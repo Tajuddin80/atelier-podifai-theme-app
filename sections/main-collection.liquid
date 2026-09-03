@@ -1,0 +1,358 @@
+
+
+<script
+  src="{{ 'results-list.js' | asset_url }}"
+  type="module"
+  fetchpriority="low"
+></script>
+
+{% javascript %}
+  const url = new URL(window.location.href);
+  if (url.hash) {
+    document.addEventListener(
+      'DOMContentLoaded',
+      () => {
+        const card = document.getElementById(url.hash.slice(1));
+        if (card) {
+          card.scrollIntoView({ behavior: 'instant' });
+        }
+      },
+      { once: true }
+    );
+  }
+{% endjavascript %}
+
+{% comment %} We always render this full-width, as the child blocks have width: page/full settings {% endcomment %}
+<div class="section-background color-{{ section.settings.color_scheme }}"></div>
+<results-list
+  class="section product-grid-container color-{{ section.settings.color_scheme }}"
+  style="--padding-block-start: {{ section.settings.padding-block-start }}px; --padding-block-end: {{ section.settings.padding-block-end }}px;"
+  section-id="{{ section.id }}"
+  infinite-scroll="{{ section.settings.enable_infinite_scroll }}"
+>
+  {% render 'skip-to-content-link', href: '#ResultsList', text: 'accessibility.skip_to_results_list' %}
+
+  <div
+    class="collection-wrapper grid gap-style{% if section.settings.product_grid_width == 'full-width' %} collection-wrapper--grid-full-width{% endif %}"
+  >
+    {% content_for 'block',
+      type: 'filters',
+      id: 'filters',
+      results: collection,
+      results_size: collection.products_count
+    %}
+
+    {% assign products_per_page = 24 %}
+
+    {% if section.settings.enable_infinite_scroll == false %}
+      {% assign products_per_page = section.settings.products_per_page %}
+    {% endif %}
+
+    {% paginate collection.products by products_per_page %}
+      {% capture children %}
+        {% for product in collection.products %}
+          <li
+            id="{{ section.id }}-{{ product.id }}"
+            class="product-grid__item product-grid__item--{{ forloop.index0 }}"
+            data-page="{{ paginate.current_page }}"
+            data-product-id="{{ product.id }}"
+            data-product-price="{{ product.price }}"
+            ref="cards[]"
+          >
+            {% # theme-check-disable %}
+            {% content_for 'block', type: '_product-card', id: 'product-card', closest.product: product %}
+            {% # theme-check-enable %}
+          </li>
+        {% endfor %}
+      {% endcapture %}
+
+      {% render 'product-grid',
+        section: section,
+        children: children,
+        products: collection.products,
+        paginate: paginate,
+        enable_infinite_scroll: section.settings.enable_infinite_scroll
+      %}
+    {% endpaginate %}
+  </div>
+</results-list>
+
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    // Run periodically to catch dynamically loaded items (infinite scroll)
+    setInterval(() => {
+      document.querySelectorAll('li.product-grid__item:not(.custom-logic-applied)').forEach(card => {
+        card.classList.add('custom-logic-applied');
+        
+        // --- 1. Hide Price if Zero ---
+        const priceVal = card.getAttribute('data-product-price');
+        if (priceVal === '0' || priceVal === 0) {
+          const priceEls = card.querySelectorAll('product-price, .price, [class*="price"]');
+          priceEls.forEach(el => {
+              if(!el.closest('.product-title')) {
+                  el.style.display = 'none';
+              }
+          });
+        }
+
+        // --- 2. Move Metafield under Price ---
+        const priceEl = card.querySelector('product-price, .price');
+        const pTags = card.querySelectorAll('p');
+        let metafieldP = null;
+        pTags.forEach(p => {
+            // Find a <p> that has text but is not title or price
+            if (p.textContent.trim() !== '' && !p.closest('.product-title') && !p.closest('product-price') && !p.closest('.price')) {
+                metafieldP = p;
+            }
+        });
+        
+        if (priceEl && metafieldP) {
+            let metafieldBlock = metafieldP.closest('.text-block') || metafieldP.closest('.product-card__block') || metafieldP;
+            // Insert metafield right after the price element
+            priceEl.parentNode.insertBefore(metafieldBlock, priceEl.nextSibling);
+            metafieldBlock.style.whiteSpace = 'nowrap';
+            metafieldBlock.style.marginTop = '4px';
+        }
+
+        // --- 3. Variants logic ---
+        // Look for actual variant swatches only, ignoring theme's built-in 'more' button
+        const swatches = Array.from(card.querySelectorAll('li.variant-option__swatch'));
+        
+        if (swatches.length > 2) {
+            const swatchContainer = swatches[0].parentNode;
+            
+            // Hide the theme's built-in 'more' button if it exists
+            const themeMoreBtn = card.querySelector('.hidden-swatches__count, li[slot="more"]');
+            if (themeMoreBtn) {
+                themeMoreBtn.style.display = 'none';
+            }
+            
+            // Hide everything after the 2nd swatch
+            for (let i = 2; i < swatches.length; i++) {
+                swatches[i].style.display = 'none';
+                swatches[i].classList.add('hidden-swatch');
+            }
+            
+            // Check if custom +N button already exists in the theme. If not, create one.
+            let moreBtn = card.querySelector('.custom-swatches-more-btn');
+            if (!moreBtn) {
+                moreBtn = document.createElement('div');
+                moreBtn.className = 'custom-swatches-more-btn';
+                moreBtn.innerHTML = '+' + (swatches.length - 2);
+                moreBtn.style.cssText = 'font-size: 11px; cursor: pointer; color: #666; padding: 2px 4px; display: inline-flex; align-items: center; justify-content: center; margin-top: 4px;';
+                swatchContainer.appendChild(moreBtn);
+            }
+            
+            // Create Grid Container for expanded view
+            let gridContainer = card.querySelector('.custom-swatches-grid');
+            if (!gridContainer) {
+                gridContainer = document.createElement('div');
+                gridContainer.className = 'custom-swatches-grid';
+                gridContainer.style.cssText = 'display: none; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-top: 6px; width: 100%;';
+                
+                // Place the grid container INSIDE the card content so it looks like part of the card
+                const cardContent = card.querySelector('.product-card__content') || card;
+                cardContent.appendChild(gridContainer);
+                
+                moreBtn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    moreBtn.style.display = 'none';
+                    gridContainer.style.display = 'grid';
+                    
+                    // Clone all swatches into grid for a full view
+                    swatches.forEach(sw => {
+                        const clone = sw.cloneNode(true);
+                        clone.style.display = 'block'; 
+                        clone.style.width = '100%';
+                        gridContainer.appendChild(clone);
+                    });
+                });
+            }
+        }
+      });
+    }, 500);
+  });
+</script>
+
+{% schema %}
+{
+  "name": "t:names.collection_container",
+  "enabled_on": {
+    "templates": ["collection"]
+  },
+  "settings": [
+    {
+      "type": "select",
+      "id": "layout_type",
+      "label": "t:settings.type",
+      "options": [
+        {
+          "value": "grid",
+          "label": "t:options.grid"
+        },
+        {
+          "value": "organic",
+          "label": "t:options.editorial"
+        }
+      ],
+      "default": "grid"
+    },
+    {
+      "type": "select",
+      "id": "product_card_size",
+      "label": "t:settings.card_size",
+      "options": [
+        {
+          "value": "small",
+          "label": "t:options.small"
+        },
+        {
+          "value": "medium",
+          "label": "t:options.medium"
+        },
+        {
+          "value": "large",
+          "label": "t:options.large"
+        },
+        {
+          "value": "extra-large",
+          "label": "t:options.extra_large"
+        }
+      ],
+      "default": "medium",
+      "visible_if": "{{ section.settings.layout_type == 'grid' }}"
+    },
+    {
+      "type": "select",
+      "id": "mobile_product_card_size",
+      "label": "t:settings.mobile_card_size",
+      "options": [
+        {
+          "value": "small",
+          "label": "t:options.small"
+        },
+        {
+          "value": "large",
+          "label": "t:options.large"
+        }
+      ],
+      "default": "small"
+    },
+    {
+      "type": "checkbox",
+      "id": "enable_infinite_scroll",
+      "label": "t:settings.auto_load_products",
+      "default": true
+    },
+    {
+      "type": "range",
+      "id": "products_per_page",
+      "label": "t:settings.products_per_page",
+      "min": 8,
+      "max": 36,
+      "step": 4,
+      "default": 24,
+      "visible_if": "{{ section.settings.enable_infinite_scroll == false }}"
+    },
+    {
+      "type": "header",
+      "content": "t:content.layout"
+    },
+    {
+      "type": "select",
+      "id": "product_grid_width",
+      "label": "t:settings.width",
+      "options": [
+        {
+          "value": "centered",
+          "label": "t:options.page"
+        },
+        {
+          "value": "full-width",
+          "label": "t:options.full"
+        }
+      ],
+      "default": "centered"
+    },
+    {
+      "type": "checkbox",
+      "id": "full_width_on_mobile",
+      "label": "t:settings.full_width_on_mobile",
+      "default": true,
+      "visible_if": "{{ section.settings.product_grid_width != 'full-width' }}"
+    },
+    {
+      "type": "range",
+      "id": "columns_gap_horizontal",
+      "label": "t:settings.horizontal_gap",
+      "min": 0,
+      "max": 50,
+      "step": 1,
+      "unit": "px",
+      "default": 16
+    },
+    {
+      "type": "range",
+      "id": "columns_gap_vertical",
+      "label": "t:settings.vertical_gap",
+      "min": 0,
+      "max": 50,
+      "step": 1,
+      "unit": "px",
+      "default": 16
+    },
+    {
+      "type": "range",
+      "id": "padding-inline-start",
+      "label": "t:settings.left_padding",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": "px",
+      "default": 0
+    },
+    {
+      "type": "range",
+      "id": "padding-inline-end",
+      "label": "t:settings.right_padding",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": "px",
+      "default": 0
+    },
+    {
+      "type": "header",
+      "content": "t:content.section_layout"
+    },
+    {
+      "type": "color_scheme",
+      "id": "color_scheme",
+      "label": "t:settings.color_scheme",
+      "default": "scheme-1"
+    },
+    {
+      "type": "range",
+      "id": "padding-block-start",
+      "label": "t:settings.top_padding",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": "px",
+      "default": 8
+    },
+    {
+      "type": "range",
+      "id": "padding-block-end",
+      "label": "t:settings.bottom_padding",
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "unit": "px",
+      "default": 8
+    }
+  ],
+  "presets": []
+}
+{% endschema %}

@@ -1,0 +1,937 @@
+{% comment %}
+  Section: Problem / Features with Cards
+  Features:
+  - Section padding & background color control
+  - Badge, heading, subtext with full typography control
+  - Section width control
+  - Layout: Centered OR Two-column (text + media/video)
+  - Text column & Media column width control (slider)
+  - Image OR Video support
+  - Feature cards as blocks (icon image, title, description)
+  - Card style control
+{% endcomment %}
+
+{%- liquid
+  assign s            = section.settings
+  assign layout       = s.layout
+  assign text_col_w   = s.text_column_width
+  assign media_col_w  = 100 | minus: text_col_w
+-%}
+
+<style>
+  /* ─── Section wrapper ─── */
+  #shopify-section-{{ section.id }} {
+    padding-top:    {{ s.padding_top }}px;
+    padding-bottom: {{ s.padding_bottom }}px;
+    background-color: {{ s.section_bg_color }};
+  }
+
+  /* ─── Inner container width ─── */
+  .pf-wrap-{{ section.id }} {
+    margin-left:  auto;
+    margin-right: auto;
+    padding-left:  24px;
+    padding-right: 24px;
+    {% if s.section_width == 'narrow' %}
+      max-width: 860px;
+    {% elsif s.section_width == 'medium' %}
+      max-width: 1100px;
+    {% elsif s.section_width == 'wide' %}
+      max-width: 1400px;
+    {% else %}
+      max-width: 100%;
+      padding-left: 0;
+      padding-right: 0;
+    {% endif %}
+  }
+
+  /* ════════════════════════════════════
+     CENTERED LAYOUT
+  ════════════════════════════════════ */
+  .pf-centered-{{ section.id }} .pf-header {
+    text-align: {{ s.header_align }};
+    margin-bottom: {{ s.header_bottom_gap }}px;
+  }
+
+  /* ════════════════════════════════════
+     TWO-COLUMN LAYOUT
+  ════════════════════════════════════ */
+  .pf-twocol-{{ section.id }} {
+    display: flex;
+    align-items: {{ s.vertical_align }};
+    gap: {{ s.column_gap }}px;
+    {% if s.media_position == 'right' %}
+      flex-direction: row;
+    {% else %}
+      flex-direction: row-reverse;
+    {% endif %}
+  }
+
+  .pf-twocol-{{ section.id }} .pf-text-col {
+    width: {{ text_col_w }}%;
+    flex-shrink: 0;
+  }
+
+  .pf-twocol-{{ section.id }} .pf-media-col {
+    width: {{ media_col_w }}%;
+    flex-shrink: 0;
+  }
+
+  @media (max-width: 768px) {
+    .pf-twocol-{{ section.id }} {
+      flex-direction: column !important;
+    }
+    .pf-twocol-{{ section.id }} .pf-text-col,
+    .pf-twocol-{{ section.id }} .pf-media-col {
+      width: 100% !important;
+    }
+  }
+
+  /* ─── Badge ─── */
+  .pf-badge-{{ section.id }} {
+    display: inline-block;
+    font-size:      {{ s.badge_size }}px;
+    font-weight:    {{ s.badge_weight }};
+    color:          {{ s.badge_color }};
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    margin-bottom: 16px;
+  }
+
+  /* ─── Heading ─── */
+  .pf-heading-{{ section.id }} {
+    font-size:   {{ s.heading_size }}px;
+    font-weight: {{ s.heading_weight }};
+    color:       {{ s.heading_color }};
+    line-height: 1.15;
+    margin: 0 0 20px;
+  }
+
+  .pf-heading-{{ section.id }} em {
+    color:       {{ s.heading_highlight_color }};
+    font-style: normal;
+  }
+
+  /* ─── Subtext ─── */
+  .pf-subtext-{{ section.id }} {
+    font-size:   {{ s.subtext_size }}px;
+    font-weight: {{ s.subtext_weight }};
+    color:       {{ s.subtext_color }};
+    line-height: 1.65;
+    margin: 0;
+    {% if s.header_align == 'center' %}
+      max-width: 560px;
+      margin-left: auto;
+      margin-right: auto;
+    {% endif %}
+  }
+
+  /* ─── Cards grid ─── */
+  .pf-cards-{{ section.id }} {
+    display: grid;
+    gap: {{ s.card_gap }}px;
+    {% if layout == 'centered' %}
+      grid-template-columns: repeat({{ s.columns_desktop }}, 1fr);
+      margin-top: {{ s.cards_top_gap }}px;
+    {% else %}
+      grid-template-columns: 1fr;
+      margin-top: 32px;
+    {% endif %}
+  }
+
+  @media (max-width: 900px) {
+    .pf-cards-{{ section.id }} {
+      grid-template-columns: repeat({{ s.columns_tablet }}, 1fr) !important;
+    }
+  }
+
+  @media (max-width: 600px) {
+    .pf-cards-{{ section.id }} {
+      grid-template-columns: 1fr !important;
+    }
+  }
+
+  /* ─── Single card ─── */
+  .pf-card-{{ section.id }} {
+    background:    {{ s.card_bg }};
+    border:        1px solid {{ s.card_border_color }};
+    border-radius: {{ s.card_radius }}px;
+    padding:       {{ s.card_padding }}px;
+    transition:    box-shadow .25s, transform .25s;
+  }
+
+  .pf-card-{{ section.id }}:hover {
+    box-shadow: 0 8px 28px rgba(0,0,0,.08);
+    transform:  translateY(-3px);
+  }
+
+  /* ─── Card icon ─── */
+  .pf-card-icon-{{ section.id }} {
+    width:         {{ s.icon_size }}px;
+    height:        {{ s.icon_size }}px;
+    border-radius: {{ s.icon_radius }}px;
+    background:    {{ s.icon_bg }};
+    display:       flex;
+    align-items:  center;
+    justify-content: center;
+    margin-bottom: 16px;
+    overflow:      hidden;
+  }
+
+  .pf-card-icon-{{ section.id }} img {
+    width:  calc({{ s.icon_size }}px * 0.55);
+    height: calc({{ s.icon_size }}px * 0.55);
+    object-fit: contain;
+  }
+
+  /* ─── Card title ─── */
+  .pf-card-title-{{ section.id }} {
+    font-size:   {{ s.card_title_size }}px;
+    font-weight: {{ s.card_title_weight }};
+    color:       {{ s.card_title_color }};
+    margin: 0 0 10px;
+    line-height: 1.3;
+  }
+
+  /* ─── Card description ─── */
+  .pf-card-desc-{{ section.id }} {
+    font-size:   {{ s.card_desc_size }}px;
+    font-weight: {{ s.card_desc_weight }};
+    color:       {{ s.card_desc_color }};
+    line-height: 1.6;
+    margin: 0;
+  }
+
+  /* ─── Media column (two-col layout) ─── */
+  .pf-media-inner-{{ section.id }} {
+    border-radius: {{ s.media_radius }}px;
+    overflow: hidden;
+    width: 100%;
+  }
+
+  .pf-media-inner-{{ section.id }} img,
+  .pf-media-inner-{{ section.id }} video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    border-radius: {{ s.media_radius }}px;
+  }
+
+  .pf-video-embed-{{ section.id }} {
+    position: relative;
+    padding-bottom: 56.25%;
+    height: 0;
+    overflow: hidden;
+    border-radius: {{ s.media_radius }}px;
+  }
+
+  .pf-video-embed-{{ section.id }} iframe {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    border: 0;
+  }
+</style>
+
+
+<div class="pf-wrap-{{ section.id }}">
+
+  {%- if section.settings.layout == 'centered' -%}
+  {%- comment -%} ══════════ CENTERED LAYOUT ══════════ {%- endcomment -%}
+
+    <div class="pf-centered-{{ section.id }}">
+
+      {%- comment -%} Header block {%- endcomment -%}
+      <div class="pf-header">
+        {%- if s.badge != blank -%}
+          <div class="pf-badge-{{ section.id }}">{{ s.badge }}</div>
+        {%- endif -%}
+
+        {%- if s.heading != blank -%}
+          <h2 class="pf-heading-{{ section.id }}">
+            {{ s.heading | replace: '<p>', '' | replace: '</p>', '' }}
+          </h2>
+        {%- endif -%}
+
+        {%- if s.subtext != blank -%}
+          <p class="pf-subtext-{{ section.id }}">{{ s.subtext }}</p>
+        {%- endif -%}
+      </div>
+
+      {%- comment -%} Cards {%- endcomment -%}
+      {%- if section.blocks.size > 0 -%}
+        <div class="pf-cards-{{ section.id }}">
+          {%- for block in section.blocks -%}
+            {%- if block.type == 'card' -%}
+              <div class="pf-card-{{ section.id }}" {{ block.shopify_attributes }}>
+
+                {%- if block.settings.icon != blank -%}
+                  <div class="pf-card-icon-{{ section.id }}">
+                    <img
+                      src="{{ block.settings.icon | image_url: width: 80 }}"
+                      alt="{{ block.settings.icon.alt | default: block.settings.title }}"
+                      width="80" height="80"
+                      loading="lazy"
+                    >
+                  </div>
+                {%- elsif block.settings.icon_emoji != blank -%}
+                  <div class="pf-card-icon-{{ section.id }}" style="font-size:{{ s.icon_size | times: 0.45 }}px;">
+                    {{ block.settings.icon_emoji }}
+                  </div>
+                {%- endif -%}
+
+                {%- if block.settings.title != blank -%}
+                  <h3 class="pf-card-title-{{ section.id }}">{{ block.settings.title }}</h3>
+                {%- endif -%}
+
+                {%- if block.settings.description != blank -%}
+                  <p class="pf-card-desc-{{ section.id }}">{{ block.settings.description }}</p>
+                {%- endif -%}
+
+              </div>
+            {%- endif -%}
+          {%- endfor -%}
+        </div>
+      {%- endif -%}
+
+    </div>
+
+  {%- else -%}
+  {%- comment -%} ══════════ TWO-COLUMN LAYOUT ══════════ {%- endcomment -%}
+
+    <div class="pf-twocol-{{ section.id }}">
+
+      {%- comment -%} Text + Cards column {%- endcomment -%}
+      <div class="pf-text-col">
+
+        {%- if s.badge != blank -%}
+          <div class="pf-badge-{{ section.id }}">{{ s.badge }}</div>
+        {%- endif -%}
+
+        {%- if s.heading != blank -%}
+          <h2 class="pf-heading-{{ section.id }}">
+             {{ s.heading | replace: '<p>', '' | replace: '</p>', '' }}
+          </h2>
+        {%- endif -%}
+
+        {%- if s.subtext != blank -%}
+          <p class="pf-subtext-{{ section.id }}">{{ s.subtext }}</p>
+        {%- endif -%}
+
+        {%- if section.blocks.size > 0 -%}
+          <div class="pf-cards-{{ section.id }}">
+            {%- for block in section.blocks -%}
+              {%- if block.type == 'card' -%}
+                <div class="pf-card-{{ section.id }}" {{ block.shopify_attributes }}>
+
+                  {%- if block.settings.icon != blank -%}
+                    <div class="pf-card-icon-{{ section.id }}">
+                      <img
+                        src="{{ block.settings.icon | image_url: width: 80 }}"
+                        alt="{{ block.settings.icon.alt | default: block.settings.title }}"
+                        width="80" height="80"
+                        loading="lazy"
+                      >
+                    </div>
+                  {%- elsif block.settings.icon_emoji != blank -%}
+                    <div class="pf-card-icon-{{ section.id }}" style="font-size:{{ s.icon_size | times: 0.45 }}px;">
+                      {{ block.settings.icon_emoji }}
+                    </div>
+                  {%- endif -%}
+
+                  {%- if block.settings.title != blank -%}
+                    <h3 class="pf-card-title-{{ section.id }}">{{ block.settings.title }}</h3>
+                  {%- endif -%}
+
+                  {%- if block.settings.description != blank -%}
+                    <p class="pf-card-desc-{{ section.id }}">{{ block.settings.description }}</p>
+                  {%- endif -%}
+
+                </div>
+              {%- endif -%}
+            {%- endfor -%}
+          </div>
+        {%- endif -%}
+
+      </div>
+
+      {%- comment -%} Media column {%- endcomment -%}
+      <div class="pf-media-col">
+        <div class="pf-media-inner-{{ section.id }}">
+
+          {%- if s.media_type == 'video' -%}
+
+            {%- if s.video != blank -%}
+              {{
+                s.video
+                | video_tag:
+                  autoplay: s.video_autoplay,
+                  loop:     s.video_loop,
+                  muted:    s.video_muted,
+                  controls: s.video_controls,
+                  playsinline: true
+              }}
+
+            {%- elsif s.video_url != blank -%}
+              <div class="pf-video-embed-{{ section.id }}">
+                <iframe
+                  src="{{ s.video_url }}"
+                  allow="autoplay; fullscreen"
+                  allowfullscreen
+                  loading="lazy"
+                ></iframe>
+              </div>
+            {%- endif -%}
+
+          {%- else -%}
+
+            {%- if s.image != blank -%}
+              {{
+                s.image
+                | image_url: width: 1200
+                | image_tag:
+                  loading: 'lazy',
+                  alt: s.image.alt
+              }}
+            {%- else -%}
+              {{ 'image' | placeholder_svg_tag: 'placeholder-svg' }}
+            {%- endif -%}
+
+          {%- endif -%}
+
+        </div>
+      </div>
+
+    </div>
+
+  {%- endif -%}
+
+</div>
+
+
+{% schema %}
+{
+  "name": "how it Section",
+  "tag": "section",
+  "class": "section-problem-features",
+  "settings": [
+
+    {
+      "type": "header",
+      "content": "📐 Section Width & Layout"
+    },
+    {
+      "type": "select",
+      "id": "section_width",
+      "label": "Section Width",
+      "options": [
+        { "value": "narrow",  "label": "Narrow  (860px)"  },
+        { "value": "medium",  "label": "Medium  (1100px)" },
+        { "value": "wide",    "label": "Wide    (1400px)" },
+        { "value": "full",    "label": "Full Width"      }
+      ],
+      "default": "medium"
+    },
+    {
+      "type": "select",
+      "id": "layout",
+      "label": "Layout",
+      "options": [
+        { "value": "centered",   "label": "Centered (heading + cards below)" },
+        { "value": "two_column", "label": "Two Column (text | media)" }
+      ],
+      "default": "centered",
+      "info": "'Two Column' shows cards on the left and an image/video on the right."
+    },
+
+    {
+      "type": "header",
+      "content": "📏 Padding & Background"
+    },
+    {
+      "type": "range",
+      "id": "padding_top",
+      "label": "Padding Top (px)",
+      "min": 0, "max": 160, "step": 4,
+      "default": 40
+    },
+    {
+      "type": "range",
+      "id": "padding_bottom",
+      "label": "Padding Bottom (px)",
+      "min": 0, "max": 160, "step": 4,
+      "default": 40
+    },
+    {
+      "type": "color",
+      "id": "section_bg_color",
+      "label": "Section Background Color",
+      "default": "#f5f6f7"
+    },
+
+    {
+      "type": "header",
+      "content": "🏷️ Badge / Label"
+    },
+    {
+      "type": "text",
+      "id": "badge",
+      "label": "Badge Text",
+      "default": "The Problem"
+    },
+    {
+      "type": "range",
+      "id": "badge_size",
+      "label": "Badge Font Size (px)",
+      "min": 10, "max": 20, "step": 1,
+      "default": 12
+    },
+    {
+      "type": "select",
+      "id": "badge_weight",
+      "label": "Badge Font Weight",
+      "options": [
+        { "value": "400", "label": "Regular (400)" },
+        { "value": "600", "label": "Semi Bold (600)" },
+        { "value": "700", "label": "Bold (700)" }
+      ],
+      "default": "700"
+    },
+    {
+      "type": "color",
+      "id": "badge_color",
+      "label": "Badge Color",
+      "default": "#0fa68a"
+    },
+
+    {
+      "type": "header",
+      "content": "✏️ Heading"
+    },
+    {
+      "type": "richtext",
+      "id": "heading",
+      "label": "Heading",
+      "default": "<p>How It <em>works.</em></p>",
+      "info": "Wrap words in <em> for accent highlight color."
+    },
+    {
+      "type": "range",
+      "id": "heading_size",
+      "label": "Heading Font Size (px)",
+      "min": 22, "max": 72, "step": 2,
+      "default": 44
+    },
+    {
+      "type": "select",
+      "id": "heading_weight",
+      "label": "Heading Font Weight",
+      "options": [
+        { "value": "400", "label": "Regular (400)" },
+        { "value": "500", "label": "Medium (500)" },
+        { "value": "600", "label": "Semi Bold (600)" },
+        { "value": "700", "label": "Bold (700)" },
+        { "value": "800", "label": "Extra Bold (800)" },
+        { "value": "900", "label": "Black (900)" }
+      ],
+      "default": "800"
+    },
+    {
+      "type": "color",
+      "id": "heading_color",
+      "label": "Heading Color",
+      "default": "#0f172a"
+    },
+    {
+      "type": "color",
+      "id": "heading_highlight_color",
+      "label": "Heading Highlight / Accent Color",
+      "default": "#0fa68a"
+    },
+    {
+      "type": "select",
+      "id": "header_align",
+      "label": "Header Alignment",
+      "options": [
+        { "value": "left",   "label": "Left" },
+        { "value": "center", "label": "Center" },
+        { "value": "right",  "label": "Right" }
+      ],
+      "default": "center"
+    },
+
+    {
+      "type": "header",
+      "content": "📝 Subtext / Description"
+    },
+    {
+      "type": "textarea",
+      "id": "subtext",
+      "label": "Subtext",
+      "default": "Traditional cleaning costs time, effort and money — and often leaves more residue than cleanliness."
+    },
+    {
+      "type": "range",
+      "id": "subtext_size",
+      "label": "Subtext Font Size (px)",
+      "min": 12, "max": 24, "step": 1,
+      "default": 16
+    },
+    {
+      "type": "select",
+      "id": "subtext_weight",
+      "label": "Subtext Font Weight",
+      "options": [
+        { "value": "400", "label": "Regular (400)" },
+        { "value": "500", "label": "Medium (500)" },
+        { "value": "600", "label": "Semi Bold (600)" }
+      ],
+      "default": "400"
+    },
+    {
+      "type": "color",
+      "id": "subtext_color",
+      "label": "Subtext Color",
+      "default": "#475569"
+    },
+    {
+      "type": "range",
+      "id": "header_bottom_gap",
+      "label": "Gap Below Header (px)",
+      "min": 16, "max": 100, "step": 4,
+      "default": 48
+    },
+
+    {
+      "type": "header",
+      "content": "🃏 Cards Grid"
+    },
+    {
+      "type": "select",
+      "id": "columns_desktop",
+      "label": "Columns on Desktop",
+      "options": [
+        { "value": "1", "label": "1 Column" },
+        { "value": "2", "label": "2 Columns" },
+        { "value": "3", "label": "3 Columns" },
+        { "value": "4", "label": "4 Columns" }
+      ],
+      "default": "3"
+    },
+    {
+      "type": "select",
+      "id": "columns_tablet",
+      "label": "Columns on Tablet",
+      "options": [
+        { "value": "1", "label": "1 Column" },
+        { "value": "2", "label": "2 Columns" },
+        { "value": "3", "label": "3 Columns" }
+      ],
+      "default": "2"
+    },
+    {
+      "type": "range",
+      "id": "card_gap",
+      "label": "Card Gap (px)",
+      "min": 8, "max": 60, "step": 4,
+      "default": 24
+    },
+    {
+      "type": "range",
+      "id": "cards_top_gap",
+      "label": "Space Above Cards (px)",
+      "min": 0, "max": 80, "step": 4,
+      "default": 48
+    },
+
+    {
+      "type": "header",
+      "content": "🎨 Card Style"
+    },
+    {
+      "type": "color",
+      "id": "card_bg",
+      "label": "Card Background",
+      "default": "#ffffff"
+    },
+    {
+      "type": "color",
+      "id": "card_border_color",
+      "label": "Card Border Color",
+      "default": "#e8eaed"
+    },
+    {
+      "type": "range",
+      "id": "card_radius",
+      "label": "Card Border Radius (px)",
+      "min": 0, "max": 32, "step": 2,
+      "default": 16
+    },
+    {
+      "type": "range",
+      "id": "card_padding",
+      "label": "Card Inner Padding (px)",
+      "min": 12, "max": 60, "step": 4,
+      "default": 28
+    },
+
+    {
+      "type": "header",
+      "content": "🔷 Card Icon"
+    },
+    {
+      "type": "range",
+      "id": "icon_size",
+      "label": "Icon Container Size (px)",
+      "min": 32, "max": 100, "step": 4,
+      "default": 52
+    },
+    {
+      "type": "range",
+      "id": "icon_radius",
+      "label": "Icon Border Radius (px)",
+      "min": 0, "max": 50, "step": 2,
+      "default": 12
+    },
+    {
+      "type": "color",
+      "id": "icon_bg",
+      "label": "Icon Background Color",
+      "default": "#fde8e8"
+    },
+
+    {
+      "type": "header",
+      "content": "🔤 Card Title"
+    },
+    {
+      "type": "range",
+      "id": "card_title_size",
+      "label": "Card Title Font Size (px)",
+      "min": 12, "max": 28, "step": 1,
+      "default": 17
+    },
+    {
+      "type": "select",
+      "id": "card_title_weight",
+      "label": "Card Title Font Weight",
+      "options": [
+        { "value": "400", "label": "Regular (400)" },
+        { "value": "500", "label": "Medium (500)" },
+        { "value": "600", "label": "Semi Bold (600)" },
+        { "value": "700", "label": "Bold (700)" }
+      ],
+      "default": "700"
+    },
+    {
+      "type": "color",
+      "id": "card_title_color",
+      "label": "Card Title Color",
+      "default": "#0f172a"
+    },
+
+    {
+      "type": "header",
+      "content": "📄 Card Description"
+    },
+    {
+      "type": "range",
+      "id": "card_desc_size",
+      "label": "Card Description Font Size (px)",
+      "min": 12, "max": 20, "step": 1,
+      "default": 14
+    },
+    {
+      "type": "select",
+      "id": "card_desc_weight",
+      "label": "Card Description Font Weight",
+      "options": [
+        { "value": "400", "label": "Regular (400)" },
+        { "value": "500", "label": "Medium (500)" }
+      ],
+      "default": "400"
+    },
+    {
+      "type": "color",
+      "id": "card_desc_color",
+      "label": "Card Description Color",
+      "default": "#64748b"
+    },
+
+    {
+      "type": "header",
+      "content": "↔️ Two-Column Layout Options",
+      "info": "Only used when Layout is set to 'Two Column'."
+    },
+    {
+      "type": "range",
+      "id": "text_column_width",
+      "label": "Text Column Width (%)",
+      "min": 30, "max": 70, "step": 5,
+      "default": 50,
+      "info": "Media column takes the remaining percentage."
+    },
+    {
+      "type": "range",
+      "id": "column_gap",
+      "label": "Gap Between Columns (px)",
+      "min": 0, "max": 100, "step": 4,
+      "default": 60
+    },
+    {
+      "type": "select",
+      "id": "vertical_align",
+      "label": "Vertical Alignment",
+      "options": [
+        { "value": "flex-start", "label": "Top" },
+        { "value": "center",     "label": "Center" },
+        { "value": "flex-end",   "label": "Bottom" }
+      ],
+      "default": "center"
+    },
+    {
+      "type": "select",
+      "id": "media_position",
+      "label": "Media Position",
+      "options": [
+        { "value": "right", "label": "Media Right" },
+        { "value": "left",  "label": "Media Left"  }
+      ],
+      "default": "right"
+    },
+
+    {
+      "type": "header",
+      "content": "🖼️ Media (Image or Video)",
+      "info": "Only used when Layout is set to 'Two Column'."
+    },
+    {
+      "type": "select",
+      "id": "media_type",
+      "label": "Media Type",
+      "options": [
+        { "value": "image", "label": "Image" },
+        { "value": "video", "label": "Video" }
+      ],
+      "default": "image"
+    },
+    {
+      "type": "image_picker",
+      "id": "image",
+      "label": "Image",
+      "info": "Used when Media Type = Image."
+    },
+    {
+      "type": "video",
+      "id": "video",
+      "label": "Video (Shopify hosted)",
+      "info": "Upload video directly. Used when Media Type = Video."
+    },
+    {
+      "type": "text",
+      "id": "video_url",
+      "label": "External Video URL (YouTube / Vimeo embed)",
+      "info": "e.g. https://www.youtube.com/embed/VIDEO_ID — used if no hosted video is set."
+    },
+    {
+      "type": "checkbox",
+      "id": "video_autoplay",
+      "label": "Autoplay",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "video_loop",
+      "label": "Loop",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "video_muted",
+      "label": "Muted",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "video_controls",
+      "label": "Show Controls",
+      "default": false
+    },
+    {
+      "type": "range",
+      "id": "media_radius",
+      "label": "Media Border Radius (px)",
+      "min": 0, "max": 40, "step": 2,
+      "default": 16
+    }
+
+  ],
+
+  "blocks": [
+    {
+      "type": "card",
+      "name": "Feature Card",
+      "settings": [
+        {
+          "type": "image_picker",
+          "id": "icon",
+          "label": "Icon Image",
+          "info": "Upload a small icon (PNG/SVG). Recommended: 80×80px."
+        },
+        {
+          "type": "text",
+          "id": "icon_emoji",
+          "label": "OR Emoji Icon",
+          "info": "Used if no image is selected. e.g. ⏱️",
+          "default": "⏱️"
+        },
+        {
+          "type": "text",
+          "id": "title",
+          "label": "Card Title",
+          "default": "Too much time"
+        },
+        {
+          "type": "textarea",
+          "id": "description",
+          "label": "Card Description",
+          "default": "Grout, ovens and fittings often require several attempts — and still don't look like new."
+        }
+      ]
+    }
+  ],
+
+  "presets": [
+    {
+      "name": "how it works Section",
+      "blocks": [
+        {
+          "type": "card",
+          "settings": {
+            "icon_emoji": "⏱️",
+            "title": "Too much time",
+            "description": "Grout, ovens and fittings often require several attempts — and still don't look like new."
+          }
+        },
+        {
+          "type": "card",
+          "settings": {
+            "icon_emoji": "⚠️",
+            "title": "Aggressive chemistry",
+            "description": "Irritating smells, irritated hands and pollutants that have no place in living spaces."
+          }
+        },
+        {
+          "type": "card",
+          "settings": {
+            "icon_emoji": "📦",
+            "title": "Many products",
+            "description": "A separate product for every material. Cupboards full of bottles — and yet, still dissatisfied."
+          }
+        }
+      ]
+    }
+  ]
+}
+{% endschema %}

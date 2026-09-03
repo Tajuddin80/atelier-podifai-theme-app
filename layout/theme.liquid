@@ -1,0 +1,542 @@
+<!doctype html>
+<html
+  {% if request.design_mode %}
+    class="shopify-design-mode"
+  {% endif %}
+  lang="{{ request.locale.iso_code }}"
+>
+  <head>
+    {%- if settings.favicon != blank -%}
+      <link
+        rel="icon"
+        type="image/png"
+        href="{{ settings.favicon | image_url: width: 32, height: 32 }}"
+      >
+    {%- endif -%}
+
+    {% # theme-check-disable RemoteAsset %}
+    {% comment %} This a way to wait for main content to load when navigating to a new page so that the view transitions can work consistently {% endcomment %}
+    {% if settings.transition_to_main_product or settings.page_transition_enabled %}
+      <link
+        rel="expect"
+        href="#MainContent"
+        blocking="render"
+        id="view-transition-render-blocker"
+      >
+    {% endif %}
+
+    {%- render 'meta-tags' -%}
+    {%- render 'stylesheets' -%}
+    {%- render 'fonts' -%}
+    {%- render 'scripts' -%}
+    {%- render 'theme-styles-variables' -%}
+    {%- render 'color-schemes' -%}
+
+    {% if request.design_mode %}
+      {%- render 'theme-editor' -%}
+    {% endif %}
+
+    {{ content_for_header }}
+    {% # theme-check-enable RemoteAsset %}
+
+    {% comment %} Universal Addon Product Suppression (Hide Addons from Recommendations, Cards, Search, and Collections) {% endcomment %}
+    <style>
+      a[href*="/products/patch-addon"],
+      a[href*="/products/embroidery-addon"],
+      a[href*="patch-addon"],
+      a[href*="embroidery-addon"],
+      .product-card:has(a[href*="addon"]),
+      .collection-product:has(a[href*="addon"]),
+      .search-result:has(a[href*="addon"]),
+      [class*="recommendation"]:has(a[href*="addon"]),
+      li:has(a[href*="addon"]),
+      .grid__item:has(a[href*="addon"]),
+      .card-wrapper:has(a[href*="addon"]),
+      .product-grid-item:has(a[href*="addon"]),
+      .product-item:has(a[href*="addon"]),
+      div:has(> a[href*="addon"]),
+      div:has(> * > a[href*="addon"][class*="product"]) {
+        display: none !important;
+      }
+    </style>
+  </head>
+
+  <body class="page-width-{{ settings.page_width }} card-hover-effect-{{ settings.card_hover_effect }}">
+    {% render 'skip-to-content-link', href: '#MainContent', text: 'accessibility.skip_to_text' %}
+    <div id="header-group">
+      {% sections 'header-group' %}
+    </div>
+
+    <script>
+      // Inline header height and menu style calculations to prevent layout shift
+      (function setHeaderHeighCustomProperties() {
+        const header = document.querySelector('header-component');
+        const headerGroup = document.querySelector('#header-group');
+        const hasHeaderSection = headerGroup?.querySelector('.header-section');
+
+        if (!header || !headerGroup) return;
+
+        const headerTopRow = header.querySelector('.header__row--top');
+        const headerHeight = header.offsetHeight;
+
+        let headerGroupHeight = 0;
+        const children = headerGroup.children;
+        for (let i = 0; i < children.length; i++) {
+          const element = children[i];
+          if (element === header || !(element instanceof HTMLElement)) continue;
+          headerGroupHeight += element.offsetHeight;
+        }
+
+        if (header.hasAttribute('transparent') && header.parentElement?.nextElementSibling) {
+          headerGroupHeight += headerHeight;
+        }
+
+        document.body.style.setProperty('--header-height', `${headerHeight}px`);
+        document.body.style.setProperty('--header-group-height', `${headerGroupHeight}px`);
+
+        if (headerTopRow) {
+          window.requestAnimationFrame(function () {
+            document.body.style.setProperty('--top-row-height', `${headerTopRow.offsetHeight}px`);
+          });
+        }
+
+        if (!hasHeaderSection || !header?.hasAttribute('transparent')) {
+          document.body.style.setProperty('--transparent-header-offset-boolean', '0');
+          return;
+        }
+
+        const hasImmediateSection = hasHeaderSection.nextElementSibling?.classList.contains('shopify-section');
+        const shouldApplyOffset = !hasImmediateSection ? '1' : '0';
+        document.body.style.setProperty('--transparent-header-offset-boolean', shouldApplyOffset);
+      })();
+
+      (function setHeaderMenuStyle() {
+        const headerComponent = document.querySelector('#header-component');
+        if (headerComponent) {
+          const isTouchDevice = 'ontouchstart' in window && navigator.maxTouchPoints > 0;
+          const overflowList = headerComponent?.querySelector('overflow-list');
+          const hasReachedMinimum = overflowList && overflowList.hasAttribute('minimum-reached');
+          headerComponent.dataset.menuStyle = isTouchDevice || hasReachedMinimum ? 'drawer' : 'menu';
+        }
+      })();
+
+      {% comment %} podifai apps js {% endcomment %}
+      const observer = new MutationObserver(() => {
+        document.querySelectorAll('a[href^="#shopify-section-"]').forEach(link => {
+          link.removeAttribute("target");
+          link.target = "_self";
+        });
+      });
+
+      observer.observe(document.body, {
+        childList: true,
+        subtree: true
+      });
+
+      document.addEventListener("click", function (e) {
+        const guide = e.target.closest("#badge_group-be99927bf0c407701928fd5f .podifai-header-help");
+        if (!guide) return;
+
+        e.preventDefault();
+        e.stopPropagation();
+        e.stopImmediatePropagation();
+
+        document.querySelector("#shopify-section-template--27966972920176__section_tbnDA4")
+          ?.scrollIntoView({
+            behavior: "smooth",
+            block: "start"
+          });
+      }, true);
+      {% comment %} podifai apps js end{% endcomment %}
+    </script>
+
+    <main
+      id="MainContent"
+      class="content-for-layout"
+      role="main"
+      data-page-transition-enabled="{{ settings.page_transition_enabled }}"
+      data-product-transition="{{ settings.transition_to_main_product }}"
+      data-template="{{ template }}"
+    >
+      {{ content_for_layout }}
+    </main>
+
+    <footer>
+      {% sections 'footer-group' %}
+    </footer>
+
+    {% render 'search-modal' %}
+
+    {% if settings.quick_add or settings.mobile_quick_add %}
+      {% render 'quick-add-modal' %}
+    {% endif %}
+
+    <script>
+      (function () {
+        let isSyncing = false;
+        let syncTimeout = null;
+
+        function updateHeaderCountUI(count) {
+          try {
+            const countEls = document.querySelectorAll(
+              '#header-component sup, .header-actions sup, header a sup, .cart-bubble'
+            );
+            const textEls = document.querySelectorAll('.cart-bubble__text-count, [ref="cartBubbleCount"]');
+            textEls.forEach((el) => {
+              if (el) {
+                el.innerText = count;
+                if (count > 0) el.classList.remove('hidden');
+                else el.classList.add('hidden');
+              }
+            });
+
+            countEls.forEach((el) => {
+              if (!el) return;
+              if (count > 0) {
+                el.removeAttribute('hidden');
+                el.classList.remove('visually-hidden');
+                el.style.setProperty('display', 'inline-flex', 'important');
+                el.style.setProperty('visibility', 'visible', 'important');
+                el.style.setProperty('opacity', '1', 'important');
+
+                // Add has-cart class to parent cart-icon if it exists
+                const cartIcon = el.closest('cart-icon');
+                if (cartIcon) {
+                  cartIcon.classList.add('header-actions__cart-icon--has-cart');
+                }
+              } else {
+                el.setAttribute('hidden', '');
+                el.classList.add('visually-hidden');
+                el.style.setProperty('display', 'none', 'important');
+
+                // Remove has-cart class from parent cart-icon if it exists
+                const cartIcon = el.closest('cart-icon');
+                if (cartIcon) {
+                  cartIcon.classList.remove('header-actions__cart-icon--has-cart');
+                }
+              }
+            });
+          } catch (e) {}
+        }
+
+        function analyzeCart(cart) {
+          let patchItem = null;
+          let embroideryItem = null;
+          let customizedBags = [];
+          let regularProducts = [];
+          let totalRequiredPatches = 0;
+          let totalRequiredEmbroidery = 0;
+          let mainItemCount = 0;
+          let regularProductsTotalCents = 0;
+          let customizedBagsTotalCents = 0;
+
+          if (!cart || !Array.isArray(cart.items)) {
+            return {
+              customizedBags: [],
+              regularProducts: [],
+              patchItem: null,
+              embroideryItem: null,
+              totalRequiredPatches: 0,
+              totalRequiredEmbroidery: 0,
+              mainItemCount: 0,
+              trueCartSubtotalCents: 0,
+              formattedSubtotal: 'RM0.00',
+            };
+          }
+
+          cart.items.forEach((it) => {
+            const t = (it.title || '').toLowerCase();
+            const h = (it.handle || '').toLowerCase();
+            const p = it.properties || {};
+
+            const isPatch =
+              t.includes('patch') || h.includes('patch') || (p['Addon Type'] && /patch/i.test(p['Addon Type']));
+            const isEmbroidery =
+              t.includes('embroidery') ||
+              h.includes('embroidery') ||
+              (p['Addon Type'] && /embroidery/i.test(p['Addon Type']));
+            const isAddon =
+              isPatch || isEmbroidery || t.includes('surcharge') || h.includes('addon') || p['_parent_item'];
+
+            if (isPatch) {
+              patchItem = it;
+            } else if (isEmbroidery) {
+              embroideryItem = it;
+            } else if (!isAddon) {
+              mainItemCount += it.quantity;
+              const isCustomized = p['Preview'] || p['Customisation Preview'] || p['Customization Preview'] || p['_patches_per_bag'] || p['Customisation'] || p['Customization'] || p['Embroidery'];
+              if (isCustomized) {
+                let patchesPerBag = parseInt(p['_patches_per_bag']) || 0;
+                let embroideryPerBag = parseInt(p['_embroidery_per_bag']) || 0;
+
+                const custStr = p['Customisation'] || p['Customization'] || '';
+                if (!patchesPerBag && custStr) {
+                  const m = custStr.match(/(\d+)\s*Patch/i);
+                  if (m) patchesPerBag = parseInt(m[1]);
+                }
+                if (!embroideryPerBag && custStr) {
+                  const m = custStr.match(/(\d+)\s*Embroidery/i);
+                  if (m) embroideryPerBag = parseInt(m[1]);
+                }
+
+                const bagQty = it.quantity;
+                totalRequiredPatches += patchesPerBag * bagQty;
+                totalRequiredEmbroidery += embroideryPerBag * bagQty;
+
+                const unitPatchFee = patchesPerBag * 600;
+                const unitEmbroideryFee = embroideryPerBag * 2000;
+                const unitTotal = it.final_price + unitPatchFee + unitEmbroideryFee;
+                const lineTotal = unitTotal * bagQty;
+
+                customizedBagsTotalCents += lineTotal;
+
+                customizedBags.push({
+                  key: it.key,
+                  qty: bagQty,
+                  unitTotalFormatted: 'RM' + (unitTotal / 100).toFixed(2),
+                  lineTotalFormatted: 'RM' + (lineTotal / 100).toFixed(2),
+                });
+              } else {
+                regularProducts.push(it);
+                regularProductsTotalCents += it.final_line_price;
+              }
+            }
+          });
+
+          const trueCartSubtotalCents = customizedBagsTotalCents + regularProductsTotalCents;
+          const formattedSubtotal = 'RM' + (trueCartSubtotalCents / 100).toFixed(2);
+
+          return {
+            customizedBags,
+            regularProducts,
+            patchItem,
+            embroideryItem,
+            totalRequiredPatches,
+            totalRequiredEmbroidery,
+            mainItemCount,
+            trueCartSubtotalCents,
+            formattedSubtotal,
+          };
+        }
+
+        function applyPricePatches(analysis) {
+          if (!analysis) return;
+
+          try {
+            updateHeaderCountUI(analysis.mainItemCount);
+
+            // 1. Update line item prices for customized bags
+            analysis.customizedBags.forEach((bag) => {
+              const rows = document.querySelectorAll(
+                `[data-key="${bag.key}"], tr:has([href*="${bag.key}"]), .cart-item:has([href*="${bag.key}"])`
+              );
+              rows.forEach((row) => {
+                const priceEls = row.querySelectorAll(
+                  '.cart-items__price text-component, .cart-item__price, [class*="price-width"] text-component, .cart-items__price span'
+                );
+                priceEls.forEach((pe) => {
+                  if (pe && pe.children.length === 0 && pe.innerText !== bag.lineTotalFormatted) {
+                    pe.innerText = bag.lineTotalFormatted;
+                  }
+                });
+              });
+            });
+
+            // 2. Update Subtotal everywhere on the Cart Page and Cart Drawer
+            document
+              .querySelectorAll(
+                '.cart-summary__subtotal-value, .cart__total-value, [data-cart-subtotal-value], [data-cart-total-value], .cart-summary [class*="value"], .cart-drawer__footer [class*="value"], .cart__total, caption span'
+              )
+              .forEach((el) => {
+                if (el && !el.children.length && el.innerText !== analysis.formattedSubtotal) {
+                  el.innerText = analysis.formattedSubtotal;
+                }
+              });
+
+            document
+              .querySelectorAll(
+                '.cart-drawer__footer, .cart-drawer__summary, #cart-drawer footer, .cart-page__summary, .cart-summary'
+              )
+              .forEach((container) => {
+                container.querySelectorAll('*').forEach((node) => {
+                  if (
+                    node.children.length === 0 &&
+                    /^RM\s*\d+(\.\d{2})?$/i.test(node.innerText.trim()) &&
+                    !node.closest('.cart-item') &&
+                    !node.closest('tr')
+                  ) {
+                    if (node.innerText !== analysis.formattedSubtotal) {
+                      node.innerText = analysis.formattedSubtotal;
+                    }
+                  }
+                });
+              });
+
+            // 3. Hide standalone companion addon items
+            document
+              .querySelectorAll(
+                '.cart-drawer .cart-items__table-row, .cart-drawer .cart-item, .cart-drawer li, .cart-items__table-row, tr.cart-item'
+              )
+              .forEach((row) => {
+                const txt = (row.textContent || '').toLowerCase();
+                if (
+                  (txt.includes('patch') || txt.includes('embroidery')) &&
+                  (txt.includes('addon') || txt.includes('surcharge'))
+                ) {
+                  row.style.display = 'none';
+                }
+              });
+          } catch (e) {}
+        }
+
+        async function syncCartEngine() {
+          if (isSyncing) return;
+
+          try {
+            const res = await fetch('/cart.js', { headers: { 'x-cart-sync': '1' } });
+            const cart = await res.json();
+            if (!cart || !cart.items) return;
+
+            const onlyAddonsRemain =
+              cart.items.length > 0 &&
+              cart.items.every((it) => {
+                const t = (it.title || '').toLowerCase();
+                const h = (it.handle || '').toLowerCase();
+                const p = it.properties || {};
+                return (
+                  t.includes('patch') ||
+                  t.includes('embroidery') ||
+                  t.includes('addon') ||
+                  t.includes('surcharge') ||
+                  h.includes('addon') ||
+                  p['_parent_item'] ||
+                  p['Addon Type']
+                );
+              });
+
+            if (onlyAddonsRemain || cart.items.length === 0) {
+              if (onlyAddonsRemain) {
+                isSyncing = true;
+                await fetch('/cart/clear.js', { method: 'POST', headers: { 'x-cart-sync': '1' } });
+                isSyncing = false;
+              }
+
+              updateHeaderCountUI(0);
+              document
+                .querySelectorAll(
+                  '.cart-summary__subtotal-value, .cart__total-value, [data-cart-subtotal-value], [data-cart-total-value], .cart-drawer__footer [class*="value"]'
+                )
+                .forEach((el) => (el.innerText = 'RM0.00'));
+              document
+                .querySelectorAll(
+                  '.cart-drawer__footer, .cart-drawer__summary, #cart-drawer footer, .cart-page__summary'
+                )
+                .forEach((el) => (el.style.display = 'none'));
+              document
+                .querySelectorAll(
+                  '.cart-drawer .cart-items__table-row, .cart-drawer .cart-item, .cart-drawer li, .cart-items__table-row'
+                )
+                .forEach((el) => (el.style.display = 'none'));
+              document.querySelectorAll('[class*="free-shipping"], [class*="shipping-bar"], [class*="shipping_bar"], .cart-drawer [class*="shipping"], [data-free-shipping-bar]').forEach(el => el.style.display = 'none');
+              return;
+            }
+
+            const analysis = analyzeCart(cart);
+            applyPricePatches(analysis);
+
+            let updates = {};
+            let needsUpdate = false;
+
+            if (analysis.patchItem && analysis.patchItem.quantity !== analysis.totalRequiredPatches) {
+              updates[analysis.patchItem.key] = analysis.totalRequiredPatches;
+              needsUpdate = true;
+            }
+
+            if (analysis.embroideryItem && analysis.embroideryItem.quantity !== analysis.totalRequiredEmbroidery) {
+              updates[analysis.embroideryItem.key] = analysis.totalRequiredEmbroidery;
+              needsUpdate = true;
+            }
+
+            if (needsUpdate) {
+              isSyncing = true;
+              await fetch('/cart/update.js', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', Accept: 'application/json', 'x-cart-sync': '1' },
+                body: JSON.stringify({ updates }),
+              });
+              isSyncing = false;
+              applyPricePatches(analysis);
+            }
+          } catch (err) {
+            console.error('Cart sync error:', err);
+            isSyncing = false;
+          }
+        }
+
+        function triggerSyncDebounced(delay = 100) {
+          if (syncTimeout) clearTimeout(syncTimeout);
+          syncTimeout = setTimeout(syncCartEngine, delay);
+        }
+
+        // Run on load
+        if (document.readyState === 'loading') {
+          document.addEventListener('DOMContentLoaded', syncCartEngine);
+        } else {
+          syncCartEngine();
+        }
+
+        // Fetch Interceptor: Trigger sync on cart calls without capturing or blocking anything
+        const origFetch = window.fetch;
+        window.fetch = function () {
+          const url = arguments[0];
+          const options = arguments[1] || {};
+          const isInternalSync =
+            options.headers &&
+            (options.headers['x-cart-sync'] ||
+              (typeof options.headers.get === 'function' && options.headers.get('x-cart-sync')));
+          const isCartCall =
+            typeof url === 'string' &&
+            (url.includes('/cart/change') ||
+              url.includes('/cart/update') ||
+              url.includes('/cart/add') ||
+              url.includes('/cart/clear') ||
+              url.includes('/cart?'));
+
+          return origFetch.apply(this, arguments).then((res) => {
+            if (isCartCall && !isInternalSync && !isSyncing) {
+              triggerSyncDebounced(150);
+            }
+            return res;
+          });
+        };
+
+        // Standard event listeners (NO CAPTURE, NEVER BLOCKS NATIVE CLICKS)
+        document.addEventListener('cart:updated', () => triggerSyncDebounced(50));
+        document.addEventListener('cart:refresh', () => triggerSyncDebounced(50));
+
+        // Light, non-capturing listener on click to trigger calculation on quantity changes
+        document.addEventListener('click', function (e) {
+          const btn = e.target.closest(
+            '.quantity-selector button, button[name="plus"], button[name="minus"], .quantity-btn, .cart-items__remove, [data-cart-remove], .cart-item__remove'
+          );
+          if (btn) {
+            triggerSyncDebounced(250);
+          }
+        });
+
+        // Light, non-capturing listener on change for quantity typing
+        document.addEventListener('change', function (e) {
+          const input = e.target.closest(
+            'input.quantity-selector__input, .quantity-selector input, input[name="updates[]"]'
+          );
+          if (input) {
+            triggerSyncDebounced(250);
+          }
+        });
+      })();
+    </script>
+
+    <!-- Load Konva.js -->
+    <script src="{{ 'konva.min.js' | asset_url }}" defer></script>
+  </body>
+</html>

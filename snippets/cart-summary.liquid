@@ -1,0 +1,393 @@
+{%- doc -%}
+  Renders the cart summary totals.
+
+  @param {string} [accelerated_checkout_buttons_layout] - { 'vertical' } Forced layout of the additional checkout buttons, instead of relying on platform's layout.
+  @param {string} [section_id] - The section ID for cart discount component.
+{%- enddoc -%}
+
+<div class="cart-totals">
+  {% # We need to keep this node in place to allow morphing to work properly # %}
+  <div class="cart-totals__original-container cart-primary-typography">
+    {%- if cart.cart_level_discount_applications.size > 0 -%}
+      <span class="cart-totals__item cart-totals__original">
+        <span class="cart-totals__original-label">{{ 'content.cart_subtotal' | t }}</span>
+        <span
+          class="cart-totals__original-value cart-secondary-typography"
+          data-testid="cart-subtotal-value"
+        >
+          {{- cart.items_subtotal_price | money -}}
+        </span>
+      </span>
+      <ul
+        class="cart-discounts"
+        role="list"
+        aria-label="{{ 'content.discounts' | t }}"
+      >
+        {%- for discount in cart.cart_level_discount_applications -%}
+          <li class="cart-discounts__item">
+            <span class="cart-discounts__label">
+              {{- 'icon-discount.svg' | inline_asset_content -}}
+              {{ discount.title | escape }}
+            </span>
+            <span class="cart-discounts__value cart-secondary-typography"
+              >-{{ discount.total_allocated_amount | money -}}
+            </span>
+          </li>
+        {%- endfor -%}
+      </ul>
+    {%- endif -%}
+  </div>
+
+  {% comment %} Gift Option Block with Tooltip Text {% endcomment %}
+  <div class="cart-actions" style="border: none; padding: 0; margin: 0;">
+    <style>
+      #gift-message-field { display: none; }
+      #gift-option-checkbox:checked + label + #gift-message-field,
+      #gift-option-checkbox:checked ~ #gift-message-field { display: block !important; }
+      textarea::placeholder { color: #999; }
+      .gift-tooltip-text {
+        color: #000000;
+        font-size: 14px;
+        font-weight: 400;
+        margin-top: 8px;
+        margin-bottom: 4px;
+        display: none;
+        text-align: left;
+      }
+      #gift-option-checkbox:checked ~ .gift-tooltip-text {
+        display: block;
+      }
+
+      /* Shipping Terms Checkbox & Dropdown Styles */
+      .shipping-terms-tooltip {
+        color: #000000;
+        font-size: 13px;
+        font-weight: 400;
+        line-height: 1.5;
+        margin-top: 8px;
+        margin-bottom: 4px;
+        display: none;
+        text-align: left;
+      }
+      #shipping-terms-checkbox:checked ~ .shipping-terms-tooltip {
+        display: block;
+      }
+      #shipping-terms-checkbox:checked ~ #shipping-terms-warning {
+        display: none;
+      }
+    </style>
+
+   
+
+    <div class="gift-option-wrapper" style="padding: 12px 0; border-top: 1px solid #e8e8e8; margin-top: 4px; text-align: left;">
+      <input 
+        type="checkbox" 
+        id="gift-option-checkbox"
+        name="attributes[is_gift]"
+        form="cart-form"
+        style="width: 16px; height: 16px; cursor: pointer; vertical-align: middle;"
+      />
+      <label for="gift-option-checkbox" style="cursor: pointer; font-size: 14px; margin-left: 8px;">
+        This is a gift 🎁
+      </label>
+
+      <!-- Tooltip text that appears on checkbox click -->
+      <div class="gift-tooltip-text">
+        We'll skip the price slip and tuck in a message card – on us!<br>
+        <span style="color: #000000; font-size: 14px; font-weight: 400;">Your message</span>
+      </div>
+
+      <div id="gift-message-field" style="margin-top: 8px;">
+        <textarea
+          name="attributes[gift_message]"
+          form="cart-form"
+          placeholder=""
+          rows="3"
+          style="width: 100%; padding: 10px; border: 1px solid #d9d9d9; border-radius: 6px; font-size: 13px; resize: none; box-sizing: border-box;"
+        ></textarea>
+      </div>
+    </div>
+
+    <div class="order-note-wrapper" style="padding: 12px 0; border-top: 1px solid #e8e8e8; margin-top: 4px;">
+      <p style="font-size: 13px; font-weight: 400; color: #000; margin-bottom: 6px; text-align: left; text-transform: none;">Anything we should know? <span style="color: #999;">(optional)</span></p>
+      <textarea
+        name="note"
+        form="cart-form"
+        placeholder=""
+        rows="3"
+        style="width: 100%; padding: 10px; border: 1px solid #d9d9d9; border-radius: 6px; font-size: 10px; resize: none; box-sizing: border-box; color: #000;"
+      >{{ cart.note }}</textarea>
+    </div>
+  </div>
+
+  {%- liquid
+    if settings.currency_code_enabled_cart_total
+      assign total_price = cart.total_price | money_with_currency
+    else
+      assign total_price = cart.total_price | money
+    endif
+  -%}
+
+  <div class="cart-totals__container{% if settings.show_installments %} cart-totals__container--has-installments{% endif %}">
+    <span
+      class="cart-totals__item cart-totals__total"
+      role="status"
+    >
+      <span class="cart-totals__total-label cart-primary-typography">{{ 'content.cart_estimated_total' | t }}</span>
+      <text-component
+        ref="cartTotal"
+        value="{{ total_price | strip_html }}"
+        class="cart-totals__total-value cart-secondary-typography"
+        data-testid="cart-total-value"
+        data-cart-subtotal
+      >
+        {{ total_price }}
+      </text-component>
+    </span>
+    {% if settings.show_installments %}
+      <span class="cart-totals__item cart-totals__installments">
+        {% form 'cart', cart %}
+          {{ form | payment_terms }}
+        {% endform %}
+      </span>
+    {% endif %}
+    <div class="cart-totals__item cart-totals__tax-note cart-primary-typography">
+      {% render 'tax-info', has_discounts_enabled: settings.show_add_discount_code %}
+    </div>
+     <!-- Shipping Terms Checkbox Block -->
+    {% comment %} <div class="shipping-terms-wrapper" style="padding: 12px 0; border-top: 1px solid #e8e8e8; margin-top: 4px; text-align: left;">
+      <input 
+        type="checkbox"
+        id="shipping-terms-checkbox"
+        name="attributes[agree_to_shipping_terms]"
+        value="Yes"
+        form="cart-form"
+        required
+        style="width: 16px; height: 16px; cursor: pointer; vertical-align: middle;"
+      />
+      <label for="shipping-terms-checkbox" style="cursor: pointer; font-size: 14px; margin-left: 8px;">
+        I agree to the shipping terms
+      </label>
+      
+      <!-- Shipping terms text that appears on checkbox click -->
+      <div class="shipping-terms-tooltip">
+        By checking this box, you agree to the following terms. Non-custom orders will ship within 2-3 working days and custom orders will ship within 5-10 working days. Items with an extended ship window will follow the shipping time listed on the product page. All items will ship together when the full order is complete. Double check your designs! Once orders are placed, we are unable to cancel or make any changes. All sale purchases are final sale.
+      </div>
+    </div> {% endcomment %}
+    {% comment %} <p id="" style="font-size: 10px; color: #000; font-weight: 400; margin: 8px 0 0 8px; text-align: left;">
+          "I agree to the shipping terms".
+      </p> {% endcomment %}
+  </div>
+</div>
+
+<div class="cart__ctas">
+  <button
+    type="submit"
+    id="checkout"
+    class="cart__checkout-button button"
+    name="checkout"
+    {% if cart.empty? %}
+      disabled
+    {% endif %}
+    form="cart-form"
+  >
+    <span class="button-text">
+      {{ 'content.checkout' | t }}
+    </span>
+  </button>
+  {% if additional_checkout_buttons and settings.show_accelerated_checkout_buttons %}
+    <div
+      class="
+        additional-checkout-buttons
+        {% if accelerated_checkout_buttons_layout == 'vertical' %}additional-checkout-buttons--vertical{% endif %}
+      "
+    >
+      {{ content_for_additional_checkout_buttons }}
+    </div>
+  {% endif %}
+</div>
+
+
+{% comment %} shipping checkout required js {% endcomment %}
+{% comment %} <script>
+document.addEventListener('DOMContentLoaded', function () {
+  const form = document.getElementById('cart-form');
+  const checkbox = document.getElementById('shipping-terms-checkbox');
+  const warningText = document.getElementById('shipping-terms-warning');
+
+  if (checkbox && warningText) {
+    checkbox.addEventListener('change', function () {
+      if (this.checked) {
+        warningText.style.display = 'none';
+      } else {
+        warningText.style.display = 'block';
+      }
+    });
+  }
+
+  if (form && checkbox) {
+    form.addEventListener('submit', function (e) {
+      if (!checkbox.checked) {
+        e.preventDefault();
+        alert('Please agree to the shipping terms before proceeding to checkout.');
+        checkbox.focus();
+      }
+    });
+  }
+});
+</script> {% endcomment %}
+
+{% comment %} shipping checkout required js end{% endcomment %}
+
+
+{% stylesheet %}
+  .cart-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    border-block: 1px solid var(--color-border);
+    padding-block: 0;
+    margin-block-start: var(--margin-3xs);
+  }
+
+  .cart-actions__divider {
+    border-block-start: 1px solid var(--color-border);
+  }
+
+  .cart-totals:not(:has(.cart-actions)) {
+    margin-block-start: var(--margin-3xs);
+    border-block-start: 1px solid var(--color-border);
+    padding-block-start: var(--margin-xl);
+  }
+
+  .cart-totals__item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .cart-totals__tax-note {
+    color: rgb(var(--color-foreground-rgb) / var(--opacity-subdued-text));
+  }
+
+  .cart-totals__tax-note small {
+    font-size: var(--font-size--2xs);
+  }
+
+  .cart-discounts {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+
+  .cart-discounts__item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .cart-discounts__label {
+    display: flex;
+    align-items: center;
+    gap: var(--gap-2xs);
+  }
+
+  .cart-discounts__label svg {
+    width: var(--icon-size-sm);
+    height: var(--icon-size-sm);
+    display: inline-block;
+  }
+
+  .cart-totals__original-container,
+  .cart-totals__container {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .cart-totals__container {
+    row-gap: var(--gap-2xs);
+
+    &.cart-totals__container--has-installments {
+      row-gap: var(--gap-xs);
+    }
+  }
+
+  .cart-totals__original-container:empty {
+    display: none;
+  }
+
+  .cart-totals {
+    display: flex;
+    flex-direction: column;
+    gap: var(--gap-xl);
+    width: 100%;
+    border-block-start: none;
+
+    &:has(> :first-child:not(.cart-totals__original-container, .cart-totals__container)) {
+      padding-block-start: 0;
+      border-block-start: none;
+    }
+
+    @media screen and (min-width: 750px) {
+      padding-block-start: 0;
+    }
+  }
+
+  .cart-totals__original-container,
+  .cart-totals__original-container * {
+    font-size: var(--cart-font-size--sm);
+  }
+
+  .cart-totals__total {
+    align-items: baseline;
+    font-weight: var(--font-weight-bold);
+  }
+
+  .cart-totals__total-label {
+    font-size: var(--cart-font-size--sm);
+  }
+
+  .cart-totals__total-value {
+    font-size: var(--cart-font-size--xl);
+
+    @media screen and (max-width: 749px) {
+      font-size: var(--font-size--lg);
+    }
+  }
+
+  .cart-totals__installments {
+    color: var(--color-foreground);
+    font-size: var(--font-size--2xs);
+  }
+
+  .cart-totals__icon {
+    height: var(--icon-size-xs);
+    width: var(--icon-size-xs);
+    margin: 0;
+  }
+
+  .cart__ctas {
+    width: 100%;
+    display: grid;
+    gap: var(--checkout-button-gap);
+    grid-auto-flow: row;
+    grid-template-columns: 1fr;
+  }
+
+  .cart__ctas .cart__checkout-button {
+    width: 100%;
+    height: clamp(25px, var(--height-buy-buttons), 55px);
+    padding-inline: var(--padding-4xl);
+  }
+
+  .cart-drawer__summary .cart-totals:not(:has(.cart-totals__original-container:empty)) {
+    border-block-start: var(--style-border-width) solid var(--color-border);
+    padding-block-start: var(--padding-2xl);
+  }
+
+  @media screen and (min-width: 750px) {
+    .cart-summary--extend {
+      height: 100%;
+    }
+  }
+{% endstylesheet %}

@@ -1,0 +1,761 @@
+{%- comment -%}
+  Advanced Image with Text — Split Hero Layout
+  Desktop: Left content | Right = background image (full height)
+  Mobile: Image top strip | Content below
+{%- endcomment -%}
+
+{%- style -%}
+
+  /* ── SECTION WRAPPER ── */
+  .custom-iwt-{{ section.id }} {
+    position: relative;
+    background-color: {{ section.settings.bg_color }};
+    min-height: {{ section.settings.section_height }}px;
+    display: flex;
+    align-items: stretch;
+    overflow: hidden;
+    {%- if section.settings.section_width == 'custom' -%}
+    max-width: {{ section.settings.custom_max_width }}px;
+    margin: 0 auto;
+    {%- endif -%}
+  }
+
+  /* ── SECTION BACKGROUND ── */
+  .custom-iwt-{{ section.id }} .iwt-section-bg {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 0;
+  }
+  .custom-iwt-{{ section.id }} .iwt-section-bg img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center;
+    display: block;
+  }
+
+  .custom-iwt-{{ section.id }} .iwt-section-bg img.hide-on-desktop {
+    display: none;
+  }
+
+  /* ── SIDE IMAGE ── */
+  .custom-iwt-{{ section.id }} .iwt-bg {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 52%;
+    height: 100%;
+    z-index: 1;
+  }
+
+  {%- if section.settings.layout == 'image_left' -%}
+  .custom-iwt-{{ section.id }} .iwt-bg {
+    right: auto;
+    left: 0;
+  }
+  {%- endif -%}
+
+  .custom-iwt-{{ section.id }} .iwt-bg img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center;
+    display: block;
+  }
+
+  /* column width overrides */
+  {%- if section.settings.column_width == '40/60' -%}
+    .custom-iwt-{{ section.id }} .iwt-bg { width: 60%; }
+    .custom-iwt-{{ section.id }} .iwt-content-col { width: 40%; }
+  {%- elsif section.settings.column_width == '60/40' -%}
+    .custom-iwt-{{ section.id }} .iwt-bg { width: 40%; }
+    .custom-iwt-{{ section.id }} .iwt-content-col { width: 60%; }
+  {%- else -%}
+    .custom-iwt-{{ section.id }} .iwt-bg { width: 50%; }
+    .custom-iwt-{{ section.id }} .iwt-content-col { width: 50%; }
+  {%- endif -%}
+
+  /* ── CONTENT COLUMN ── */
+  .custom-iwt-{{ section.id }} .iwt-content-col {
+    position: relative;
+    z-index: 2;
+    background-color: {%- if section.settings.section_bg_image != blank -%}transparent{%- else -%}{{ section.settings.bg_color }}{%- endif -%};
+    padding: {{ section.settings.padding_top }}px 60px {{ section.settings.padding_bottom }}px 60px;
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    {%- if section.settings.layout == 'image_left' -%}
+    margin-left: auto;
+    {%- endif -%}
+  }
+
+  .custom-iwt-{{ section.id }} .iwt-content-inner {
+    width: 100%;
+    max-width: 600px;
+    {%- if section.settings.layout == 'image_right' -%}
+    margin-right: auto;
+    {%- else -%}
+    margin-left: auto;
+    {%- endif -%}
+  }
+
+  /* ── HEADING ── */
+  .custom-iwt-{{ section.id }} .custom-iwt-heading {
+    font-size: {{ section.settings.heading_size }}px;
+    color: {{ section.settings.heading_color }};
+    font-weight: 800;
+    line-height: 1.1;
+    margin: 0 0 18px;
+  }
+
+  .custom-iwt-{{ section.id }} .custom-iwt-highlight {
+    color: {{ section.settings.highlight_color }};
+  }
+
+  /* ── DESCRIPTION ── */
+  .custom-iwt-{{ section.id }} .custom-iwt-desc {
+    font-size: {{ section.settings.text_size }}px;
+    color: {{ section.settings.text_color }};
+    line-height: 1.6;
+    margin-bottom: 26px;
+    text-align: left;
+  }
+
+  /* ── FEATURE GRID ── */
+  .custom-iwt-{{ section.id }} .custom-iwt-features {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 26px;
+  }
+
+  .custom-iwt-{{ section.id }} .custom-iwt-feature-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    border: 1.5px solid {{ section.settings.feature_border_color }};
+    border-radius: 8px;
+    background: {{ section.settings.feature_bg_color }};
+  }
+
+  .custom-iwt-{{ section.id }} .custom-iwt-feature-icon {
+    width: 32px;
+    height: 32px;
+    object-fit: contain;
+    flex-shrink: 0;
+  }
+
+  .custom-iwt-{{ section.id }} .custom-iwt-feature-text {
+    font-size: 14px;
+    font-weight: 600;
+    color: {{ section.settings.text_color }};
+    line-height: 1.35;
+  }
+
+  /* ── BUTTONS ── */
+  .custom-iwt-{{ section.id }} .custom-iwt-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 28px;
+  }
+
+  .custom-iwt-{{ section.id }} .custom-iwt-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 24px;
+    border-radius: 6px;
+    font-size: 15px;
+    font-weight: 700;
+    text-decoration: none;
+    transition: all 0.25s ease;
+    gap: 10px;
+    flex: 1;
+    min-width: 180px;
+  }
+
+  .custom-iwt-{{ section.id }} .custom-iwt-btn svg {
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+    transition: transform 0.25s ease;
+  }
+
+  .custom-iwt-{{ section.id }} .custom-iwt-btn:hover svg {
+    transform: translateX(4px);
+  }
+
+  .custom-iwt-{{ section.id }} .custom-iwt-btn-primary {
+    background-color: {{ section.settings.btn_1_bg }};
+    color: {{ section.settings.btn_1_text_color }};
+    border: 2px solid {{ section.settings.btn_1_bg }};
+  }
+
+  .custom-iwt-{{ section.id }} .custom-iwt-btn-primary:hover {
+    opacity: 0.88;
+    transform: translateY(-2px);
+  }
+
+  .custom-iwt-{{ section.id }} .custom-iwt-btn-secondary {
+    background-color: {{ section.settings.btn_2_bg }};
+    color: {{ section.settings.btn_2_text_color }};
+    border: 2px solid {{ section.settings.btn_2_border }};
+  }
+
+  .custom-iwt-{{ section.id }} .custom-iwt-btn-secondary:hover {
+    background-color: #f5f5f5;
+    transform: translateY(-2px);
+  }
+
+  /* ── FOOTER FEATURES ── */
+  .custom-iwt-{{ section.id }} .custom-iwt-footer-features {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: 20px;
+    border-top: 1px solid rgba(0,0,0,0.08);
+    padding-top: 20px;
+  }
+
+  .custom-iwt-{{ section.id }} .custom-iwt-footer-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .custom-iwt-{{ section.id }} .custom-iwt-footer-icon {
+    width: 28px;
+    height: 28px;
+    object-fit: contain;
+    flex-shrink: 0;
+  }
+
+  .custom-iwt-{{ section.id }} .custom-iwt-footer-text {
+    font-size: 12px;
+    line-height: 1.4;
+    color: {{ section.settings.text_color }};
+    opacity: 0.85;
+  }
+
+  .custom-iwt-{{ section.id }} .custom-iwt-footer-text strong {
+    display: block;
+    font-weight: 700;
+  }
+
+  /* ══════════════════════════════════
+     TABLET (≤ 900px)
+  ══════════════════════════════════ */
+  @media (max-width: 900px) {
+    .custom-iwt-{{ section.id }} {
+      flex-direction: column;
+      min-height: auto;
+    }
+
+    .custom-iwt-{{ section.id }} .iwt-section-bg {
+      position: relative;
+      width: 100%;
+      height: 52vw;
+      min-height: 280px;
+      max-height: 460px;
+    }
+
+    .custom-iwt-{{ section.id }} .iwt-section-bg img.hide-on-mobile {
+      display: none;
+    }
+
+    .custom-iwt-{{ section.id }} .iwt-section-bg img.hide-on-desktop {
+      display: block;
+    }
+
+    .custom-iwt-{{ section.id }} .iwt-bg {
+      position: relative;
+      width: 100% !important;
+      height: 52vw;
+      min-height: 280px;
+      max-height: 460px;
+      top: auto; right: auto; left: auto;
+    }
+
+    .custom-iwt-{{ section.id }} .iwt-content-col {
+      width: 100% !important;
+      margin-left: 0 !important;
+      padding: {{ section.settings.padding_top | times: 0.6 | round }}px 32px {{ section.settings.padding_bottom | times: 0.6 | round }}px;
+    }
+
+    .custom-iwt-{{ section.id }} .iwt-content-inner {
+      max-width: 100%;
+      margin: 0;
+    }
+
+    .custom-iwt-{{ section.id }} .custom-iwt-heading {
+      font-size: {{ section.settings.heading_size | times: 0.75 | round }}px;
+    }
+  }
+
+  /* ══════════════════════════════════
+     MOBILE (≤ 768px)
+  ══════════════════════════════════ */
+  @media (max-width: 768px) {
+    .custom-iwt-{{ section.id }} .iwt-section-bg,
+    .custom-iwt-{{ section.id }} .iwt-bg {
+      height: 62vw;
+      min-height: 220px;
+    }
+
+    .custom-iwt-{{ section.id }} .iwt-content-col {
+      padding: 28px 20px 32px;
+    }
+
+    .custom-iwt-{{ section.id }} .custom-iwt-heading {
+      font-size: 45px;
+      text-align: center;
+    }
+
+    .custom-iwt-{{ section.id }} .custom-iwt-features {
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .custom-iwt-{{ section.id }} .custom-iwt-feature-item {
+      padding: 10px 12px;
+    }
+
+    .custom-iwt-{{ section.id }} .custom-iwt-feature-text {
+      font-size: 13px;
+    }
+
+    .custom-iwt-{{ section.id }} .custom-iwt-buttons {
+      flex-direction: column;
+    }
+
+    .custom-iwt-{{ section.id }} .custom-iwt-btn {
+      width: 100%;
+      min-width: unset;
+      flex: none;
+      justify-content: center;
+    }
+
+    .custom-iwt-{{ section.id }} .custom-iwt-footer-features {
+      gap: 14px;
+    }
+  }
+
+{%- endstyle -%}
+
+<section class="custom-iwt-{{ section.id }}">
+
+  {%- comment -%} ── SECTION BACKGROUND IMAGE ── {%- endcomment -%}
+  {%- if section.settings.section_bg_image != blank or section.settings.section_bg_image_mobile != blank -%}
+    <div class="iwt-section-bg">
+      <div class="iwt-section-bg-overlay" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-color: {{ section.settings.overlay_color }}; opacity: {{ section.settings.overlay_opacity | divided_by: 100.0 }}; z-index: 1;"></div>
+      {%- if section.settings.section_bg_image != blank -%}
+        <img src="{{ section.settings.section_bg_image | image_url: width: 1800 }}" alt="{{ section.settings.section_bg_image.alt | escape }}" loading="eager" class="{% if section.settings.section_bg_image_mobile != blank %}hide-on-mobile{% endif %}">
+      {%- endif -%}
+      {%- if section.settings.section_bg_image_mobile != blank -%}
+        <img src="{{ section.settings.section_bg_image_mobile | image_url: width: 900 }}" alt="{{ section.settings.section_bg_image_mobile.alt | escape }}" loading="eager" class="hide-on-desktop">
+      {%- endif -%}
+    </div>
+  {%- endif -%}
+
+  {%- comment -%} ── SIDE IMAGE ── {%- endcomment -%}
+  {%- if section.settings.image != blank -%}
+    <div class="iwt-bg">
+      <img
+        src="{{ section.settings.image | image_url: width: 1800 }}"
+        alt="{{ section.settings.image.alt | escape }}"
+        loading="eager"
+        width="1800"
+        height="1200"
+      >
+    </div>
+  {%- endif -%}
+
+  {%- comment -%} ── CONTENT COLUMN ── {%- endcomment -%}
+  <div class="iwt-content-col">
+    <div class="iwt-content-inner">
+
+      {%- if section.settings.heading != blank -%}
+        <h2 class="custom-iwt-heading">
+          {%- assign highlight = section.settings.highlight_text -%}
+          {%- if highlight != blank -%}
+            {%- assign highlight_html = '<span class="custom-iwt-highlight">' | append: highlight | append: '</span>' -%}
+            {{ section.settings.heading | replace: highlight, highlight_html | newline_to_br }}
+          {%- else -%}
+            {{ section.settings.heading | newline_to_br }}
+          {%- endif -%}
+        </h2>
+      {%- endif -%}
+
+      {%- if section.settings.description != blank -%}
+        <div class="custom-iwt-desc">{{ section.settings.description | newline_to_br }}</div>
+      {%- endif -%}
+
+      {%- assign grid_features = section.blocks | where: 'type', 'grid_feature' -%}
+      {%- if grid_features.size > 0 -%}
+        <div class="custom-iwt-features">
+          {%- for block in grid_features -%}
+            <div class="custom-iwt-feature-item" {{ block.shopify_attributes }}>
+              {%- if block.settings.icon != blank -%}
+                <img src="{{ block.settings.icon | image_url: width: 80 }}" alt="" class="custom-iwt-feature-icon" loading="lazy">
+              {%- endif -%}
+              <div class="custom-iwt-feature-text">{{ block.settings.text | newline_to_br }}</div>
+            </div>
+          {%- endfor -%}
+        </div>
+      {%- endif -%}
+
+      <div class="custom-iwt-buttons">
+        {%- if section.settings.btn_1_text != blank -%}
+          <a href="{{ section.settings.btn_1_link | default: '#' }}" class="custom-iwt-btn custom-iwt-btn-primary">
+            <span>{{ section.settings.btn_1_text }}</span>
+            <svg viewBox="0 0 24 24" fill="none"><path d="M9 5L16 12L9 19" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </a>
+        {%- endif -%}
+        {%- if section.settings.btn_2_text != blank -%}
+          <a href="{{ section.settings.btn_2_link | default: '#' }}" class="custom-iwt-btn custom-iwt-btn-secondary">
+            <span>{{ section.settings.btn_2_text }}</span>
+            <svg viewBox="0 0 24 24" fill="none"><path d="M9 5L16 12L9 19" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </a>
+        {%- endif -%}
+      </div>
+
+      {%- assign footer_features = section.blocks | where: 'type', 'footer_feature' -%}
+      {%- if footer_features.size > 0 -%}
+        <div class="custom-iwt-footer-features">
+          {%- for block in footer_features -%}
+            <div class="custom-iwt-footer-item" {{ block.shopify_attributes }}>
+              {%- if block.settings.icon != blank -%}
+                <img src="{{ block.settings.icon | image_url: width: 60 }}" alt="" class="custom-iwt-footer-icon" loading="lazy">
+              {%- endif -%}
+              <div class="custom-iwt-footer-text">{{ block.settings.text }}</div>
+            </div>
+          {%- endfor -%}
+        </div>
+      {%- endif -%}
+
+    </div>
+  </div>
+
+</section>
+
+{% schema %}
+{
+  "name": "Advanced Image with Text",
+  "settings": [
+    {
+      "type": "header",
+      "content": "🖼️ Layout"
+    },
+    {
+      "type": "select",
+      "id": "section_width",
+      "label": "Section Width",
+      "options": [
+        { "value": "full", "label": "Full Width" },
+        { "value": "custom", "label": "Custom Width" }
+      ],
+      "default": "full"
+    },
+    {
+      "type": "range",
+      "id": "custom_max_width",
+      "label": "Custom Max Width",
+      "min": 800,
+      "max": 1800,
+      "step": 50,
+      "unit": "px",
+      "default": 1200
+    },
+    {
+      "type": "select",
+      "id": "layout",
+      "label": "Image Position",
+      "options": [
+        { "value": "image_right", "label": "Image Right" },
+        { "value": "image_left", "label": "Image Left" }
+      ],
+      "default": "image_right"
+    },
+    {
+      "type": "select",
+      "id": "column_width",
+      "label": "Column Width Split (Desktop)",
+      "options": [
+        { "value": "50/50", "label": "50% / 50%" },
+        { "value": "40/60", "label": "40% Content / 60% Image" },
+        { "value": "60/40", "label": "60% Content / 40% Image" }
+      ],
+      "default": "50/50"
+    },
+    {
+      "type": "range",
+      "id": "section_height",
+      "label": "Min Section Height (Desktop)",
+      "min": 400,
+      "max": 1000,
+      "step": 20,
+      "unit": "px",
+      "default": 620
+    },
+    {
+      "type": "range",
+      "id": "padding_top",
+      "label": "Content Padding Top",
+      "min": 20,
+      "max": 120,
+      "step": 4,
+      "unit": "px",
+      "default": 60
+    },
+    {
+      "type": "range",
+      "id": "padding_bottom",
+      "label": "Content Padding Bottom",
+      "min": 20,
+      "max": 120,
+      "step": 4,
+      "unit": "px",
+      "default": 60
+    },
+    {
+      "type": "header",
+      "content": "🖼️ Side Image"
+    },
+    {
+      "type": "image_picker",
+      "id": "image",
+      "label": "Side Image"
+    },
+    {
+      "type": "header",
+      "content": "🖼️ Section Background"
+    },
+    {
+      "type": "image_picker",
+      "id": "section_bg_image",
+      "label": "Section Background Image (Desktop)"
+    },
+    {
+      "type": "image_picker",
+      "id": "section_bg_image_mobile",
+      "label": "Section Background Image (Mobile)"
+    },
+    {
+      "type": "color",
+      "id": "overlay_color",
+      "label": "Background Overlay Color",
+      "default": "#000000"
+    },
+    {
+      "type": "range",
+      "id": "overlay_opacity",
+      "label": "Background Overlay Opacity",
+      "min": 0,
+      "max": 100,
+      "step": 5,
+      "unit": "%",
+      "default": 40
+    },
+    {
+      "type": "header",
+      "content": "📝 Content"
+    },
+    {
+      "type": "textarea",
+      "id": "heading",
+      "label": "Heading",
+      "default": "Smoke Alarms\nMade Simple."
+    },
+    {
+      "type": "text",
+      "id": "highlight_text",
+      "label": "Highlight Word (exact match from heading)",
+      "default": "Simple.",
+      "info": "Type the exact word/phrase to colorize"
+    },
+    {
+      "type": "color",
+      "id": "highlight_color",
+      "label": "Highlight Color",
+      "default": "#e60000"
+    },
+    {
+      "type": "textarea",
+      "id": "description",
+      "label": "Description",
+      "default": "Wireless interconnected smoke alarm kits designed\nto help many Australian homes upgrade quickly and simply."
+    },
+    {
+      "type": "header",
+      "content": "🔘 Buttons"
+    },
+    {
+      "type": "text",
+      "id": "btn_1_text",
+      "label": "Primary Button Text",
+      "default": "Find the Right Home Kit"
+    },
+    {
+      "type": "url",
+      "id": "btn_1_link",
+      "label": "Primary Button Link"
+    },
+    {
+      "type": "text",
+      "id": "btn_2_text",
+      "label": "Secondary Button Text",
+      "default": "Smoke Alarm Calculator"
+    },
+    {
+      "type": "url",
+      "id": "btn_2_link",
+      "label": "Secondary Button Link"
+    },
+    {
+      "type": "header",
+      "content": "🎨 Colors"
+    },
+    {
+      "type": "color",
+      "id": "bg_color",
+      "label": "Content Side Background",
+      "default": "#ffffff"
+    },
+    {
+      "type": "color",
+      "id": "heading_color",
+      "label": "Heading Color",
+      "default": "#000000"
+    },
+    {
+      "type": "color",
+      "id": "text_color",
+      "label": "Text / Feature Color",
+      "default": "#333333"
+    },
+    {
+      "type": "color",
+      "id": "feature_border_color",
+      "label": "Feature Card Border",
+      "default": "#e0e0e0"
+    },
+    {
+      "type": "color",
+      "id": "feature_bg_color",
+      "label": "Feature Card Background",
+      "default": "#ffffff"
+    },
+    {
+      "type": "color",
+      "id": "btn_1_bg",
+      "label": "Primary Button Background",
+      "default": "#d10000"
+    },
+    {
+      "type": "color",
+      "id": "btn_1_text_color",
+      "label": "Primary Button Text Color",
+      "default": "#ffffff"
+    },
+    {
+      "type": "color",
+      "id": "btn_2_bg",
+      "label": "Secondary Button Background",
+      "default": "#ffffff"
+    },
+    {
+      "type": "color",
+      "id": "btn_2_text_color",
+      "label": "Secondary Button Text Color",
+      "default": "#000000"
+    },
+    {
+      "type": "color",
+      "id": "btn_2_border",
+      "label": "Secondary Button Border",
+      "default": "#000000"
+    },
+    {
+      "type": "header",
+      "content": "✍️ Typography"
+    },
+    {
+      "type": "range",
+      "id": "heading_size",
+      "label": "Heading Size (Desktop)",
+      "min": 24,
+      "max": 80,
+      "step": 2,
+      "unit": "px",
+      "default": 52
+    },
+    {
+      "type": "range",
+      "id": "text_size",
+      "label": "Description Size",
+      "min": 12,
+      "max": 24,
+      "step": 1,
+      "unit": "px",
+      "default": 16
+    }
+  ],
+  "blocks": [
+    {
+      "type": "grid_feature",
+      "name": "Feature Card (2×2 Grid)",
+      "limit": 6,
+      "settings": [
+        {
+          "type": "image_picker",
+          "id": "icon",
+          "label": "Icon Image"
+        },
+        {
+          "type": "textarea",
+          "id": "text",
+          "label": "Feature Text",
+          "default": "Fast DIY Install"
+        }
+      ]
+    },
+    {
+      "type": "footer_feature",
+      "name": "Footer Info Item",
+      "limit": 5,
+      "settings": [
+        {
+          "type": "image_picker",
+          "id": "icon",
+          "label": "Icon Image"
+        },
+        {
+          "type": "html",
+          "id": "text",
+          "label": "Text (HTML allowed)",
+          "default": "<strong>Designed for</strong><br>Australian homes"
+        }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "Advanced Image with Text",
+      "blocks": [
+        { "type": "grid_feature", "settings": { "text": "Fast DIY Install" } },
+        { "type": "grid_feature", "settings": { "text": "Australian Compliant\n(AS: 3786:2014)" } },
+        { "type": "grid_feature", "settings": { "text": "10-Year Sealed Battery" } },
+        { "type": "grid_feature", "settings": { "text": "Supplied Interconnected\n& Install-ready" } },
+        { "type": "footer_feature", "settings": { "text": "<strong>Designed for</strong><br>Australian homes" } },
+        { "type": "footer_feature", "settings": { "text": "<strong>Trusted by</strong><br>Australians" } },
+        { "type": "footer_feature", "settings": { "text": "<strong>Support before you buy</strong><br>Need help choosing a kit?" } }
+      ]
+    }
+  ]
+}
+{% endschema %}

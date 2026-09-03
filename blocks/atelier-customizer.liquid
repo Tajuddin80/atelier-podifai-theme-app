@@ -1,0 +1,98 @@
+{% render 'atelier-customizer', block: block %}
+
+{% schema %}
+{
+  "name": "Atelier Customizer",
+  "settings": [
+    {
+      "type": "header",
+      "content": "Cloud Image Hosting (Optional - Cloudinary Direct)"
+    },
+    {
+      "type": "text",
+      "id": "cloudinary_cloud_name",
+      "label": "Cloudinary Cloud Name",
+      "info": "Your free Cloudinary Cloud Name (e.g. demo or my-store)",
+      "default": "tifgkltm"
+    },
+    {
+      "type": "text",
+      "id": "cloudinary_upload_preset",
+      "label": "Cloudinary Unsigned Upload Preset",
+      "info": "Your unsigned upload preset name (e.g. unsigned_presets)",
+      "default": "shopify_preset_podifai"
+    },
+    {
+      "type": "header",
+      "content": "Pricing & Checkout Surcharge Addons"
+    },
+    {
+      "type": "checkbox",
+      "id": "enable_addon_surcharges",
+      "label": "Charge Surcharges at Checkout via Addons",
+      "default": true,
+      "info": "Automatically bundles patch and embroidery fees into checkout"
+    },
+    {
+      "type": "product",
+      "id": "patch_addon_product",
+      "label": "Patch Surcharge Product",
+      "info": "Select the addon product priced per patch (e.g. $6.00)"
+    },
+    {
+      "type": "product",
+      "id": "embroidery_addon_product",
+      "label": "Embroidery Surcharge Product",
+      "info": "Select the addon product priced per embroidery text (e.g. $20.00)"
+    },
+    {
+      "type": "text",
+      "id": "patch_addon_variant_id",
+      "label": "Direct Patch Addon Variant ID (Optional)",
+      "info": "Paste the numerical Variant ID (e.g. 45678901234) if using direct ID"
+    },
+    {
+      "type": "text",
+      "id": "embroidery_addon_variant_id",
+      "label": "Direct Embroidery Addon Variant ID (Optional)",
+      "info": "Paste the numerical Variant ID (e.g. 45678901235) if using direct ID"
+    },
+    {
+      "type": "text",
+      "id": "currency_symbol",
+      "label": "Currency Symbol / Prefix",
+      "default": "RM"
+    },
+    {
+      "type": "text",
+      "id": "patch_unit_price",
+      "label": "Fallback Patch Price Per Item",
+      "default": "6.00"
+    },
+    {
+      "type": "text",
+      "id": "patch_label_text",
+      "label": "Patch Sublabel Text",
+      "default": "Choose your patches:"
+    },
+    {
+      "type": "text",
+      "id": "embroidery_unit_price",
+      "label": "Fallback Embroidery Price Per Text",
+      "default": "20.00"
+    },
+    {
+      "type": "text",
+      "id": "embroidery_heading_text",
+      "label": "Embroidery Section Title",
+      "default": "Select Embroidery"
+    },
+    {
+      "type": "text",
+      "id": "text_input_label_text",
+      "label": "Text Field Label",
+      "default": "Enter Text (Up to 10 characters):"
+    }
+  ]
+}
+{% endschema %}

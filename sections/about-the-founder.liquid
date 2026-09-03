@@ -1,0 +1,343 @@
+{% comment %}
+  Nouvelle Naturals Inspired - Minimal Luxury "Our Story" Section
+  Features: Section Width Control, Full Typography Size & Color Controls, Custom Border Radius.
+{% endcomment %}
+
+<div id="NouvelleStory-{{ section.id }}" class="nouvelle-story-section">
+  <div class="nouvelle-story-container" style="max-width: {{ section.settings.container_width }}px;">
+    
+    <div class="nouvelle-story-header">
+      {% if section.settings.sub_label != blank %}
+        <span class="nouvelle-story-meta">{{ section.settings.sub_label | uppercase }}</span>
+      {% endif %}
+      
+      {% if section.settings.heading != blank %}
+        <h2 class="nouvelle-story-title">{{ section.settings.heading }}</h2>
+      {% endif %}
+      
+      {% if section.settings.description != blank %}
+        <div class="nouvelle-story-desc">
+          {{ section.settings.description }}
+        </div>
+      {% endif %}
+    </div>
+
+    <div class="nouvelle-story-banner" style="border-radius: {{ section.settings.box_border_radius }}px;">
+      {% if section.settings.banner_image != blank %}
+        <img 
+          src="{{ section.settings.banner_image | image_url: width: 1600 }}" 
+          alt="{{ section.settings.banner_image.alt | escape }}" 
+          loading="lazy"
+          class="nouvelle-banner-img"
+        >
+      {% else %}
+        <div class="nouvelle-story-placeholder">
+          <span class="placeholder-text-center">{{ section.settings.placeholder_text }}</span>
+        </div>
+      {% endif %}
+    </div>
+
+  </div>
+</div>
+
+{% style %}
+#NouvelleStory-{{ section.id }} {
+  background-color: {{ section.settings.bg_color }};
+  padding-top: {{ section.settings.padding_top }}px;
+  padding-bottom: {{ section.settings.padding_bottom }}px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+#NouvelleStory-{{ section.id }} .nouvelle-story-container {
+  margin: 0 auto;
+  padding: 0 24px;
+  box-sizing: border-box;
+}
+
+#NouvelleStory-{{ section.id }} .nouvelle-story-header {
+  text-align: center;
+  max-width: 720px;
+  margin: 0 auto {{ section.settings.header_margin_bottom }}px auto;
+}
+
+/* 1. Sub-label Style Control */
+#NouvelleStory-{{ section.id }} .nouvelle-story-meta {
+  display: block;
+  font-family: Newsreader, thin, serif;
+  font-size: {{ section.settings.sub_label_size }}px;
+  color: {{ section.settings.sub_label_color }};
+  letter-spacing: 3px;
+  margin-bottom: 20px;
+  font-weight: 500;
+}
+
+/* 2. Main Heading Style Control */
+#NouvelleStory-{{ section.id }} .nouvelle-story-title {
+  font-family: Newsreader, serif;
+  font-size: {{ section.settings.title_size }}px;
+  color: {{ section.settings.title_color }};
+  font-weight: 400;
+  line-height: 1.25;
+  margin: 0 0 25px 0;
+  letter-spacing: -0.5px;
+}
+
+/* Italic Accent Inside Heading */
+#NouvelleStory-{{ section.id }} .nouvelle-story-title em {
+  font-style: italic;
+  color: {{ section.settings.italic_accent_color }};
+  font-family: Newsreader, serif;
+}
+
+/* 3. Description/Body Style Control */
+#NouvelleStory-{{ section.id }} .nouvelle-story-desc {
+  font-family: "Red Hat Text", sans-serif;
+  font-size: {{ section.settings.desc_size }}px;
+  color: {{ section.settings.desc_color }};
+  line-height: 1.6;
+}
+
+#NouvelleStory-{{ section.id }} .nouvelle-story-desc p {
+  margin: 0;
+}
+
+/* Banner Box Layout */
+#NouvelleStory-{{ section.id }} .nouvelle-story-banner {
+  width: 100%;
+  position: relative;
+  overflow: hidden;
+  background: {{ section.settings.box_bg_gradient }};
+  aspect-ratio: 16 / 9;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.02);
+}
+
+#NouvelleStory-{{ section.id }} .nouvelle-banner-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+#NouvelleStory-{{ section.id }} .nouvelle-story-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#NouvelleStory-{{ section.id }} .placeholder-text-center {
+  font-family: 'Georgia', serif;
+  font-style: italic;
+  font-size: 0.95rem;
+  letter-spacing: 2px;
+  color: {{ section.settings.title_color }};
+  opacity: 0.4;
+  text-transform: uppercase;
+}
+
+/* Responsive Mobile Scaling Rules */
+@media screen and (max-width: 767px) {
+  #NouvelleStory-{{ section.id }} .nouvelle-story-banner {
+    aspect-ratio: 4 / 3;
+  }
+  #NouvelleStory-{{ section.id }} .nouvelle-story-title {
+    /* Mobile-এ ফন্ট সাইজ অটোমেটিক কিছুটা স্কেল ডাউন হবে যাতে স্ক্রিন ভেঙে না যায় */
+    font-size: max(1.6rem, calc({{ section.settings.title_size }}px * 0.75));
+  }
+  #NouvelleStory-{{ section.id }} .nouvelle-story-desc {
+    font-size: max(0.95rem, calc({{ section.settings.desc_size }}px * 0.9));
+  }
+}
+{% endstyle %}
+
+{% schema %}
+{
+  "name": "Our Story Banner",
+  "settings": [
+    {
+      "type": "header",
+      "content": "Layout Width Settings"
+    },
+    {
+      "type": "range",
+      "id": "container_width",
+      "min": 800,
+      "max": 1600,
+      "step": 50,
+      "unit": "px",
+      "label": "Section Content Max Width",
+      "default": 1100
+    },
+    {
+      "type": "header",
+      "content": "Text Contents"
+    },
+    {
+      "type": "text",
+      "id": "sub_label",
+      "label": "Top Subtitle Tag",
+      "default": "OUR STORY"
+    },
+    {
+      "type": "inline_richtext",
+      "id": "heading",
+      "label": "Main Headline Title",
+      "default": "A quiet rebellion against <em>harsh</em> hair routines."
+    },
+    {
+      "type": "richtext",
+      "id": "description",
+      "label": "Paragraph Description",
+      "default": "<p>Nouvelle Naturals began with a single belief: that nature already knows how to grow strong, healthy hair — we just have to listen.</p>"
+    },
+    {
+      "type": "header",
+      "content": "🛠️ Typography Size & Color Controls"
+    },
+    {
+      "type": "paragraph",
+      "content": "এখানে আপনি টেক্সটের সাইজ এবং কালার কাস্টমাইজ করতে পারবেন।"
+    },
+    {
+      "type": "range",
+      "id": "sub_label_size",
+      "min": 10,
+      "max": 24,
+      "step": 1,
+      "unit": "px",
+      "label": "Subtitle (Top Tag) Font Size",
+      "default": 14
+    },
+    {
+      "type": "color",
+      "id": "sub_label_color",
+      "label": "Subtitle Color",
+      "default": "#2c3e2b"
+    },
+    {
+      "type": "range",
+      "id": "title_size",
+      "min": 24,
+      "max": 72,
+      "step": 2,
+      "unit": "px",
+      "label": "Main Heading Font Size (Desktop)",
+      "default": 42
+    },
+    {
+      "type": "color",
+      "id": "title_color",
+      "label": "Main Heading Color",
+      "default": "#2c3e2b"
+    },
+    {
+      "type": "color",
+      "id": "italic_accent_color",
+      "label": "Italicized Word (Accent) Color",
+      "default": "#607256",
+      "info": "Heading-এর ভেতর <em>ট্যাগ</em> বা ইতালিক করা শব্দের কালার।"
+    },
+    {
+      "type": "range",
+      "id": "desc_size",
+      "min": 14,
+      "max": 28,
+      "step": 1,
+      "unit": "px",
+      "label": "Description Font Size",
+      "default": 16
+    },
+    {
+      "type": "color",
+      "id": "desc_color",
+      "label": "Description Color",
+      "default": "#2c3e2b"
+    },
+    {
+      "type": "header",
+      "content": "Banner Media Assets"
+    },
+    {
+      "type": "image_picker",
+      "id": "banner_image",
+      "label": "Main Portrait/Banner Image"
+    },
+    {
+      "type": "text",
+      "id": "placeholder_text",
+      "label": "Placeholder Center Text",
+      "default": "— FOUNDER PORTRAIT —"
+    },
+    {
+      "type": "range",
+      "id": "box_border_radius",
+      "min": 0,
+      "max": 40,
+      "step": 2,
+      "unit": "px",
+      "label": "Banner Box Corner Smoothness",
+      "default": 16
+    },
+    {
+      "type": "header",
+      "content": "Outer Section Styling"
+    },
+    {
+      "type": "color",
+      "id": "bg_color",
+      "label": "Outer Section Background",
+      "default": "#fbf9f6"
+    },
+    {
+      "type": "text",
+      "id": "box_bg_gradient",
+      "label": "Placeholder Custom CSS Gradient",
+      "default": "linear-gradient(135deg, #cbd4c5 0%, #9fae96 100%)"
+    },
+    {
+      "type": "header",
+      "content": "Padding Grid Management"
+    },
+    {
+      "type": "range",
+      "id": "padding_top",
+      "min": 20,
+      "max": 140,
+      "step": 5,
+      "unit": "px",
+      "label": "Section Upper Space",
+      "default": 80
+    },
+    {
+      "type": "range",
+      "id": "padding_bottom",
+      "min": 20,
+      "max": 140,
+      "step": 5,
+      "unit": "px",
+      "label": "Section Lower Space",
+      "default": 80
+    },
+    {
+      "type": "range",
+      "id": "header_margin_bottom",
+      "min": 20,
+      "max": 80,
+      "step": 5,
+      "unit": "px",
+      "label": "Header to Banner Gap Control",
+      "default": 45
+    }
+  ],
+  "presets": [
+    {
+      "name": "Our Story Banner"
+    }
+  ]
+}
+{% endschema %}

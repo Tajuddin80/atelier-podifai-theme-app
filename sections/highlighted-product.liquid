@@ -1,0 +1,682 @@
+{%- style -%}
+  #shopify-section-{{ section.id }} {
+    background-color: {{ section.settings.bg_color }};
+    padding-top: {{ section.settings.padding_top_mobile }}px;
+    padding-bottom: {{ section.settings.padding_bottom_mobile }}px;
+  }
+
+  @media screen and (min-width: 750px) {
+    #shopify-section-{{ section.id }} {
+      padding-top: {{ section.settings.padding_top_desktop }}px;
+      padding-bottom: {{ section.settings.padding_bottom_desktop }}px;
+    }
+  }
+
+  .ritual-outer-{{ section.id }} {
+    max-width: {{ section.settings.container_width }}px;
+    margin: 0 auto;
+    padding: 0 20px;
+    box-sizing: border-box;
+    text-align: center;
+  }
+
+  .ritual-top-subheading-{{ section.id }} {
+    font-size: {{ section.settings.top_sub_fs }}px;
+    color: {{ section.settings.top_sub_color }};
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    margin-bottom: 12px;
+    display: block;
+  }
+
+  .ritual-top-heading-{{ section.id }} {
+    font-size: {{ section.settings.top_head_fs_mobile }}px;
+    color: {{ section.settings.top_head_color }};
+    line-height: 1.2;
+    margin-bottom: 40px;
+    font-weight: 400;
+    font-family: serif;
+  }
+
+  @media screen and (min-width: 750px) {
+    .ritual-top-heading-{{ section.id }} {
+      font-size: {{ section.settings.top_head_fs_desktop }}px;
+    }
+  }
+
+  /* Main Luxury Floating Card Wrapper */
+  .ritual-card-{{ section.id }} {
+    background-color: {{ section.settings.card_bg_color }};
+    border-radius: {{ section.settings.card_border_radius }}px;
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 30px;
+    text-align: left;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.015);
+    margin: 0 auto;
+    max-width: 1170px;
+  }
+
+  /* Left Side - Dynamic Image Slot */
+  .ritual-image-zone-{{ section.id }} {
+    width: 100%;
+    border-radius: {{ section.settings.image_border_radius }}px;
+    overflow: hidden;
+    background-color: #cbd4c5; /* Sophisticated brand fallback tint */
+    aspect-ratio: 1 / 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .ritual-image-zone-{{ section.id }} img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+
+  .ritual-image-zone-{{ section.id }} svg {
+    width: 50%;
+    height: 50%;
+    fill: #7a8a75;
+  }
+
+  /* Right Side - Content Configurations */
+  .ritual-content-zone-{{ section.id }} {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+
+  .ritual-card-subheading-{{ section.id }} {
+    font-size: 11px;
+    color: {{ section.settings.top_sub_color }};
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    margin-bottom: 12px;
+    display: block;
+  }
+
+  .ritual-card-heading-{{ section.id }} {
+    font-size: {{ section.settings.card_head_fs_mobile }}px;
+    color: {{ section.settings.top_head_color }};
+    margin: 0 0 16px 0;
+    font-weight: 400;
+    line-height: 1.3;
+  }
+
+  .ritual-card-desc-{{ section.id }} {
+    font-size: {{ section.settings.card_desc_fs }}px;
+    color: {{ section.settings.desc_color }};
+    line-height: 1.6;
+    margin: 0 0 24px 0;
+  }
+
+  /* Pricing Box Engine */
+  .ritual-price-wrapper-{{ section.id }} {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 24px;
+  }
+
+  .ritual-price-current-{{ section.id }} {
+    font-size: 24px;
+    color: {{ section.settings.top_head_color }};
+    font-weight: 400;
+  }
+
+  .ritual-price-compare-{{ section.id }} {
+    font-size: 18px;
+    color: #8c8c8c;
+    text-decoration: line-through;
+  }
+
+  .ritual-save-badge-{{ section.id }} {
+    background-color: {{ section.settings.badge_bg_color }};
+    color: {{ section.settings.badge_text_color }};
+    font-size: 11px;
+    font-weight: 600;
+    padding: 4px 10px;
+    border-radius: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  /* Variant Selector Engine */
+  .ritual-variant-wrapper-{{ section.id }} {
+    margin-bottom: 20px;
+  }
+  
+  .ritual-variant-wrapper-{{ section.id }} select {
+    width: 68%;
+    padding: 12px 16px;
+    border-radius: 6px;
+    border: 1px solid #ccc;
+    background-color: #fff;
+    font-size: 14px;
+    color: {{ section.settings.desc_color }};
+    cursor: pointer;
+  }
+
+  /* Combo Features Custom List */
+  .ritual-features-list-{{ section.id }} {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 35px 0;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .ritual-feature-item-{{ section.id }} {
+    font-size: {{ section.settings.feature_fs }}px;
+    color: {{ section.settings.desc_color }};
+    display: flex;
+    align-items: center;
+  }
+
+  /* Direct Checkout Luxury Button Styling */
+  .ritual-checkout-btn-{{ section.id }} {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 58%;
+    background-color: {{ section.settings.btn_bg_color }};
+    color: {{ section.settings.btn_text_color }};
+    border: none;
+    border-radius: 50px;
+    padding: 16px 32px;
+    font-size: 15px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-weight: 400;
+    text-decoration: none;
+    text-align: center;
+    box-sizing: border-box;
+    transition: opacity 0.2s ease-in-out;
+    cursor: pointer;
+  }
+
+  .ritual-checkout-btn-{{ section.id }}:hover {
+    opacity: 0.95;
+    text-decoration: none;
+    color: {{ section.settings.btn_text_color }};
+  }
+
+  /* Desktop Grid Layout Engine */
+  @media screen and (min-width: 750px) {
+    .ritual-card-{{ section.id }} {
+      padding: 40px;
+      flex-direction: row;
+      align-items: stretch;
+    }
+
+    .ritual-image-zone-{{ section.id }} {
+      flex: 0 0 42%;
+      width: 42%;
+    }
+
+    .ritual-content-zone-{{ section.id }} {
+      flex: 0 0 58%;
+      width: 58%;
+      padding-left: 40px;
+      box-sizing: border-box;
+    }
+
+    .ritual-card-heading-{{ section.id }} {
+      font-size: {{ section.settings.card_head_fs_desktop }}px;
+    }
+  }
+
+  @media(max-width: 768px){
+    .ritual-checkout-btn-{{ section.id }} {
+      width: 100% !important;
+      padding: 18px;
+    }
+  }
+
+{%- endstyle -%}
+
+{%- assign product = all_products[section.settings.featured_product] -%}
+{%- assign variant = product.selected_or_first_available_variant -%}
+
+<div class="ritual-section-wrapper">
+  <div class="ritual-outer-{{ section.id }}">
+    
+    {%- if section.settings.top_subheading != blank -%}
+      <span class="ritual-top-subheading-{{ section.id }}">{{ section.settings.top_subheading }}</span>
+    {%- endif -%}
+    {%- if section.settings.top_heading != blank -%}
+      <h2 class="ritual-top-heading-{{ section.id }}">{{ section.settings.top_heading }}</h2>
+    {%- endif -%}
+
+    <div class="ritual-card-{{ section.id }}">
+      
+      <div class="ritual-image-zone-{{ section.id }}">
+        {%- if product.featured_image != blank -%}
+          <img src="{{ product.featured_image | image_url: width: 800 }}" alt="{{ product.title | escape }}" loading="lazy">
+        {%- else -%}
+          {{ 'product-1' | placeholder_svg_tag }}
+        {%- endif -%}
+      </div>
+
+      <div class="ritual-content-zone-{{ section.id }}">
+        {%- if section.settings.card_subheading != blank -%}
+          <span class="ritual-card-subheading-{{ section.id }}">{{ section.settings.card_subheading }}</span>
+        {%- endif -%}
+
+        <h3 class="ritual-card-heading-{{ section.id }}">
+          {%- if section.settings.custom_title != blank -%}
+            {{ section.settings.custom_title }}
+          {%- elsif product != blank -%}
+            {{ product.title }}
+          {%- else -%}
+            Hair Growth Spray + Scalp Brush
+          {%- endif -%}
+        </h3>
+
+        <div class="ritual-card-desc-{{ section.id }}">
+          {%- if section.settings.custom_description != blank -%}
+            {{ section.settings.custom_description }}
+          {%- elsif product != blank -%}
+            {{ product.description | strip_html | truncatewords: 25 }}
+          {%- else -%}
+            A complete two-step ritual — thoughtfully paired to nourish, stimulate, and support stronger-feeling hair.
+          {%- endif -%}
+        </div>
+
+        <div class="ritual-price-wrapper-{{ section.id }}">
+          {%- if product != blank -%}
+            <span class="ritual-price-current-{{ section.id }}">{{ variant.price | money }}</span>
+            {%- if variant.compare_at_price > variant.price -%}
+              <span class="ritual-price-compare-{{ section.id }}">{{ variant.compare_at_price | money }}</span>
+              {%- assign savings = variant.compare_at_price | minus: variant.price -%}
+              <span class="ritual-save-badge-{{ section.id }}">SAVE {{ savings | money }}</span>
+            {%- endif -%}
+          {%- else -%}
+            <span class="ritual-price-current-{{ section.id }}">€64.00</span>
+            <span class="ritual-price-compare-{{ section.id }}">€82.00</span>
+            <span class="ritual-save-badge-{{ section.id }}">SAVE €18.00</span>
+          {%- endif -%}
+        </div>
+
+        {%- if section.settings.show_variant_select and product.variants.size > 1 -%}
+          <div class="ritual-variant-wrapper-{{ section.id }}">
+            <select class="ritual-variant-picker-select" data-section-id="{{ section.id }}">
+              {%- for v in product.variants -%}
+                <option value="{{ v.id }}" {% if v.id == variant.id %}selected="selected"{% endif %}>
+                  {{ v.title }} - {{ v.price | money }}
+                </option>
+              {%- endfor -%}
+            </select>
+          </div>
+        {%- endif -%}
+
+        {%- if section.blocks.size > 0 -%}
+          <ul class="ritual-features-list-{{ section.id }}">
+            {%- for block in section.blocks -%}
+              <li class="ritual-feature-item-{{ section.id }}" {{ block.shopify_attributes }}>
+                —&nbsp;{{ block.settings.item_text }}
+              </li>
+            {%- endfor -%}
+          </ul>
+        {%- endif -%}
+
+        <a href="{{ section.settings.button_link | default: '#' }}" class="ritual-checkout-btn-{{ section.id }}">
+          {{ section.settings.btn_label }} 
+          {% comment %} {%- if product != blank -%} — <span class="ritual-btn-price-{{ section.id }}">{{ variant.price | money }}</span>{%- endif -%} {% endcomment %}
+        </a>
+
+      </div>
+    </div>
+
+  </div>
+</div>
+
+{%- if product != blank -%}
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      const selectPicker = document.querySelector('.ritual-variant-wrapper-{{ section.id }} .ritual-variant-picker-select');
+      if (selectPicker) {
+        selectPicker.addEventListener('change', function() {
+          const variantId = this.value;
+          const sectionId = this.getAttribute('data-section-id');
+          
+          // Fetch variant data dynamically via Shopify Section Rendering API or simple js update if preloaded
+          fetch(window.location.pathname + '?sections={{ section.id }}')
+            .then(response => response.json())
+            .then(data => {
+              const parser = new DOMParser();
+              const html = parser.parseFromString(data['{{ section.id }}'], 'text/html');
+              
+              // Update price
+              const newPriceEl = html.querySelector('.ritual-price-current-{{ section.id }}');
+              const currentPriceEl = document.querySelector('.ritual-price-wrapper-{{ section.id }} .ritual-price-current-{{ section.id }}');
+              if (newPriceEl && currentPriceEl) {
+                currentPriceEl.innerHTML = newPriceEl.innerHTML;
+              }
+
+              // Update compare price and save badge if exists
+              const newCompareEl = html.querySelector('.ritual-price-compare-{{ section.id }}');
+              const currentCompareEl = document.querySelector('.ritual-price-wrapper-{{ section.id }} .ritual-price-compare-{{ section.id }}');
+              const priceWrapper = document.querySelector('.ritual-price-wrapper-{{ section.id }}');
+              
+              if (newCompareEl) {
+                if (currentCompareEl) {
+                  currentCompareEl.innerHTML = newCompareEl.innerHTML;
+                } else {
+                  const newBadgeEl = html.querySelector('.ritual-save-badge-{{ section.id }}');
+                  priceWrapper.insertAdjacentHTML('beforeend', newCompareEl.outerHTML + (newBadgeEl ? newBadgeEl.outerHTML : ''));
+                }
+              } else {
+                if (currentCompareEl) {
+                  currentCompareEl.remove();
+                  const badgeEl = document.querySelector('.ritual-save-badge-{{ section.id }}');
+                  if (badgeEl) badgeEl.remove();
+                }
+              }
+
+              // Update button price
+              const newBtnPriceEl = html.querySelector('.ritual-btn-price-{{ section.id }}');
+              const currentBtnPriceEl = document.querySelector('.ritual-checkout-btn-{{ section.id }} .ritual-btn-price-{{ section.id }}');
+              if (newBtnPriceEl && currentBtnPriceEl) {
+                currentBtnPriceEl.innerHTML = newBtnPriceEl.innerHTML;
+              }
+            });
+        });
+      }
+    });
+  </script>
+{%- endif -%}
+
+{% schema %}
+{
+  "name": "premium single product",
+  "settings": [
+    {
+      "type": "header",
+      "content": "📌 Section General Titles"
+    },
+    {
+      "type": "text",
+      "id": "top_subheading",
+      "label": "Top Subheading",
+      "default": "CURATED TOGETHER"
+    },
+    {
+      "type": "textarea",
+      "id": "top_heading",
+      "label": "Top Main Heading",
+      "default": "Complete Your Scalp Care Ritual"
+    },
+    {
+      "type": "header",
+      "content": "🛒 Core Dynamic Product Data"
+    },
+    {
+      "type": "product",
+      "id": "featured_product",
+      "label": "Select Dynamic Product"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_variant_select",
+      "label": "Show Variant Selector (If multiple)",
+      "default": true
+    },
+    {
+      "type": "url",
+      "id": "button_link",
+      "label": "Button Link (Where to go on click)"
+    },
+    {
+      "type": "text",
+      "id": "card_subheading",
+      "label": "Card Upper Mini-Title",
+      "default": "THE RITUAL SET"
+    },
+    {
+      "type": "text",
+      "id": "custom_title",
+      "label": "Custom Title Override",
+      "info": "Leave blank to use official Shopify product title."
+    },
+    {
+      "type": "textarea",
+      "id": "custom_description",
+      "label": "Custom Description Override",
+      "info": "Leave blank to use default shopify product description."
+    },
+    {
+      "type": "text",
+      "id": "btn_label",
+      "label": "Button Main Text",
+      "default": "Add The Ritual"
+    },
+    {
+      "type": "header",
+      "content": "🎨 Aesthetics & Luxury Palette"
+    },
+    {
+      "type": "color",
+      "id": "bg_color",
+      "label": "Section Outer Background",
+      "default": "#f4eee4"
+    },
+    {
+      "type": "color",
+      "id": "card_bg_color",
+      "label": "Floating Card Background",
+      "default": "#ffffff"
+    },
+    {
+      "type": "color",
+      "id": "top_head_color",
+      "label": "Primary Headings & Text Color",
+      "default": "#1a1a1a"
+    },
+    {
+      "type": "color",
+      "id": "top_sub_color",
+      "label": "Subheadings Color Accent",
+      "default": "#707070"
+    },
+    {
+      "type": "color",
+      "id": "desc_color",
+      "label": "Descriptions Color",
+      "default": "#2b2b2b"
+    },
+    {
+      "type": "color",
+      "id": "badge_bg_color",
+      "label": "Discount Badge Background",
+      "default": "#cbd4c5"
+    },
+    {
+      "type": "color",
+      "id": "badge_text_color",
+      "label": "Discount Badge Text Color",
+      "default": "#243726"
+    },
+    {
+      "type": "color",
+      "id": "btn_bg_color",
+      "label": "Checkout Button Background",
+      "default": "#243726"
+    },
+    {
+      "type": "color",
+      "id": "btn_text_color",
+      "label": "Checkout Button Text Color",
+      "default": "#ffffff"
+    },
+    {
+      "type": "header",
+      "content": "📐 Sizing Configurations"
+    },
+    {
+      "type": "range",
+      "id": "container_width",
+      "min": 800,
+      "max": 1400,
+      "step": 20,
+      "unit": "px",
+      "label": "Total Container Max Width",
+      "default": 1200
+    },
+    {
+      "type": "range",
+      "id": "card_border_radius",
+      "min": 0,
+      "max": 50,
+      "step": 2,
+      "unit": "px",
+      "label": "Card Rounded Corners",
+      "default": 24
+    },
+    {
+      "type": "range",
+      "id": "image_border_radius",
+      "min": 0,
+      "max": 40,
+      "step": 2,
+      "unit": "px",
+      "label": "Product Image Rounded Corners",
+      "default": 16
+    },
+    {
+      "type": "range",
+      "id": "top_head_fs_desktop",
+      "min": 24,
+      "max": 60,
+      "step": 1,
+      "unit": "px",
+      "label": "Top Heading Font Size (Desktop)",
+      "default": 42
+    },
+    {
+      "type": "range",
+      "id": "top_head_fs_mobile",
+      "min": 20,
+      "max": 40,
+      "step": 1,
+      "unit": "px",
+      "label": "Top Heading Font Size (Mobile)",
+      "default": 28
+    },
+    {
+      "type": "range",
+      "id": "card_head_fs_desktop",
+      "min": 20,
+      "max": 50,
+      "step": 1,
+      "unit": "px",
+      "label": "Card Title Size (Desktop)",
+      "default": 32
+    },
+    {
+      "type": "range",
+      "id": "card_head_fs_mobile",
+      "min": 18,
+      "max": 36,
+      "step": 1,
+      "unit": "px",
+      "label": "Card Title Size (Mobile)",
+      "default": 24
+    },
+    {
+      "type": "range",
+      "id": "card_desc_fs",
+      "min": 13,
+      "max": 20,
+      "step": 1,
+      "unit": "px",
+      "label": "Description Size",
+      "default": 15
+    },
+    {
+      "type": "range",
+      "id": "feature_fs",
+      "min": 12,
+      "max": 20,
+      "step": 1,
+      "unit": "px",
+      "label": "Combo Combo Items Font Size",
+      "default": 14
+    },
+    {
+      "type": "header",
+      "content": "🔲 Custom Section Spacings"
+    },
+    {
+      "type": "range",
+      "id": "padding_top_desktop",
+      "min": 0,
+      "max": 150,
+      "step": 5,
+      "unit": "px",
+      "label": "Padding Top (Desktop)",
+      "default": 80
+    },
+    {
+      "type": "range",
+      "id": "padding_bottom_desktop",
+      "min": 0,
+      "max": 150,
+      "step": 5,
+      "unit": "px",
+      "label": "Padding Bottom (Desktop)",
+      "default": 80
+    },
+    {
+      "type": "range",
+      "id": "padding_top_mobile",
+      "min": 0,
+      "max": 100,
+      "step": 5,
+      "unit": "px",
+      "label": "Padding Top (Mobile)",
+      "default": 40
+    },
+    {
+      "type": "range",
+      "id": "padding_bottom_mobile",
+      "min": 0,
+      "max": 100,
+      "step": 5,
+      "unit": "px",
+      "label": "Padding Bottom (Mobile)",
+      "default": 40
+    }
+  ],
+  "blocks": [
+    {
+      "type": "bundle_feature",
+      "name": "Combo Item Line",
+      "settings": [
+        {
+          "type": "text",
+          "id": "item_text",
+          "label": "Combo Item Product/Text Line",
+          "default": "Hair Growth Complex Spray (100ml)"
+        }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "premium single product",
+      "blocks": [
+        { "type": "bundle_feature", "settings": { "item_text": "Hair Growth Complex Spray (100ml)" } },
+        { "type": "bundle_feature", "settings": { "item_text": "Scalp Massage Brush" } },
+        { "type": "bundle_feature", "settings": { "item_text": "Ritual Guide Card" } }
+      ]
+    }
+  ]
+}
+{% endschema %}

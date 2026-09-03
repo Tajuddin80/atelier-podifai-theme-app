@@ -1,0 +1,3429 @@
+ {% comment %}
+  Podifai / Atelier Product Customizer Snippet
+  Supports:
+  1. Step 3 (Add Patches) & Step 4 (Add Embroidery) Card Architecture.
+  2. Bottom Placement of Selected Patches with Pill design & Live Surcharges.
+  3. Dynamic Character Categories (Cutie faces, Snacks & sweets, Tiny animals, Little feelings) & 26 Alphabet Patches.
+  4. Multi-Text Embroidery Engine with Font Picker, Character Counter, and Thread Colors.
+  5. Live Order Total Summary Breakdown Card & Microcopy.
+  6. Zero-Backend Companion Addon Surcharge Engine + Cloudinary/Canvas composite snapshot export.
+{% endcomment %}
+
+{% assign customizer_block = block %}
+{% if customizer_block == null %}
+  {% assign customizer_block = section.blocks | where: 'type', 'atelier-customizer' | first %}
+{% endif %}
+{% if customizer_block == null %}
+  {% assign customizer_block = section.blocks | where: 'type', 'podifai-customizer' | first %}
+{% endif %}
+{% assign custom_settings = customizer_block.settings %}
+{% assign currency_symbol = custom_settings.currency_symbol | default: 'RM' %}
+
+{% assign patch_addon_handle = custom_settings.patch_addon_product.handle
+  | default: custom_settings.patch_addon_product
+%}
+{% assign patch_addon_prod = all_products[patch_addon_handle] | default: custom_settings.patch_addon_product %}
+{% assign patch_addon_variant = patch_addon_prod.selected_or_first_available_variant
+  | default: patch_addon_prod.variants.first
+%}
+{% assign patch_addon_variant_id = patch_addon_variant.id | default: custom_settings.patch_addon_variant_id %}
+{% assign patch_unit_price = patch_addon_prod.price
+  | money_without_currency
+  | default: custom_settings.patch_unit_price
+  | default: '6.00'
+%}
+
+{% assign embroidery_addon_handle = custom_settings.embroidery_addon_product.handle
+  | default: custom_settings.embroidery_addon_product
+%}
+{% assign embroidery_addon_prod = all_products[embroidery_addon_handle]
+  | default: custom_settings.embroidery_addon_product
+%}
+{% assign embroidery_addon_variant = embroidery_addon_prod.selected_or_first_available_variant
+  | default: embroidery_addon_prod.variants.first
+%}
+{% assign embroidery_addon_variant_id = embroidery_addon_variant.id
+  | default: custom_settings.embroidery_addon_variant_id
+%}
+{% assign embroidery_unit_price = embroidery_addon_prod.price
+  | money_without_currency
+  | default: custom_settings.embroidery_unit_price
+  | default: '20.00'
+%}
+{% assign embroidery_heading_text = custom_settings.embroidery_heading_text | default: 'Add embroidery' %}
+{% assign text_input_label_text = custom_settings.text_input_label_text | default: 'Your text' %}
+
+{% assign show_default_char = custom_settings.show_default_char_categories %}
+{% if show_default_char == null %}
+  {% assign show_default_char = true %}
+{% endif %}
+
+{% assign show_default_alpha = custom_settings.show_default_alpha_categories %}
+{% if show_default_alpha == null %}
+  {% assign show_default_alpha = true %}
+{% endif %}
+
+<div class="podifai-customizer">
+  <!-- Config Bridge for JavaScript -->
+  <div
+    id="podifai-customizer-config"
+    data-enable-addon="{{ custom_settings.enable_addon_surcharges }}"
+    data-currency-symbol="{{ currency_symbol }}"
+    data-base-price="{{ product.selected_or_first_available_variant.price | default: product.price | money_without_currency | remove: ',' }}"
+    data-patch-price="{{ patch_unit_price }}"
+    data-patch-addon-variant="{{ patch_addon_variant_id }}"
+    data-embroidery-price="{{ embroidery_unit_price }}"
+    data-embroidery-addon-variant="{{ embroidery_addon_variant_id }}"
+    data-cloud-name="{{ custom_settings.cloudinary_cloud_name | default: 'tifgkltm' | escape }}"
+    data-upload-preset="{{ custom_settings.cloudinary_upload_preset | default: 'shopify_preset_podifai' | escape }}"
+    style="display: none;"
+  ></div>
+
+  <!-- Canvas Overlay Teleport Anchor / Wrapper -->
+  <div id="podifai-canvas-wrapper" class="podifai-canvas-wrapper">
+    <div id="podifai-konva-container" class="podifai-konva-container"></div>
+  </div>
+
+  <div class="podifai-customizer__container">
+    <!-- Step 3: Add Patches Card -->
+    <div class="podifai-step-card podifai-patches-step-card" id="podifai-patches-step-card">
+      <div class="podifai-step-header">
+        <div class="podifai-step-title-group">
+          <span class="step-badge">3</span>
+          <span class="podifai-step-title">Add patches</span>
+          <span class="podifai-optional-badge">optional</span>
+        </div>
+        <div class="podifai-step-header-meta">
+          <span id="podifai-patches-header-count-text"></span>
+          <span class="podifai-embroidery-price-tag">
+            +{{ currency_symbol -}}
+            {{- patch_unit_price -}}
+          </span>
+          <button
+            type="button"
+            class="podifai-clear-all-patches-btn"
+            id="podifai-clear-all-patches-btn"
+            style="display: none;"
+            title="Clear all patches"
+          >
+            &times;
+          </button>
+        </div>
+      </div>
+
+      <!-- Accordion 1: Character Patches -->
+      <div class="podifai-accordion" id="podifai-char-accordion">
+        <div class="podifai-accordion__trigger">
+          <span class="podifai-accordion__label">Character patches</span>
+
+          <span class="podifai-accordion__icon">+</span>
+        </div>
+        <div class="podifai-accordion__content">
+          <!-- Character Category Filter Pills -->
+          <div class="podifai-pill-filters" id="podifai-char-categories">
+            {% assign char_category_blocks = section.blocks | where: 'type', 'character_category' %}
+            {% assign has_custom_char_cats = false %}
+
+            {% if char_category_blocks.size > 0 %}
+              {% for cb in char_category_blocks %}
+                {% assign has_custom_char_cats = true %}
+                {% assign cat_id = cb.settings.title | handleize | default: cb.id %}
+                <button
+                  type="button"
+                  class="podifai-pill-btn {% if forloop.first %}active{% endif %}"
+                  data-char-cat="{{ cat_id }}"
+                  data-label="{{ cb.settings.title | escape }}"
+                  data-size="{{ cb.settings.size | default: '8cm x 8cm' | escape }}"
+                  {{ cb.shopify_attributes }}
+                >
+                  {{ cb.settings.title }}
+                </button>
+              {% endfor %}
+            {% endif %}
+
+            <!-- Default Beautiful Categories matching reference designs -->
+            {% if has_custom_char_cats == false %}
+              <button
+                type="button"
+                class="podifai-pill-btn active"
+                data-char-cat="cutie-faces"
+                data-label="Cutie faces"
+                data-size="8cm x 8cm"
+              >
+                Cutie faces
+              </button>
+              <button
+                type="button"
+                class="podifai-pill-btn"
+                data-char-cat="snacks-sweets"
+                data-label="Snacks & sweets"
+                data-size="8cm x 8cm"
+              >
+                Snacks & sweets
+              </button>
+              <button
+                type="button"
+                class="podifai-pill-btn"
+                data-char-cat="tiny-animals"
+                data-label="Tiny animals"
+                data-size="8cm x 8cm"
+              >
+                Tiny animals
+              </button>
+              <button
+                type="button"
+                class="podifai-pill-btn"
+                data-char-cat="little-feelings"
+                data-label="Little feelings"
+                data-size="8cm x 8cm"
+              >
+                Little feelings
+              </button>
+            {% endif %}
+          </div>
+
+          {% assign first_char_cat_title = '' %}
+          {% assign first_char_cat_size = '8cm x 8cm' %}
+
+          {% if char_category_blocks.size > 0 %}
+            {% assign first_block = char_category_blocks.first %}
+            {% assign first_char_cat_size = first_block.settings.size | default: '8cm x 8cm' %}
+          {% else %}
+            {% assign first_char_cat_size = '8cm x 8cm' %}
+          {% endif %}
+
+          <div class="podifai-sublabel" id="podifai-char-sublabel">
+            Size approximately <span id="podifai-char-cat-size">{{ first_char_cat_size | default: '8cm x 8cm' }}</span>
+          </div>
+
+          <!-- Character Patches Grid -->
+          <div class="podifai-patch-grid" id="podifai-character-patches">
+            <!-- Custom Character Category Blocks (Metafield & Manual Uploads) -->
+            {% if char_category_blocks.size > 0 %}
+              {% for cb in char_category_blocks %}
+                {% assign cat_id = cb.settings.title | handleize | default: cb.id %}
+                {% assign raw_key = cb.settings.metafield_key
+                  | default: cb.settings.title
+                  | remove: 'custom.'
+                  | strip
+                  | handleize
+                  | replace: '-', '_'
+                %}
+                {% assign patch_files = product.metafields.custom[raw_key].value
+                  | default: product.metafields.custom[raw_key]
+                %}
+                {% if patch_files == blank %}
+                  {% assign key_with_patches = raw_key | append: '_patches' %}
+                  {% assign patch_files = product.metafields.custom[key_with_patches].value
+                    | default: product.metafields.custom[key_with_patches]
+                  %}
+                {% endif %}
+                {% if patch_files == blank and cb.settings.metafield_key != blank %}
+                  {% assign clean_key = cb.settings.metafield_key | remove: 'custom.' | strip %}
+                  {% assign patch_files = product.metafields.custom[clean_key].value
+                    | default: product.metafields.custom[clean_key]
+                  %}
+                {% endif %}
+
+                {% if patch_files != blank %}
+                  {% for file in patch_files %}
+                    {% assign img_src = file | image_url: width: 400 %}
+                    {% assign default_name = cb.settings.title | append: ' #' | append: forloop.index %}
+                    {% assign patch_name = file.alt | default: default_name %}
+                    <button
+                      type="button"
+                      class="podifai-patch-item"
+                      data-char-category="{{ cat_id }}"
+                      data-patch-id="char-mf-{{ cb.id }}-{{ forloop.index }}"
+                      data-patch-type="character"
+                      data-patch-name="{{ patch_name | escape }}"
+                      data-patch-img="{{ img_src }}"
+                      title="{{ patch_name | escape }}"
+                    >
+                      <img
+                        src="{{ img_src }}"
+                        alt="{{ patch_name | escape }}"
+                        class="podifai-patch-img"
+                        loading="lazy"
+                        width="44"
+                        height="44"
+                      >
+                      <span class="podifai-patch-label">
+                        {%- if file.alt != blank %}{{ file.alt }}{% else %}P{{ forloop.index }}{% endif -%}
+                      </span>
+                      <span class="podifai-patch-badge"></span>
+                    </button>
+                  {% endfor %}
+                {% else %}
+                  {% for i in (1..10) %}
+                    {% assign img_key = 'img_' | append: i %}
+                    {% if cb.settings[img_key] != blank %}
+                      {% assign img_src = cb.settings[img_key] | image_url: width: 200 %}
+                      {% assign patch_name = cb.settings.title | append: ' #' | append: i %}
+                      <button
+                        type="button"
+                        class="podifai-patch-item"
+                        data-char-category="{{ cat_id }}"
+                        data-patch-id="char-{{ cb.id }}-{{ i }}"
+                        data-patch-type="character"
+                        data-patch-name="{{ patch_name | escape }}"
+                        data-patch-img="{{ img_src }}"
+                        title="{{ patch_name | escape }}"
+                      >
+                        <img
+                          src="{{ img_src }}"
+                          alt="{{ patch_name | escape }}"
+                          class="podifai-patch-img"
+                          loading="lazy"
+                          width="44"
+                          height="44"
+                        >
+                        <span class="podifai-patch-label">P{{ i }}</span>
+                        <span class="podifai-patch-badge"></span>
+                      </button>
+                    {% endif %}
+                  {% endfor %}
+                {% endif %}
+              {% endfor %}
+            {% endif %}
+
+            <!-- Default High-Quality Patches (matching reference image) -->
+            {% if show_default_char and has_custom_char_cats == false %}
+              <!-- Cutie faces -->
+              <button
+                type="button"
+                class="podifai-patch-item"
+                data-char-category="cutie-faces"
+                data-patch-id="char-blossom"
+                data-patch-type="character"
+                data-patch-name="Blossom"
+                data-patch-img="https://api.iconify.design/twemoji:cherry-blossom.svg"
+                title="Blossom"
+              >
+                <img
+                  src="https://api.iconify.design/twemoji:cherry-blossom.svg"
+                  alt="Blossom"
+                  class="podifai-patch-img"
+                  loading="lazy"
+                  width="44"
+                  height="44"
+                >
+                <span class="podifai-patch-label">Blossom</span>
+                <span class="podifai-patch-badge"></span>
+              </button>
+
+              <button
+                type="button"
+                class="podifai-patch-item"
+                data-char-category="cutie-faces"
+                data-patch-id="char-little-star"
+                data-patch-type="character"
+                data-patch-name="Little Star"
+                data-patch-img="https://api.iconify.design/twemoji:star.svg"
+                title="Little Star"
+              >
+                <img
+                  src="https://api.iconify.design/twemoji:star.svg"
+                  alt="Little Star"
+                  class="podifai-patch-img"
+                  loading="lazy"
+                  width="44"
+                  height="44"
+                >
+                <span class="podifai-patch-label">Little Star</span>
+                <span class="podifai-patch-badge"></span>
+              </button>
+
+              <button
+                type="button"
+                class="podifai-patch-item"
+                data-char-category="cutie-faces"
+                data-patch-id="char-bun-bun"
+                data-patch-type="character"
+                data-patch-name="Bun-bun"
+                data-patch-img="https://api.iconify.design/twemoji:rabbit-face.svg"
+                title="Bun-bun"
+              >
+                <img
+                  src="https://api.iconify.design/twemoji:rabbit-face.svg"
+                  alt="Bun-bun"
+                  class="podifai-patch-img"
+                  loading="lazy"
+                  width="44"
+                  height="44"
+                >
+                <span class="podifai-patch-label">Bun-bun</span>
+                <span class="podifai-patch-badge"></span>
+              </button>
+
+              <button
+                type="button"
+                class="podifai-patch-item"
+                data-char-category="cutie-faces"
+                data-patch-id="char-rainbow"
+                data-patch-type="character"
+                data-patch-name="Rainbow"
+                data-patch-img="https://api.iconify.design/twemoji:rainbow.svg"
+                title="Rainbow"
+              >
+                <img
+                  src="https://api.iconify.design/twemoji:rainbow.svg"
+                  alt="Rainbow"
+                  class="podifai-patch-img"
+                  loading="lazy"
+                  width="44"
+                  height="44"
+                >
+                <span class="podifai-patch-label">Rainbow</span>
+                <span class="podifai-patch-badge"></span>
+              </button>
+
+              <button
+                type="button"
+                class="podifai-patch-item"
+                data-char-category="cutie-faces"
+                data-patch-id="char-sparkle"
+                data-patch-type="character"
+                data-patch-name="Sparkle"
+                data-patch-img="https://api.iconify.design/twemoji:sparkles.svg"
+                title="Sparkle"
+              >
+                <img
+                  src="https://api.iconify.design/twemoji:sparkles.svg"
+                  alt="Sparkle"
+                  class="podifai-patch-img"
+                  loading="lazy"
+                  width="44"
+                  height="44"
+                >
+                <span class="podifai-patch-label">Sparkle</span>
+                <span class="podifai-patch-badge"></span>
+              </button>
+
+              <button
+                type="button"
+                class="podifai-patch-item"
+                data-char-category="cutie-faces"
+                data-patch-id="char-cloud"
+                data-patch-type="character"
+                data-patch-name="Cloud"
+                data-patch-img="https://api.iconify.design/twemoji:cloud.svg"
+                title="Cloud"
+              >
+                <img
+                  src="https://api.iconify.design/twemoji:cloud.svg"
+                  alt="Cloud"
+                  class="podifai-patch-img"
+                  loading="lazy"
+                  width="44"
+                  height="44"
+                >
+                <span class="podifai-patch-label">Cloud</span>
+                <span class="podifai-patch-badge"></span>
+              </button>
+
+              <!-- Snacks & sweets -->
+              <button
+                type="button"
+                class="podifai-patch-item"
+                data-char-category="snacks-sweets"
+                data-patch-id="char-strawberry"
+                data-patch-type="character"
+                data-patch-name="Strawberry"
+                data-patch-img="https://api.iconify.design/twemoji:strawberry.svg"
+                title="Strawberry"
+              >
+                <img
+                  src="https://api.iconify.design/twemoji:strawberry.svg"
+                  alt="Strawberry"
+                  class="podifai-patch-img"
+                  loading="lazy"
+                  width="44"
+                  height="44"
+                >
+                <span class="podifai-patch-label">Strawberry</span>
+                <span class="podifai-patch-badge"></span>
+              </button>
+
+              <button
+                type="button"
+                class="podifai-patch-item"
+                data-char-category="snacks-sweets"
+                data-patch-id="char-patty"
+                data-patch-type="character"
+                data-patch-name="Burger"
+                data-patch-img="https://api.iconify.design/twemoji:hamburger.svg"
+                title="Burger"
+              >
+                <img
+                  src="https://api.iconify.design/twemoji:hamburger.svg"
+                  alt="Burger"
+                  class="podifai-patch-img"
+                  loading="lazy"
+                  width="44"
+                  height="44"
+                >
+                <span class="podifai-patch-label">Burger</span>
+                <span class="podifai-patch-badge"></span>
+              </button>
+
+              <button
+                type="button"
+                class="podifai-patch-item"
+                data-char-category="snacks-sweets"
+                data-patch-id="char-ice-cream"
+                data-patch-type="character"
+                data-patch-name="Ice Cream"
+                data-patch-img="https://api.iconify.design/twemoji:soft-ice-cream.svg"
+                title="Ice Cream"
+              >
+                <img
+                  src="https://api.iconify.design/twemoji:soft-ice-cream.svg"
+                  alt="Ice Cream"
+                  class="podifai-patch-img"
+                  loading="lazy"
+                  width="44"
+                  height="44"
+                >
+                <span class="podifai-patch-label">Ice Cream</span>
+                <span class="podifai-patch-badge"></span>
+              </button>
+
+              <button
+                type="button"
+                class="podifai-patch-item"
+                data-char-category="snacks-sweets"
+                data-patch-id="char-donut"
+                data-patch-type="character"
+                data-patch-name="Donut"
+                data-patch-img="https://api.iconify.design/twemoji:doughnut.svg"
+                title="Donut"
+              >
+                <img
+                  src="https://api.iconify.design/twemoji:doughnut.svg"
+                  alt="Donut"
+                  class="podifai-patch-img"
+                  loading="lazy"
+                  width="44"
+                  height="44"
+                >
+                <span class="podifai-patch-label">Donut</span>
+                <span class="podifai-patch-badge"></span>
+              </button>
+
+              <button
+                type="button"
+                class="podifai-patch-item"
+                data-char-category="snacks-sweets"
+                data-patch-id="char-cookie"
+                data-patch-type="character"
+                data-patch-name="Cookie"
+                data-patch-img="https://api.iconify.design/twemoji:cookie.svg"
+                title="Cookie"
+              >
+                <img
+                  src="https://api.iconify.design/twemoji:cookie.svg"
+                  alt="Cookie"
+                  class="podifai-patch-img"
+                  loading="lazy"
+                  width="44"
+                  height="44"
+                >
+                <span class="podifai-patch-label">Cookie</span>
+                <span class="podifai-patch-badge"></span>
+              </button>
+
+              <button
+                type="button"
+                class="podifai-patch-item"
+                data-char-category="snacks-sweets"
+                data-patch-id="char-candy"
+                data-patch-type="character"
+                data-patch-name="Candy"
+                data-patch-img="https://api.iconify.design/twemoji:candy.svg"
+                title="Candy"
+              >
+                <img
+                  src="https://api.iconify.design/twemoji:candy.svg"
+                  alt="Candy"
+                  class="podifai-patch-img"
+                  loading="lazy"
+                  width="44"
+                  height="44"
+                >
+                <span class="podifai-patch-label">Candy</span>
+                <span class="podifai-patch-badge"></span>
+              </button>
+
+              <!-- Tiny animals -->
+              <button
+                type="button"
+                class="podifai-patch-item"
+                data-char-category="tiny-animals"
+                data-patch-id="char-duck"
+                data-patch-type="character"
+                data-patch-name="Duck"
+                data-patch-img="https://api.iconify.design/twemoji:duck.svg"
+                title="Duck"
+              >
+                <img
+                  src="https://api.iconify.design/twemoji:duck.svg"
+                  alt="Duck"
+                  class="podifai-patch-img"
+                  loading="lazy"
+                  width="44"
+                  height="44"
+                >
+                <span class="podifai-patch-label">Duck</span>
+                <span class="podifai-patch-badge"></span>
+              </button>
+
+              <button
+                type="button"
+                class="podifai-patch-item"
+                data-char-category="tiny-animals"
+                data-patch-id="char-bear"
+                data-patch-type="character"
+                data-patch-name="Bear"
+                data-patch-img="https://api.iconify.design/twemoji:bear.svg"
+                title="Bear"
+              >
+                <img
+                  src="https://api.iconify.design/twemoji:bear.svg"
+                  alt="Bear"
+                  class="podifai-patch-img"
+                  loading="lazy"
+                  width="44"
+                  height="44"
+                >
+                <span class="podifai-patch-label">Bear</span>
+                <span class="podifai-patch-badge"></span>
+              </button>
+
+              <button
+                type="button"
+                class="podifai-patch-item"
+                data-char-category="tiny-animals"
+                data-patch-id="char-crab"
+                data-patch-type="character"
+                data-patch-name="Crab"
+                data-patch-img="https://api.iconify.design/twemoji:crab.svg"
+                title="Crab"
+              >
+                <img
+                  src="https://api.iconify.design/twemoji:crab.svg"
+                  alt="Crab"
+                  class="podifai-patch-img"
+                  loading="lazy"
+                  width="44"
+                  height="44"
+                >
+                <span class="podifai-patch-label">Crab</span>
+                <span class="podifai-patch-badge"></span>
+              </button>
+
+              <button
+                type="button"
+                class="podifai-patch-item"
+                data-char-category="tiny-animals"
+                data-patch-id="char-gary"
+                data-patch-type="character"
+                data-patch-name="Snail"
+                data-patch-img="https://api.iconify.design/twemoji:snail.svg"
+                title="Snail"
+              >
+                <img
+                  src="https://api.iconify.design/twemoji:snail.svg"
+                  alt="Snail"
+                  class="podifai-patch-img"
+                  loading="lazy"
+                  width="44"
+                  height="44"
+                >
+                <span class="podifai-patch-label">Snail</span>
+                <span class="podifai-patch-badge"></span>
+              </button>
+
+              <button
+                type="button"
+                class="podifai-patch-item"
+                data-char-category="tiny-animals"
+                data-patch-id="char-puppy"
+                data-patch-type="character"
+                data-patch-name="Puppy"
+                data-patch-img="https://api.iconify.design/twemoji:dog-face.svg"
+                title="Puppy"
+              >
+                <img
+                  src="https://api.iconify.design/twemoji:dog-face.svg"
+                  alt="Puppy"
+                  class="podifai-patch-img"
+                  loading="lazy"
+                  width="44"
+                  height="44"
+                >
+                <span class="podifai-patch-label">Puppy</span>
+                <span class="podifai-patch-badge"></span>
+              </button>
+
+              <button
+                type="button"
+                class="podifai-patch-item"
+                data-char-category="tiny-animals"
+                data-patch-id="char-chick"
+                data-patch-type="character"
+                data-patch-name="Chick"
+                data-patch-img="https://api.iconify.design/twemoji:front-facing-baby-chick.svg"
+                title="Chick"
+              >
+                <img
+                  src="https://api.iconify.design/twemoji:front-facing-baby-chick.svg"
+                  alt="Chick"
+                  class="podifai-patch-img"
+                  loading="lazy"
+                  width="44"
+                  height="44"
+                >
+                <span class="podifai-patch-label">Chick</span>
+                <span class="podifai-patch-badge"></span>
+              </button>
+
+              <!-- Little feelings -->
+              <button
+                type="button"
+                class="podifai-patch-item"
+                data-char-category="little-feelings"
+                data-patch-id="char-sparkle-heart"
+                data-patch-type="character"
+                data-patch-name="Heart"
+                data-patch-img="https://api.iconify.design/twemoji:sparkling-heart.svg"
+                title="Heart"
+              >
+                <img
+                  src="https://api.iconify.design/twemoji:sparkling-heart.svg"
+                  alt="Heart"
+                  class="podifai-patch-img"
+                  loading="lazy"
+                  width="44"
+                  height="44"
+                >
+                <span class="podifai-patch-label">Heart</span>
+                <span class="podifai-patch-badge"></span>
+              </button>
+
+              <button
+                type="button"
+                class="podifai-patch-item"
+                data-char-category="little-feelings"
+                data-patch-id="char-joy"
+                data-patch-type="character"
+                data-patch-name="Joy"
+                data-patch-img="https://api.iconify.design/twemoji:smiling-face-with-hearts.svg"
+                title="Joy"
+              >
+                <img
+                  src="https://api.iconify.design/twemoji:smiling-face-with-hearts.svg"
+                  alt="Joy"
+                  class="podifai-patch-img"
+                  loading="lazy"
+                  width="44"
+                  height="44"
+                >
+                <span class="podifai-patch-label">Joy</span>
+                <span class="podifai-patch-badge"></span>
+              </button>
+
+              <button
+                type="button"
+                class="podifai-patch-item"
+                data-char-category="little-feelings"
+                data-patch-id="char-sun"
+                data-patch-type="character"
+                data-patch-name="Sun"
+                data-patch-img="https://api.iconify.design/twemoji:sun.svg"
+                title="Sun"
+              >
+                <img
+                  src="https://api.iconify.design/twemoji:sun.svg"
+                  alt="Sun"
+                  class="podifai-patch-img"
+                  loading="lazy"
+                  width="44"
+                  height="44"
+                >
+                <span class="podifai-patch-label">Sun</span>
+                <span class="podifai-patch-badge"></span>
+              </button>
+
+              <button
+                type="button"
+                class="podifai-patch-item"
+                data-char-category="little-feelings"
+                data-patch-id="char-moon"
+                data-patch-type="character"
+                data-patch-name="Moon"
+                data-patch-img="https://api.iconify.design/twemoji:crescent-moon.svg"
+                title="Moon"
+              >
+                <img
+                  src="https://api.iconify.design/twemoji:crescent-moon.svg"
+                  alt="Moon"
+                  class="podifai-patch-img"
+                  loading="lazy"
+                  width="44"
+                  height="44"
+                >
+                <span class="podifai-patch-label">Moon</span>
+                <span class="podifai-patch-badge"></span>
+              </button>
+
+              <button
+                type="button"
+                class="podifai-patch-item"
+                data-char-category="little-feelings"
+                data-patch-id="char-fire"
+                data-patch-type="character"
+                data-patch-name="Fire"
+                data-patch-img="https://api.iconify.design/twemoji:fire.svg"
+                title="Fire"
+              >
+                <img
+                  src="https://api.iconify.design/twemoji:fire.svg"
+                  alt="Fire"
+                  class="podifai-patch-img"
+                  loading="lazy"
+                  width="44"
+                  height="44"
+                >
+                <span class="podifai-patch-label">Fire</span>
+                <span class="podifai-patch-badge"></span>
+              </button>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+
+      <!-- Accordion 2: Alphabet Patches -->
+      <div class="podifai-accordion" id="podifai-alphabet-accordion">
+        <div class="podifai-accordion__trigger">
+          <span class="podifai-accordion__label">Alphabet patches</span>
+          <span class="podifai-accordion__icon">+</span>
+        </div>
+        <div class="podifai-accordion__content">
+          <p class="podifai-alphabet-instruction">Spell a name or initials in letter patches.</p>
+
+          <!-- Alphabet Category Filter Pills -->
+          <div class="podifai-pill-filters" id="podifai-alphabet-categories">
+            {% assign alphabet_blocks = section.blocks | where: 'type', 'alphabet_category' %}
+            {% assign has_custom_alpha_cats = false %}
+
+            <!-- Alphabet Category Blocks (if added separately) -->
+            {% if alphabet_blocks.size > 0 %}
+              {% for ablock in alphabet_blocks %}
+                {% assign has_custom_alpha_cats = true %}
+                {% assign cat_id = ablock.settings.title | handleize | default: ablock.id %}
+                <button
+                  type="button"
+                  class="podifai-pill-btn {% if forloop.first %}active{% endif %}"
+                  data-cat="{{ cat_id }}"
+                  data-label="{{ ablock.settings.title | escape }}"
+                  data-size="{{ ablock.settings.size | default: '8cm x 8cm' | escape }}"
+                  {{ ablock.shopify_attributes }}
+                >
+                  {{ ablock.settings.title }}
+                </button>
+              {% endfor %}
+            {% endif %}
+
+            <!-- Default Alphabet Categories -->
+            {% if show_default_alpha and has_custom_alpha_cats == false %}
+              <button
+                type="button"
+                class="podifai-pill-btn active"
+                data-cat="black-cap"
+                data-label="Black caps"
+                data-size="8cm x 8cm"
+              >
+                Black caps
+              </button>
+              <button
+                type="button"
+                class="podifai-pill-btn"
+                data-cat="blue-cap"
+                data-label="Blue caps"
+                data-size="8cm x 8cm"
+              >
+                Blue caps
+              </button>
+              <button
+                type="button"
+                class="podifai-pill-btn"
+                data-cat="pink-cap"
+                data-label="Pink caps"
+                data-size="8cm x 8cm"
+              >
+                Pink caps
+              </button>
+              <button
+                type="button"
+                class="podifai-pill-btn"
+                data-cat="yellow-cap"
+                data-label="Yellow caps"
+                data-size="8cm x 8cm"
+              >
+                Yellow caps
+              </button>
+              <button
+                type="button"
+                class="podifai-pill-btn"
+                data-cat="mix-color"
+                data-label="Mix colours"
+                data-size="8cm x 8cm"
+              >
+                Mix colours
+              </button>
+            {% endif %}
+          </div>
+
+          {% assign first_alpha_cat_title = '' %}
+          {% assign first_alpha_cat_size = '8cm x 8cm' %}
+
+          {% if alphabet_blocks.size > 0 %}
+            {% assign first_alpha_block = alphabet_blocks.first %}
+            {% assign first_alpha_cat_size = first_alpha_block.settings.size | default: '8cm x 8cm' %}
+          {% else %}
+            {% assign first_alpha_cat_size = '8cm x 8cm' %}
+          {% endif %}
+
+          <div class="podifai-sublabel" id="podifai-alpha-sublabel">
+            Size approximately
+            <span id="podifai-alpha-cat-size">{{ first_alpha_cat_size | default: '8cm x 8cm' }}</span>
+          </div>
+
+          <!-- Alphabet Letters Patch Grid -->
+          <div class="podifai-alphabet-grid" id="podifai-alphabet-grid">
+            {% assign alphabet = 'a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t,u,v,w,x,y,z' | split: ',' %}
+
+            <!-- Custom Alphabet Blocks Letters -->
+            {% if alphabet_blocks.size > 0 %}
+              {% for ablock in alphabet_blocks %}
+                {% assign cat_id = ablock.settings.title | handleize | default: ablock.id %}
+                {% assign raw_alpha_key = ablock.settings.metafield_key
+                  | default: ablock.settings.title
+                  | remove: 'custom.'
+                  | strip
+                  | handleize
+                  | replace: '-', '_'
+                %}
+                {% assign alpha_files = product.metafields.custom[raw_alpha_key].value
+                  | default: product.metafields.custom[raw_alpha_key]
+                %}
+                {% if alpha_files == blank and ablock.settings.metafield_key != blank %}
+                  {% assign clean_alpha_key = ablock.settings.metafield_key | remove: 'custom.' | strip %}
+                  {% assign alpha_files = product.metafields.custom[clean_alpha_key].value
+                    | default: product.metafields.custom[clean_alpha_key]
+                  %}
+                {% endif %}
+
+                {% if alpha_files != blank %}
+                  {% assign alphabet_upper = 'A,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q,R,S,T,U,V,W,X,Y,Z' | split: ',' %}
+                  {% for file in alpha_files %}
+                    {% assign ltr_idx = forloop.index0 %}
+                    {% assign letter_char = file.alt | default: alphabet_upper[ltr_idx] | default: forloop.index %}
+                    {% assign img_src = file | image_url: width: 400 %}
+                    <button
+                      type="button"
+                      class="podifai-letter-item"
+                      data-letter-category="{{ cat_id }}"
+                      data-letter-cat-label="{{ ablock.settings.title | escape }}"
+                      data-letter="{{ letter_char | downcase }}"
+                      data-custom-img="{{ img_src }}"
+                      title="{{ letter_char | upcase }} ({{ ablock.settings.title }})"
+                    >
+                      <div class="podifai-letter-wrapper">
+                        <img
+                          src="{{ img_src }}"
+                          alt="{{ letter_char }}"
+                          class="podifai-letter-img"
+                          loading="lazy"
+                          width="44"
+                          height="44"
+                        >
+                      </div>
+                      <span class="podifai-patch-badge"></span>
+                    </button>
+                  {% endfor %}
+                {% else %}
+                  {% for letter in alphabet %}
+                    {% assign img_key = 'img_' | append: letter %}
+                    {% assign custom_img = ablock.settings[img_key] %}
+                    <button
+                      type="button"
+                      class="podifai-letter-item"
+                      data-letter-category="{{ cat_id }}"
+                      data-letter-cat-label="{{ ablock.settings.title | escape }}"
+                      data-letter="{{ letter }}"
+                      {% if custom_img != blank %}
+                        data-custom-img="{{ custom_img | image_url: width: 200 }}"
+                      {% endif %}
+                    >
+                      <div class="podifai-letter-wrapper">
+                        <img
+                          src="{% if custom_img != blank %}{{ custom_img | image_url: width: 200 }}{% endif %}"
+                          alt="{{ letter }}"
+                          width="44"
+                          height="44"
+                          class="podifai-letter-img"
+                          loading="lazy"
+                        >
+                      </div>
+                      <span class="podifai-patch-badge"></span>
+                    </button>
+                  {% endfor %}
+                {% endif %}
+              {% endfor %}
+            {% endif %}
+
+            <!-- Default Grid Letters -->
+            {% if show_default_alpha and has_custom_alpha_cats == false %}
+              {% for letter in alphabet %}
+                <button
+                  type="button"
+                  class="podifai-letter-item"
+                  data-letter="{{ letter }}"
+                >
+                  <div class="podifai-letter-wrapper">
+                    <img src="" alt="{{ letter }}" height="44" width="44" class="podifai-letter-img" loading="lazy">
+                  </div>
+                  <span class="podifai-patch-badge"></span>
+                </button>
+              {% endfor %}
+            {% endif %}
+          </div>
+        </div>
+      </div>
+
+      <!-- Selected Patches Persistent Summary Bar at the BOTTOM of Step 3 -->
+      <div class="podifai-active-summary" id="podifai-active-summary" style="display: none;">
+        <div class="podifai-summary-header">
+          <span class="podifai-summary-title"
+            >Your patches (<span id="podifai-summary-count">0</span>) ·
+            <span id="podifai-summary-price">{{ currency_symbol }}0.00</span></span
+          >
+        </div>
+        <div class="podifai-summary-tags" id="podifai-summary-tags">
+          <!-- Active patch tags dynamically inserted here -->
+        </div>
+      </div>
+    </div>
+
+    <!-- Step 4: Add Embroidery Card -->
+    <div class="podifai-step-card podifai-embroidery-step-card" id="podifai-embroidery-step-card">
+      <div class="podifai-step-header">
+        <div class="podifai-step-title-group">
+          <span class="step-badge">4</span>
+          <span class="podifai-step-title">{{ embroidery_heading_text }}</span>
+          <span class="podifai-optional-badge">optional</span>
+        </div>
+        <div class="podifai-step-header-meta">
+          <span class="podifai-embroidery-price-tag"
+            >+{{ currency_symbol -}}
+            {{- embroidery_unit_price -}}
+          </span>
+        </div>
+      </div>
+      <p class="podifai-embroidery-subtitle">Colour, font size and placement may vary slightly. These small differences are inherent to personalisation, not a defect.​</p>
+
+      <div class="podifai-embroidery">
+        <!-- Dynamic Multi-Text Embroidery Lines Container -->
+        <div id="podifai-embroidery-lines" class="podifai-embroidery-lines"></div>
+
+        <!-- Add Another Text Button -->
+        <button type="button" id="podifai-add-text-btn" class="podifai-add-text-btn" style="display: none !important;">
+          <span>+ Add Another Text</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Live Order Total Summary Breakdown Card -->
+    <div class="podifai-total-summary-card" id="podifai-total-summary-card">
+      <div class="podifai-summary-row" id="podifai-summary-base-row">
+        <span class="podifai-summary-row-label" id="podifai-summary-product-name">
+          {{- product.title -}}
+          {%- assign init_v = product.selected_or_first_available_variant -%}
+          {%- if init_v and init_v.title != 'Default Title' -%}
+            {%- assign init_size = init_v.option1 | default: init_v.title -%}
+            {%- if init_size != blank %} ({{ init_size }}){% endif -%}
+          {%- endif -%}
+        </span>
+        <span class="podifai-summary-row-price" id="podifai-summary-base-price">
+          {{- product.selected_or_first_available_variant.price | default: product.price | money -}}
+        </span>
+      </div>
+      <div class="podifai-summary-row" id="podifai-summary-patches-row" style="display: none;">
+        <span class="podifai-summary-row-label">Patches × <span id="podifai-summary-patches-qty">0</span></span>
+        <span class="podifai-summary-row-price" id="podifai-summary-patches-total">
+          {{- currency_symbol -}}
+          0.00
+        </span>
+      </div>
+      <div class="podifai-summary-row" id="podifai-summary-embroidery-row" style="display: none;">
+        <span class="podifai-summary-row-label">Embroidery × <span id="podifai-summary-embroidery-qty">0</span></span>
+        <span class="podifai-summary-row-price" id="podifai-summary-embroidery-total">
+          {{- currency_symbol -}}
+          0.00
+        </span>
+      </div>
+      <div class="podifai-summary-divider"></div>
+      <div class="podifai-summary-row podifai-summary-total-row">
+        <span class="podifai-summary-total-label">Your total</span>
+        <span class="podifai-summary-total-price" id="podifai-summary-grand-total">
+          {{- product.selected_or_first_available_variant.price | default: product.price | money -}}
+        </span>
+      </div>
+    </div>
+
+    <!-- Microcopy Notes -->
+    <div class="podifai-microcopy-list">
+      <div class="podifai-microcopy-item">
+        <span class="podifai-microcopy-icon">🧵</span>
+        <span><strong>Made to order</strong> — ready to ship in 5–7 working days.</span>
+      </div>
+      <div class="podifai-microcopy-item">
+        <span class="podifai-microcopy-icon">💛</span>
+        <span>Because it's personalised just for you, custom pieces can't be returned or exchanged.</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Reusable Thread Color Options Definition for Dynamic Injection -->
+<div id="podifai-thread-options-source" style="display: none;">
+  {% assign thread_color_blocks = section.blocks | where: 'type', 'thread_color' %}
+  {% assign has_custom_threads = false %}
+
+  <!-- Custom Threads from Blocks -->
+  {% if thread_color_blocks.size > 0 %}
+    {% for tb in thread_color_blocks %}
+      {% assign has_custom_threads = true %}
+      <button
+        type="button"
+        class="podifai-color-swatch"
+        data-color="{{ tb.settings.color }}"
+        data-color-name="{{ tb.settings.color_name | escape }}"
+        style="background-color: {{ tb.settings.color }};"
+        title="{{ tb.settings.color_name | escape }}"
+      ></button>
+    {% endfor %}
+  {% endif %}
+
+  <!-- Default 5 Thread Colors matching reference designs -->
+  {% if has_custom_threads == false %}
+    <button
+      type="button"
+      class="podifai-color-swatch"
+      data-color="#D32F2F"
+      data-color-name="Red"
+      style="background-color: #D32F2F;"
+      title="Red"
+    ></button>
+    <button
+      type="button"
+      class="podifai-color-swatch"
+      data-color="#FAF8F5"
+      data-color-name="Ivory"
+      style="background-color: #FAF8F5;"
+      title="Ivory"
+    ></button>
+    <button
+      type="button"
+      class="podifai-color-swatch"
+      data-color="#1A1A1A"
+      data-color-name="Black"
+      style="background-color: #1A1A1A;"
+      title="Black"
+    ></button>
+    <button
+      type="button"
+      class="podifai-color-swatch"
+      data-color="#FF69B4"
+      data-color-name="Pink"
+      style="background-color: #FF69B4;"
+      title="Pink"
+    ></button>
+    <button
+      type="button"
+      class="podifai-color-swatch"
+      data-color="#E68A2E"
+      data-color-name="Orange"
+      style="background-color: #E68A2E;"
+      title="Orange"
+    ></button>
+  {% endif %}
+</div>
+
+<!-- Load Konva.js -->
+<script src="{{ 'konva.min.js' | asset_url }}" defer></script>
+
+<link
+  rel="stylesheet"
+  href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=EB+Garamond:ital,wght@0,400..700;1,400..700&family=Newsreader:ital,opsz,wght@0,6..72,200..800;1,6..72,200..800&family=Red+Hat+Text:ital,wght@0,300..700;1,300..700&display=swap"
+>
+
+<style>
+  .podifai-customizer {
+    margin: 1.25rem 0;
+    font-family: 'Red Hat Text', var(--font-body--family, sans-serif);
+    color: #1a1a1a;
+  }
+
+  /* Canvas Overlay Positioning */
+  .podifai-canvas-wrapper {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 10;
+  }
+
+  .podifai-konva-container {
+    width: 100%;
+    height: 100%;
+    pointer-events: auto;
+  }
+
+  /* Step Card Container */
+  .podifai-step-card {
+    border: 1.5px solid var(--podifai-card-border, #eae6e1);
+    border-radius: 12px;
+    background: #ffffff;
+    padding: 16px 18px;
+    margin-bottom: 16px;
+  }
+
+  .podifai-step-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 14px;
+  }
+
+  .podifai-step-title-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .podifai-step-title {
+    font-size: 1rem;
+    font-weight: 700;
+    color: #1a1a1a;
+  }
+
+  .podifai-optional-badge {
+    font-size: 0.72rem;
+    color: #888888;
+    background: #f0ece8;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-weight: 500;
+  }
+
+  .podifai-step-header-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.82rem;
+    color: #666666;
+    font-weight: 500;
+  }
+
+  .podifai-clear-all-patches-btn {
+    background: none;
+    border: none;
+    color: #999999;
+    cursor: pointer;
+    font-size: 1.1rem;
+    line-height: 1;
+    padding: 0;
+    transition: color 0.2s ease;
+  }
+
+  .podifai-clear-all-patches-btn:hover {
+    color: #e85a37;
+  }
+
+  .podifai-embroidery-price-tag {
+    font-size: 0.88rem;
+    font-weight: 600;
+    color: #555555;
+  }
+
+  .podifai-embroidery-subtitle {
+    font-size: 0.84rem;
+    color: #777777;
+    margin: 0 0 14px 0;
+    line-height: 1.4;
+  }
+
+  .podifai-alphabet-instruction {
+    font-size: 0.82rem;
+    color: #777777;
+    margin: 0 0 10px 0;
+  }
+
+  /* Accordions inside Step 3 */
+  .podifai-accordion {
+    border-top: 1px solid #f0ece8;
+    padding-top: 10px;
+    margin-top: 10px;
+  }
+
+  .podifai-accordion:first-of-type {
+    border-top: none;
+    padding-top: 0;
+    margin-top: 0;
+  }
+
+  .podifai-accordion__trigger {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 0;
+    cursor: pointer;
+    user-select: none;
+  }
+
+  .podifai-accordion__label {
+    font-size: 0.92rem;
+    font-weight: 600;
+    color: #1a1a1a;
+  }
+
+  .podifai-accordion__tag {
+    font-size: 0.78rem;
+    color: #777777;
+    margin-left: auto;
+    margin-right: 0.75rem;
+  }
+
+  .podifai-accordion__icon {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #555555;
+  }
+
+  .podifai-accordion__content {
+    display: none;
+    padding: 8px 0 12px 0;
+  }
+
+  .podifai-accordion.active .podifai-accordion__content {
+    display: block;
+  }
+
+  /* Category Filter Pills */
+  .podifai-pill-filters {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 12px;
+  }
+
+  .podifai-pill-btn {
+    white-space: nowrap;
+    font-size: 0.78rem;
+    padding: 6px 14px;
+    border-radius: 20px;
+    border: 1.5px solid #eae6e1;
+    background-color: #ffffff;
+    color: #333333;
+    cursor: pointer;
+    font-weight: 500;
+    transition: all 0.2s ease;
+  }
+
+  .podifai-pill-btn:hover {
+    border-color: var(--podifai-primary-btn-bg);
+  }
+
+  .podifai-pill-btn.active {
+    background-color: var(--podifai-primary-btn-bg);
+    color: var(--podifai-primary-btn-text);
+    border-color: var(--podifai-primary-btn-bg);
+  }
+
+  .podifai-sublabel {
+    font-size: 0.8rem;
+    color: #666666;
+    margin: 8px 0 12px 0;
+    font-weight: 500;
+  }
+
+  /* Patch Grids: 4 -> 3 -> 2 columns responsive layout */
+  .podifai-patch-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 10px;
+    margin-top: 10px;
+    box-sizing: border-box;
+    width: 100%;
+  }
+
+  @media (max-width: 768px) {
+    .podifai-patch-grid {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 8px;
+    }
+  }
+
+  @media (max-width: 420px) {
+    .podifai-patch-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+    }
+  }
+
+  .podifai-patch-item {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 1;
+    border: 1.5px solid #eae6e1;
+    border-radius: 10px;
+    background: #ffffff;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 6px 4px 4px;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    box-sizing: border-box;
+    overflow: hidden;
+  }
+
+  .podifai-patch-item:hover {
+    border-color: var(--podifai-primary-btn-bg);
+  }
+
+  .podifai-patch-item.active {
+    border-color: var(--podifai-primary-btn-bg);
+    border-width: 2px;
+  }
+
+  .podifai-patch-img {
+    max-width: 70%;
+    max-height: 70%;
+    width: auto;
+    height: auto;
+    object-fit: contain;
+    margin-bottom: 2px;
+  }
+
+  .podifai-patch-label {
+    font-size: 0.72rem;
+    color: #666666;
+    text-align: center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 90%;
+    line-height: 1.2;
+  }
+
+  .podifai-patch-badge {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: var(--podifai-primary-btn-bg);
+    color: var(--podifai-primary-btn-text);
+    font-size: 0.68rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transform: scale(0.5);
+    transition: all 0.2s ease;
+  }
+
+  .podifai-patch-item.active .podifai-patch-badge,
+  .podifai-letter-item.active .podifai-patch-badge {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  /* Alphabet Letters Grid: 5 -> 4 -> 3 -> 2 columns responsive layout */
+  .podifai-alphabet-grid {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 8px;
+    margin-top: 10px;
+    box-sizing: border-box;
+    width: 100%;
+  }
+
+  @media (max-width: 768px) {
+    .podifai-alphabet-grid {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 8px;
+    }
+  }
+
+  @media (max-width: 480px) {
+    .podifai-alphabet-grid {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 6px;
+    }
+  }
+
+  @media (max-width: 360px) {
+    .podifai-alphabet-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 6px;
+    }
+  }
+
+  .podifai-letter-item {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 1;
+    border: 1.5px solid #eae6e1;
+    border-radius: 10px;
+    background: #ffffff;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 6px;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    box-sizing: border-box;
+  }
+
+  .podifai-letter-item:hover {
+    border-color: var(--podifai-primary-btn-bg);
+  }
+
+  .podifai-letter-item.active {
+    border-color: var(--podifai-primary-btn-bg);
+    border-width: 2px;
+  }
+
+  .podifai-letter-wrapper {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .podifai-letter-img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+  }
+
+  .podifai-patch-item.hidden,
+  .podifai-letter-item.hidden {
+    display: none !important;
+  }
+
+  /* Selected Patches Summary Bar at the BOTTOM */
+  .podifai-active-summary {
+    background: #faf8f5;
+    border: 1px solid #eae6e1;
+    border-radius: 10px;
+    padding: 12px 14px;
+    margin-top: 16px;
+  }
+
+  .podifai-summary-header {
+    margin-bottom: 10px;
+  }
+
+  .podifai-summary-title {
+    font-size: 0.88rem;
+    font-weight: 600;
+    color: #1a1a1a;
+  }
+
+  .podifai-summary-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .podifai-summary-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: #ffffff;
+    border: 1px solid #eae6e1;
+    border-radius: 20px;
+    padding: 4px 12px;
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: #1a1a1a;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+  }
+
+  .podifai-summary-tag img {
+    width: 18px;
+    height: 18px;
+    object-fit: contain;
+  }
+
+  .podifai-summary-remove {
+    background: none;
+    border: none;
+    color: #999999;
+    cursor: pointer;
+    font-size: 0.95rem;
+    line-height: 1;
+    padding: 0 0 0 4px;
+    transition: color 0.2s ease;
+  }
+
+  .podifai-summary-remove:hover {
+    color: #e85a37;
+  }
+
+  /* Multi-Text Embroidery Section */
+  .podifai-embroidery-spec-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: #fdf8f3;
+    border: 1px dashed #dfcbb5;
+    border-radius: 6px;
+    padding: 6px 10px;
+    font-size: 0.76rem;
+    color: #6d543e;
+    margin-bottom: 6px;
+  }
+
+  .podifai-embroidery-spec-badge strong {
+    color: #3b2c1f;
+    font-weight: 600;
+  }
+
+  .podifai-embroidery-spec-badge svg {
+    flex-shrink: 0;
+    color: #b48347;
+  }
+
+  .podifai-embroidery {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .podifai-embroidery-lines {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .podifai-embroidery-card {
+    background: #ffffff;
+    border: 1px solid #eae6e1;
+    border-radius: 10px;
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    position: relative;
+  }
+
+  .podifai-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #f0ece8;
+    padding-bottom: 8px;
+  }
+
+  .podifai-card-title {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #1a1a1a;
+  }
+
+  .podifai-card-remove {
+    background: none;
+    border: none;
+    color: #999999;
+    font-size: 0.78rem;
+    cursor: pointer;
+    padding: 2px 6px;
+    border-radius: 4px;
+    transition: color 0.2s ease;
+  }
+
+  .podifai-card-remove:hover {
+    color: #e85a37;
+  }
+
+  .podifai-field-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .podifai-field-label-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .podifai-field-label {
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: #333333;
+  }
+
+  .podifai-char-counter {
+    font-size: 0.75rem;
+    color: #888888;
+  }
+
+  .podifai-font-picker {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+  }
+
+  .podifai-font-btn {
+    width: 52px;
+    height: 40px;
+    border: 1.5px solid #eae6e1;
+    border-radius: 8px;
+    background: #ffffff;
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #333333;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+  }
+
+  .podifai-font-btn:hover {
+    border-color: var(--podifai-primary-btn-bg);
+  }
+
+  .podifai-font-btn.active {
+    background-color: var(--podifai-primary-btn-bg);
+    color: var(--podifai-primary-btn-text);
+    border-color: var(--podifai-primary-btn-bg);
+  }
+
+  .podifai-text-input {
+    width: 100%;
+    padding: 10px 14px;
+    border: 1.5px solid #eae6e1;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    outline: none;
+    box-sizing: border-box;
+    transition: border-color 0.2s ease;
+  }
+
+  .podifai-text-input:focus {
+    border-color: var(--podifai-primary-btn-bg);
+  }
+
+  .podifai-color-picker {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+
+  .podifai-color-swatch {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    cursor: pointer;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    border: 1px solid rgba(0, 0, 0, 0.15);
+    outline: none;
+    padding: 0;
+  }
+
+  .podifai-color-swatch:hover {
+    transform: scale(1.1);
+  }
+
+  .podifai-color-swatch.active {
+    box-shadow: 0 0 0 2px #ffffff, 0 0 0 4px var(--podifai-primary-btn-bg);
+    border-color: transparent;
+  }
+
+  .podifai-add-text-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 10px 18px;
+    border: 1.5px dashed #d3d3d3;
+    border-radius: 8px;
+    background: #ffffff;
+    color: #444444;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    width: 100%;
+  }
+
+  .podifai-add-text-btn:hover {
+    border-color: var(--podifai-primary-btn-bg);
+    color: var(--podifai-primary-btn-bg);
+  }
+
+  /* Live Order Total Summary Card */
+  .podifai-total-summary-card {
+    background: #faf8f5;
+    border: 1.5px solid #eae6e1;
+    border-radius: 10px;
+    padding: 14px 18px;
+    margin: 16px 0 14px 0;
+  }
+
+  .podifai-summary-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.88rem;
+    color: #444444;
+    padding: 4px 0;
+  }
+
+  .podifai-summary-row-label {
+    font-weight: 500;
+  }
+
+  .podifai-summary-row-price {
+    font-weight: 500;
+  }
+
+  .podifai-summary-divider {
+    height: 1px;
+    background: #eae6e1;
+    margin: 8px 0;
+  }
+
+  .podifai-summary-total-row {
+    font-size: 1rem;
+    font-weight: 700;
+    color: #1a1a1a;
+    padding-top: 2px;
+  }
+
+  .podifai-summary-total-label {
+    font-weight: 700;
+  }
+
+  .podifai-summary-total-price {
+    font-weight: 700;
+  }
+
+  /* Microcopy Notes */
+  .podifai-microcopy-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: 16px;
+  }
+
+  .podifai-microcopy-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    font-size: 0.78rem;
+    color: #777777;
+    line-height: 1.4;
+  }
+
+  .podifai-microcopy-icon {
+    font-size: 0.95rem;
+    line-height: 1.2;
+    flex-shrink: 0;
+  }
+</style>
+
+<script>
+  (function () {
+    const BASE_STAGE_REF = 600;
+    const configEl = document.getElementById('podifai-customizer-config');
+    const CURRENCY_SYMBOL = configEl ? configEl.dataset.currencySymbol || 'RM' : 'RM';
+    const PATCH_UNIT_PRICE = configEl ? parseFloat(configEl.dataset.patchPrice) || 6.0 : 6.0;
+    const EMBROIDERY_UNIT_PRICE = configEl ? parseFloat(configEl.dataset.embroideryPrice) || 20.0 : 20.0;
+    const PATCH_ADDON_VARIANT = configEl ? configEl.dataset.patchAddonVariant || '' : '';
+    const EMBROIDERY_ADDON_VARIANT = configEl ? configEl.dataset.embroideryAddonVariant || '' : '';
+    const ENABLE_ADDON = configEl ? configEl.dataset.enableAddon !== 'false' : true;
+    const CLOUD_NAME = configEl ? configEl.dataset.cloudName || '' : '';
+    const UPLOAD_PRESET = configEl ? configEl.dataset.uploadPreset || '' : '';
+    const TEXT_INPUT_LABEL = '{{ custom_settings.text_input_label_text | default: "Your text" | escape }}';
+
+    let selectedPatches = [];
+    let stage = null;
+    let layer = null;
+    let transformer = null;
+    let deleteBtnGroup = null;
+    let mediaContainerEl = null;
+
+    // Multi-Text Embroidery State
+    let embroideryLines = [
+      {
+        id: 'emb-line-1',
+        text: '',
+        font: "'DM Serif Display', Georgia, serif",
+        color: '#FAF8F5',
+        colorName: 'Ivory',
+        node: null,
+        relX: 0.35,
+        relY: 0.65,
+        baseFontSize: 28,
+        baseScaleX: 1,
+        baseScaleY: 1,
+        rotation: 0,
+      },
+    ];
+    let nextEmbroideryLineId = 2;
+
+    // Active Categories Tracking
+    const initialCharPill =
+      document.querySelector('#podifai-char-categories .podifai-pill-btn.active') ||
+      document.querySelector('#podifai-char-categories .podifai-pill-btn');
+    let currentCharCategory = initialCharPill ? initialCharPill.dataset.charCat : 'cutie-faces';
+
+    const initialAlphabetPill =
+      document.querySelector('#podifai-alphabet-categories .podifai-pill-btn.active') ||
+      document.querySelector('#podifai-alphabet-categories .podifai-pill-btn');
+    let currentAlphabetCategory = initialAlphabetPill ? initialAlphabetPill.dataset.cat : 'black-cap';
+
+    // Live Dynamic Surcharge Pricing & Summary Card Engine
+    function updateDynamicPrice() {
+      const priceEl = document.getElementById('podifai-product-price');
+      const priceDisplayEl = document.getElementById('podifai-price-display');
+      const btnPriceDisplayEl = document.getElementById('podifai-btn-price-display');
+      const configEl = document.getElementById('podifai-customizer-config');
+
+      let rawBase = 0;
+      if (priceEl && priceEl.dataset.basePrice) {
+        rawBase = parseFloat(priceEl.dataset.basePrice) || 0;
+      } else if (configEl && configEl.dataset.basePrice) {
+        rawBase = parseFloat(configEl.dataset.basePrice) || 0;
+      }
+
+      const basePrice = rawBase > 1000 ? rawBase / 100 : rawBase;
+
+      const patchCount = selectedPatches.length;
+      const activeEmbroideryCount = embroideryLines.filter((l) => l.text && l.text.trim().length > 0).length;
+
+      const qtyInput = document.getElementById('product-quantity-input');
+      const qty = parseInt(qtyInput ? qtyInput.value : 1) || 1;
+
+      const patchTotal = patchCount * PATCH_UNIT_PRICE;
+      const embroideryTotal = activeEmbroideryCount * EMBROIDERY_UNIT_PRICE;
+      const unitTotal = basePrice + patchTotal + embroideryTotal;
+      const grandTotal = unitTotal * qty;
+
+      const formattedUnitPrice = `${CURRENCY_SYMBOL}${unitTotal.toFixed(2)}`;
+      const formattedGrandPrice = `${CURRENCY_SYMBOL}${grandTotal.toFixed(2)}`;
+      const formattedPatchTotal = `${CURRENCY_SYMBOL}${patchTotal.toFixed(2)}`;
+      const formattedEmbroideryTotal = `${CURRENCY_SYMBOL}${embroideryTotal.toFixed(2)}`;
+      const formattedBasePrice = `${CURRENCY_SYMBOL}${basePrice.toFixed(2)}`;
+
+      if (priceDisplayEl) {
+        priceDisplayEl.innerText = formattedUnitPrice;
+      }
+      if (btnPriceDisplayEl) {
+        btnPriceDisplayEl.innerText = formattedGrandPrice;
+      }
+
+      // Step 3 bottom summary price
+      const summaryPriceEl = document.getElementById('podifai-summary-price');
+      if (summaryPriceEl) {
+        summaryPriceEl.innerText = formattedPatchTotal;
+      }
+
+      // Step 3 header meta info
+      const patchesHeaderCountText = document.getElementById('podifai-patches-header-count-text');
+      const clearAllPatchesBtn = document.getElementById('podifai-clear-all-patches-btn');
+      if (patchesHeaderCountText) {
+        if (patchCount > 0) {
+          patchesHeaderCountText.innerText = `${patchCount} added`;
+          if (clearAllPatchesBtn) clearAllPatchesBtn.style.display = 'inline-block';
+        } else {
+          patchesHeaderCountText.innerText = '';
+          if (clearAllPatchesBtn) clearAllPatchesBtn.style.display = 'none';
+        }
+      }
+
+      // Live Order Breakdown Card
+      const basePriceRow = document.getElementById('podifai-summary-base-price');
+      if (basePriceRow) basePriceRow.innerText = formattedBasePrice;
+
+      const checkedSize = document.querySelector('.variant-option-group--size .size-pill-input:checked, .size-pill-input:checked');
+      const sizeVal = checkedSize ? checkedSize.value : '';
+      const productNameEl = document.getElementById('podifai-summary-product-name');
+      const productTitle = '{{ product.title | escape }}';
+      if (productNameEl) {
+        productNameEl.innerText = sizeVal ? `${productTitle} (${sizeVal})` : productTitle;
+      }
+
+      const patchesRow = document.getElementById('podifai-summary-patches-row');
+      const patchesQtyEl = document.getElementById('podifai-summary-patches-qty');
+      const patchesTotalEl = document.getElementById('podifai-summary-patches-total');
+      if (patchesRow && patchesQtyEl && patchesTotalEl) {
+        if (patchCount > 0) {
+          patchesRow.style.display = 'flex';
+          patchesQtyEl.innerText = patchCount;
+          patchesTotalEl.innerText = formattedPatchTotal;
+        } else {
+          patchesRow.style.display = 'none';
+        }
+      }
+
+      const embRow = document.getElementById('podifai-summary-embroidery-row');
+      const embQtyEl = document.getElementById('podifai-summary-embroidery-qty');
+      const embTotalEl = document.getElementById('podifai-summary-embroidery-total');
+      if (embRow && embQtyEl && embTotalEl) {
+        if (activeEmbroideryCount > 0) {
+          embRow.style.display = 'flex';
+          embQtyEl.innerText = activeEmbroideryCount;
+          embTotalEl.innerText = formattedEmbroideryTotal;
+        } else {
+          embRow.style.display = 'none';
+        }
+      }
+
+      const grandTotalEl = document.getElementById('podifai-summary-grand-total');
+      if (grandTotalEl) grandTotalEl.innerText = formattedUnitPrice;
+
+      return {
+        basePrice,
+        unitTotal,
+        patchTotal,
+        embroideryTotal,
+        grandTotal,
+        formattedPrice: formattedUnitPrice,
+        formattedGrandPrice,
+        patchCount,
+        activeEmbroideryCount,
+        quantity: qty,
+      };
+    }
+
+    // Filter Character Patches Grid
+    function filterCharacterPatchesGrid() {
+      const activePill =
+        document.querySelector('#podifai-char-categories .podifai-pill-btn.active') ||
+        document.querySelector('#podifai-char-categories .podifai-pill-btn');
+      if (activePill) {
+        currentCharCategory =
+          activePill.dataset.charCat || activePill.dataset.category || activePill.textContent.trim();
+        updateCharacterSublabel(activePill);
+      }
+
+      const items = document.querySelectorAll('#podifai-character-patches .podifai-patch-item');
+      if (items.length === 0) return;
+
+      const normCurrent = (currentCharCategory || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+
+      items.forEach((btn) => {
+        const rawCat = btn.dataset.charCategory || btn.dataset.category || '';
+        const normCat = rawCat.toLowerCase().replace(/[^a-z0-9]/g, '');
+
+        if (
+          !normCat ||
+          !normCurrent ||
+          normCat === normCurrent ||
+          normCurrent.includes(normCat) ||
+          normCat.includes(normCurrent)
+        ) {
+          btn.classList.remove('hidden');
+        } else {
+          btn.classList.add('hidden');
+        }
+      });
+    }
+
+    // Dynamic Letter Patch SVG Generator
+    function getLetterPatchImageUrl(category, letterChar) {
+      const charUpper = (letterChar || 'A').toUpperCase();
+      const charLower = (letterChar || 'a').toLowerCase();
+      const catLower = (category || '').toLowerCase();
+
+      if (catLower.includes('blue')) {
+        const svgString = `<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120" viewBox="0 0 120 120">
+          <text x="60" y="80" font-size="76" font-weight="900" font-family="'Arial Black', sans-serif" fill="#0091EA" stroke="#FFFFFF" stroke-width="6" stroke-linejoin="round" text-anchor="middle">${charUpper}</text>
+        </svg>`;
+        return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svgString);
+      } else if (catLower.includes('pink')) {
+        const svgString = `<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120" viewBox="0 0 120 120">
+          <text x="60" y="80" font-size="76" font-weight="900" font-family="'Arial Black', sans-serif" fill="#E91E63" stroke="#FFFFFF" stroke-width="6" stroke-linejoin="round" text-anchor="middle">${charUpper}</text>
+        </svg>`;
+        return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svgString);
+      } else if (catLower.includes('yellow')) {
+        const svgString = `<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120" viewBox="0 0 120 120">
+          <text x="60" y="80" font-size="76" font-weight="900" font-family="'Arial Black', sans-serif" fill="#FFC107" stroke="#FFFFFF" stroke-width="6" stroke-linejoin="round" text-anchor="middle">${charUpper}</text>
+        </svg>`;
+        return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svgString);
+      } else if (catLower.includes('mix')) {
+        const rainbowColors = ['#E91E63', '#FF5722', '#FFC107', '#4CAF50', '#2196F3', '#9C27B0'];
+        const charCode = (letterChar || 'A').charCodeAt(0) || 0;
+        const color = rainbowColors[charCode % rainbowColors.length];
+        const svgString = `<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120" viewBox="0 0 120 120">
+          <text x="60" y="80" font-size="76" font-weight="900" font-family="'Arial Black', sans-serif" fill="${color}" stroke="#FFFFFF" stroke-width="6" stroke-linejoin="round" text-anchor="middle">${charUpper}</text>
+        </svg>`;
+        return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svgString);
+      } else {
+        // Default / Black caps
+        const svgString = `<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120" viewBox="0 0 120 120">
+          <text x="60" y="80" font-size="76" font-weight="900" font-family="'Impact', 'Arial Black', sans-serif" fill="#1A1A1A" stroke="#FFFFFF" stroke-width="5" stroke-linejoin="round" text-anchor="middle">${charUpper}</text>
+        </svg>`;
+        return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svgString);
+      }
+    }
+
+    // Filter Alphabet Letter Grid
+    function updateAlphabetGrid() {
+      const activeAlphaPill =
+        document.querySelector('#podifai-alphabet-categories .podifai-pill-btn.active') ||
+        document.querySelector('#podifai-alphabet-categories .podifai-pill-btn');
+      if (activeAlphaPill) {
+        currentAlphabetCategory =
+          activeAlphaPill.dataset.cat || activeAlphaPill.dataset.category || activeAlphaPill.textContent.trim();
+        updateAlphabetSublabel(activeAlphaPill);
+      }
+
+      const normCurrent = (currentAlphabetCategory || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+      const items = document.querySelectorAll('#podifai-alphabet-grid .podifai-letter-item');
+
+      items.forEach((btn) => {
+        const rawCat = btn.dataset.letterCategory || btn.dataset.category || '';
+        const normCat = rawCat.toLowerCase().replace(/[^a-z0-9]/g, '');
+        const letter = btn.dataset.letter;
+        const imgEl = btn.querySelector('.podifai-letter-img');
+        const customImg = btn.dataset.customImg;
+
+        if (
+          !normCat ||
+          !normCurrent ||
+          normCat === normCurrent ||
+          normCurrent.includes(normCat) ||
+          normCat.includes(normCurrent)
+        ) {
+          btn.classList.remove('hidden');
+          if (imgEl) {
+            imgEl.src = customImg || getLetterPatchImageUrl(currentAlphabetCategory, letter);
+          }
+        } else {
+          btn.classList.add('hidden');
+        }
+      });
+    }
+
+    function formatDimensionString(rawStr) {
+      if (!rawStr) return '8cm x 8cm';
+      let clean = rawStr.toString().trim();
+      const nums = clean.match(/(\d+(?:\.\d+)?)/g);
+      if (!nums || nums.length === 0) return '8cm x 8cm';
+      const w = nums[0];
+      const h = nums.length > 1 ? nums[1] : w;
+      return `${w}cm x ${h}cm`;
+    }
+
+{% assign char_scale_on = section.settings.enable_proportional_scaling_char %}
+{% if char_scale_on == nil %}
+  {% assign char_scale_on = section_settings.enable_proportional_scaling_char %}
+{% endif %}
+{% if char_scale_on == nil %}
+  {% assign char_scale_on = true %}
+{% endif %}
+
+{% assign alpha_scale_on = section.settings.enable_proportional_scaling_alpha %}
+{% if alpha_scale_on == nil %}
+  {% assign alpha_scale_on = section_settings.enable_proportional_scaling_alpha %}
+{% endif %}
+{% if alpha_scale_on == nil %}
+  {% assign alpha_scale_on = true %}
+{% endif %}
+
+    function getPatchDimensionsPx(sizeStr, patchType) {
+      const isCharEnabled = {{ char_scale_on | json }};
+      const isAlphaEnabled = {{ alpha_scale_on | json }};
+
+      const isScalingActive = patchType === 'letter' ? isAlphaEnabled : isCharEnabled;
+
+      if (!isScalingActive) {
+        return { width: 85, height: 85 };
+      }
+
+      if (!sizeStr) return { width: 85, height: 85 };
+
+      const numbers = sizeStr.toString().match(/(\d+(?:\.\d+)?)/g);
+      if (!numbers || numbers.length === 0) return { width: 85, height: 85 };
+
+      let cmW = parseFloat(numbers[0]) || 8;
+      cmW = Math.max(0.5, Math.min(cmW, 12));
+
+      // Visual size offset: 2cm -> 5cm (53px), 3cm -> 6cm (64px), 3.5cm -> 6.5cm (69px), 5cm+ -> 8cm (85px)
+      let visualCm = Math.min(8, cmW + 3);
+      if (cmW >= 5) {
+        visualCm = 8;
+      }
+
+      const BASE_CM_TO_PX = 10.625; // 85px = 8cm max zone scale
+      const visualPx = Math.round(visualCm * BASE_CM_TO_PX);
+
+      return {
+        width: visualPx,
+        height: visualPx
+      };
+    }
+
+    function updateCharacterSublabel(pill) {
+      if (!pill) {
+        pill =
+          document.querySelector('#podifai-char-categories .podifai-pill-btn.active') ||
+          document.querySelector('#podifai-char-categories .podifai-pill-btn');
+      }
+      if (!pill) return;
+
+      const catSize = formatDimensionString(pill.dataset.size || '8cm x 8cm');
+      const sublabelEl = document.getElementById('podifai-char-sublabel');
+      if (sublabelEl) {
+        sublabelEl.innerHTML = `Size approximately <span id="podifai-char-cat-size">${catSize}</span>`;
+      }
+    }
+
+    function updateAlphabetSublabel(pill) {
+      if (!pill) {
+        pill =
+          document.querySelector('#podifai-alphabet-categories .podifai-pill-btn.active') ||
+          document.querySelector('#podifai-alphabet-categories .podifai-pill-btn');
+      }
+      if (!pill) return;
+
+      const catSize = formatDimensionString(pill.dataset.size || '8cm x 8cm');
+      const sublabelEl = document.getElementById('podifai-alpha-sublabel');
+      if (sublabelEl) {
+        sublabelEl.innerHTML = `Size approximately <span id="podifai-alpha-cat-size">${catSize}</span>`;
+      }
+    }
+
+    function updateActiveHeaderLabels() {
+      const activeCharPill = document.querySelector('#podifai-char-categories .podifai-pill-btn.active');
+      if (activeCharPill) {
+        const charHeaderLabel = document.getElementById('podifai-active-char-cat-label');
+        if (charHeaderLabel) charHeaderLabel.innerText = activeCharPill.dataset.label || activeCharPill.innerText;
+        updateCharacterSublabel(activeCharPill);
+      }
+      const activeAlphaPill = document.querySelector('#podifai-alphabet-categories .podifai-pill-btn.active');
+      if (activeAlphaPill) {
+        const alphaHeaderLabel = document.getElementById('podifai-active-category-label');
+        if (alphaHeaderLabel) alphaHeaderLabel.innerText = activeAlphaPill.dataset.label || activeAlphaPill.innerText;
+        updateAlphabetSublabel(activeAlphaPill);
+      }
+    }
+
+    let lastCanvasW = 0;
+    let lastCanvasH = 0;
+    let resizeFrameId = null;
+
+    // Helper to position floating X (Delete) button on top-right of selected node
+    function updateDeleteButtonPosition() {
+      if (!stage || !layer || !deleteBtnGroup) return;
+      const nodes = transformer ? transformer.nodes() : [];
+      if (!nodes || nodes.length === 0) {
+        deleteBtnGroup.visible(false);
+        layer.batchDraw();
+        return;
+      }
+      const selectedNode = nodes[0];
+      const box = selectedNode.getClientRect({ relativeTo: layer });
+
+      deleteBtnGroup.position({
+        x: box.x + box.width + 2,
+        y: box.y - 2,
+      });
+      deleteBtnGroup.visible(true);
+      deleteBtnGroup.moveToTop();
+      layer.batchDraw();
+    }
+
+    // Responsive Canvas Resize & Re-anchor Function
+    function resizeAndRedrawCanvas() {
+      if (!mediaContainerEl || !stage || !layer) return;
+
+      const newRect = mediaContainerEl.getBoundingClientRect();
+      if (newRect.width <= 0 || newRect.height <= 0) return;
+
+      // Prevent fractional subpixel micro-reflows that cause mobile screen shaking
+      if (Math.abs(newRect.width - lastCanvasW) < 1.5 && Math.abs(newRect.height - lastCanvasH) < 1.5) {
+        return;
+      }
+
+      lastCanvasW = newRect.width;
+      lastCanvasH = newRect.height;
+
+      const newWidth = newRect.width;
+      const newHeight = newRect.height;
+
+      stage.width(newWidth);
+      stage.height(newHeight);
+
+      const scaleFactor = newWidth / BASE_STAGE_REF;
+
+      selectedPatches.forEach((p) => {
+        if (p.node) {
+          p.node.x(p.relX * newWidth);
+          p.node.y(p.relY * newHeight);
+          p.node.scaleX((p.baseScaleX || 1) * scaleFactor);
+          p.node.scaleY((p.baseScaleY || 1) * scaleFactor);
+          if (typeof p.rotation === 'number') {
+            p.node.rotation(p.rotation);
+          }
+        }
+      });
+
+      const maxEmbW = Math.min(220 * scaleFactor, newWidth * 0.42);
+
+      embroideryLines.forEach((line) => {
+        if (line.node) {
+          const baseSize = (line.baseFontSize || 30) * scaleFactor;
+          line.node.fontSize(baseSize);
+          if (line.node.width() > maxEmbW) {
+            line.node.fontSize(baseSize * (maxEmbW / line.node.width()));
+          }
+          line.node.offsetX(line.node.width() / 2);
+          line.node.offsetY(line.node.height() / 2);
+          line.node.x(line.relX * newWidth);
+          line.node.y(line.relY * newHeight);
+          if (typeof line.rotation === 'number') {
+            line.node.rotation(line.rotation);
+          }
+        }
+      });
+
+      updateDeleteButtonPosition();
+      layer.batchDraw();
+    }
+
+    // Initialize Konva Canvas Engine
+    function initKonvaOverlay() {
+      mediaContainerEl = document.querySelector(
+        '.product-images, .product-media-gallery, [data-product-single-media-group], .product-gallery__main'
+      );
+      const canvasWrapper = document.getElementById('podifai-canvas-wrapper');
+
+      if (mediaContainerEl && canvasWrapper) {
+        if (getComputedStyle(mediaContainerEl).position === 'static') {
+          mediaContainerEl.style.position = 'relative';
+        }
+        mediaContainerEl.appendChild(canvasWrapper);
+
+        const rect = mediaContainerEl.getBoundingClientRect();
+        const width = rect.width || 500;
+        const height = rect.height || 500;
+
+        lastCanvasW = width;
+        lastCanvasH = height;
+
+        stage = new Konva.Stage({
+          container: 'podifai-konva-container',
+          width: width,
+          height: height,
+        });
+
+        layer = new Konva.Layer();
+        stage.add(layer);
+
+        // Transformer: Allows 360° rotation and dragging while strictly locking size / preventing resizing
+        transformer = new Konva.Transformer({
+          rotateEnabled: true,
+          rotateAnchorOffset: 25,
+          resizeEnabled: false,
+          enabledAnchors: [],
+          borderStroke: '#1a1a1a',
+          borderStrokeWidth: 1.5,
+          borderDash: [4, 4],
+          padding: 4,
+        });
+        layer.add(transformer);
+
+        // Floating Delete / Trash Bin Icon Button (X Icon)
+        deleteBtnGroup = new Konva.Group({
+          name: 'deleteBtnGroup',
+          visible: false,
+          listening: true,
+        });
+
+        const deleteBtnBg = new Konva.Circle({
+          radius: 11,
+          fill: '#ffffff',
+          stroke: '#333333',
+          strokeWidth: 1.5,
+          shadowColor: 'rgba(0, 0, 0, 0.15)',
+          shadowBlur: 3,
+          shadowOffset: { x: 0, y: 1 },
+          shadowOpacity: 0.2,
+          cursor: 'pointer',
+        });
+
+        const deleteBtnIcon = new Konva.Path({
+          data: 'M -3.5 -3.5 L 3.5 3.5 M 3.5 -3.5 L -3.5 3.5',
+          stroke: '#333333',
+          strokeWidth: 1.6,
+          lineCap: 'round',
+          lineJoin: 'round',
+          fill: 'none',
+          cursor: 'pointer',
+        });
+
+        deleteBtnGroup.add(deleteBtnBg);
+        deleteBtnGroup.add(deleteBtnIcon);
+        layer.add(deleteBtnGroup);
+
+        deleteBtnGroup.on('mouseenter', () => {
+          if (typeof document !== 'undefined') document.body.style.cursor = 'pointer';
+          deleteBtnBg.fill('#fee2e2');
+          deleteBtnBg.stroke('#dc2626');
+          deleteBtnIcon.stroke('#dc2626');
+          layer.batchDraw();
+        });
+
+        deleteBtnGroup.on('mouseleave', () => {
+          if (typeof document !== 'undefined') document.body.style.cursor = 'default';
+          deleteBtnBg.fill('#ffffff');
+          deleteBtnBg.stroke('#333333');
+          deleteBtnIcon.stroke('#333333');
+          layer.batchDraw();
+        });
+
+        deleteBtnGroup.on('click tap', (e) => {
+          e.cancelBubble = true;
+          const nodes = transformer ? transformer.nodes() : [];
+          if (nodes && nodes.length > 0) {
+            const targetNode = nodes[0];
+            const patchObj = selectedPatches.find((p) => p.node === targetNode);
+            if (patchObj) {
+              removePatchById(patchObj.id);
+            } else {
+              const lineObj = embroideryLines.find((l) => l.node === targetNode);
+              if (lineObj) {
+                lineObj.text = '';
+                const idx = embroideryLines.indexOf(lineObj);
+                updateEmbroideryLineNode(lineObj, idx);
+                if (typeof renderEmbroideryLinesUI === 'function') renderEmbroideryLinesUI();
+              }
+            }
+            if (transformer) transformer.nodes([]);
+            updateDeleteButtonPosition();
+          }
+        });
+
+        stage.on('click tap', (e) => {
+          if (e.target === stage) {
+            transformer.nodes([]);
+            updateDeleteButtonPosition();
+          }
+        });
+
+        if (window.ResizeObserver) {
+          const ro = new ResizeObserver(() => {
+            if (resizeFrameId) cancelAnimationFrame(resizeFrameId);
+            resizeFrameId = requestAnimationFrame(resizeAndRedrawCanvas);
+          });
+          ro.observe(mediaContainerEl);
+        }
+
+        window.addEventListener('resize', () => {
+          if (resizeFrameId) cancelAnimationFrame(resizeFrameId);
+          resizeFrameId = requestAnimationFrame(resizeAndRedrawCanvas);
+        });
+        window.addEventListener('orientationchange', () => {
+          setTimeout(resizeAndRedrawCanvas, 200);
+        });
+      }
+    }
+
+    // Accordion Toggle
+    document.querySelectorAll('.podifai-accordion__trigger').forEach((trigger) => {
+      trigger.addEventListener('click', () => {
+        const accordion = trigger.closest('.podifai-accordion');
+        accordion.classList.toggle('active');
+        const icon = accordion.querySelector('.podifai-accordion__icon');
+        if (icon) {
+          icon.innerHTML = accordion.classList.contains('active') ? '&times;' : '+';
+        }
+      });
+    });
+
+    // Update Persistent UI Summary Bar & Badges
+    function updateUIBadges() {
+      // 1. Character patch items badge count - Strictly match unique patchRefId
+      document.querySelectorAll('#podifai-character-patches .podifai-patch-item').forEach((btn) => {
+        const pId = btn.dataset.patchId;
+        const count = selectedPatches.filter((p) => p.type === 'character' && p.patchRefId === pId).length;
+
+        const badge = btn.querySelector('.podifai-patch-badge');
+        if (count > 0) {
+          btn.classList.add('active');
+          if (badge) badge.innerText = count;
+        } else {
+          btn.classList.remove('active');
+          if (badge) badge.innerText = '';
+        }
+      });
+
+      const charSelectedCount = selectedPatches.filter((p) => p.type === 'character').length;
+      const charSelectedCountEl = document.getElementById('podifai-char-selected-count');
+      if (charSelectedCountEl) charSelectedCountEl.innerText = charSelectedCount;
+
+      // 2. Alphabet patch items badge count
+      document.querySelectorAll('#podifai-alphabet-grid .podifai-letter-item').forEach((btn) => {
+        const letter = (btn.dataset.letter || '').toLowerCase();
+        const count = selectedPatches.filter(
+          (p) =>
+            p.type === 'letter' &&
+            p.category === currentAlphabetCategory &&
+            (p.letterChar || '').toLowerCase() === letter
+        ).length;
+
+        const badge = btn.querySelector('.podifai-patch-badge');
+        if (count > 0) {
+          btn.classList.add('active');
+          if (badge) badge.innerText = count;
+        } else {
+          btn.classList.remove('active');
+          if (badge) badge.innerText = '';
+        }
+      });
+
+      // 3. Bottom Summary Bar in Step 3
+      const summaryContainer = document.getElementById('podifai-active-summary');
+      const summaryTags = document.getElementById('podifai-summary-tags');
+      const summaryCount = document.getElementById('podifai-summary-count');
+
+      if (summaryContainer && summaryTags && summaryCount) {
+        summaryCount.innerText = selectedPatches.length;
+        summaryTags.innerHTML = '';
+
+        if (selectedPatches.length > 0) {
+          summaryContainer.style.display = 'block';
+          selectedPatches.forEach((p) => {
+            const tag = document.createElement('div');
+            tag.className = 'podifai-summary-tag';
+
+            let labelText = '';
+            if (p.type === 'character') {
+              const raw = p.letterChar || 'Patch';
+              const m = raw.match(/^(.*?)\s*#(\d+)$/);
+              if (m) {
+                labelText = `${m[1].trim()}, P${m[2]}`;
+              } else {
+                labelText = raw;
+              }
+            } else {
+              const cat = p.categoryLabel || p.category || 'Alphabet';
+              const char = (p.letterChar || '').toUpperCase().replace(/'/g, '');
+              labelText = `${cat}, ${char}`;
+            }
+
+            tag.innerHTML = `
+              <img src="${p.imgUrl}" alt="${labelText}">
+              <span>${labelText}</span>
+              <button type="button" class="podifai-summary-remove" data-id="${p.id}">&times;</button>
+            `;
+            summaryTags.appendChild(tag);
+          });
+
+          summaryTags.querySelectorAll('.podifai-summary-remove').forEach((btn) => {
+            btn.addEventListener('click', () => {
+              const instanceId = btn.dataset.id;
+              removePatchById(instanceId);
+            });
+          });
+        } else {
+          summaryContainer.style.display = 'none';
+        }
+      }
+
+      updateDynamicPrice();
+    }
+
+    function removePatchById(instanceId) {
+      const idx = selectedPatches.findIndex((p) => p.id === instanceId);
+      if (idx > -1) {
+        const removed = selectedPatches.splice(idx, 1)[0];
+        if (removed.node) {
+          removed.node.destroy();
+          transformer.nodes([]);
+          updateDeleteButtonPosition();
+        }
+        updateUIBadges();
+      }
+    }
+
+    // Clear All Patches button in Step 3 header
+    const clearAllPatchesBtn = document.getElementById('podifai-clear-all-patches-btn');
+    if (clearAllPatchesBtn) {
+      clearAllPatchesBtn.addEventListener('click', () => {
+        selectedPatches.forEach((p) => {
+          if (p.node) p.node.destroy();
+        });
+        selectedPatches = [];
+        if (transformer) transformer.nodes([]);
+        if (layer) layer.draw();
+        updateUIBadges();
+      });
+    }
+
+    // Add Patch Handler (supports multiple instances of the same patch / letter)
+    function handlePatchAdd(btnEl, patchRefId, patchType, titleStr, svgOrImgSrc, categoryStr, categoryLabel) {
+      if (!layer || !stage) return;
+
+      const currentW = stage.width();
+      const currentH = stage.height();
+      const scaleFactor = currentW / BASE_STAGE_REF;
+
+      const imgObj = new Image();
+      imgObj.crossOrigin = 'Anonymous';
+      const finalImgSrc = svgOrImgSrc || getLetterPatchImageUrl(categoryStr || currentAlphabetCategory, titleStr);
+      imgObj.src = finalImgSrc;
+
+      // Unique instance ID for this specific patch node
+      const instanceId = `${patchRefId}-inst-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`;
+
+      // Stagger positions nicely across canvas
+      const patchIndex = selectedPatches.length;
+      const initX = Math.min(Math.max(50, currentW / 2 + ((patchIndex % 5) - 2) * 45), currentW - 50);
+      const initY = Math.min(Math.max(50, currentH / 2 + Math.floor(patchIndex / 5) * 45), currentH - 50);
+      const relX = initX / currentW;
+      const relY = initY / currentH;
+
+      let rawSizeStr = null;
+      if (btnEl) {
+        rawSizeStr = btnEl.dataset.size || (btnEl.closest('[data-size]') ? btnEl.closest('[data-size]').dataset.size : null);
+      }
+      if (!rawSizeStr) {
+        if (patchType === 'letter') {
+          const activeAlphaPill = document.querySelector('#podifai-alphabet-categories .podifai-pill-btn.active');
+          if (activeAlphaPill) rawSizeStr = activeAlphaPill.dataset.size;
+        } else {
+          const activeCharPill = document.querySelector('#podifai-char-categories .podifai-pill-btn.active');
+          if (activeCharPill) rawSizeStr = activeCharPill.dataset.size;
+        }
+      }
+      if (!rawSizeStr) rawSizeStr = '8cm x 8cm';
+
+      const dim = getPatchDimensionsPx(rawSizeStr, patchType);
+      const baseWidth = dim.width;
+      const baseHeight = dim.height;
+
+      const node = new Konva.Image({
+        x: initX,
+        y: initY,
+        image: imgObj,
+        width: baseWidth,
+        height: baseHeight,
+        offsetX: baseWidth / 2,
+        offsetY: baseHeight / 2,
+        scaleX: scaleFactor,
+        scaleY: scaleFactor,
+        draggable: true,
+        dragBoundFunc: function (pos) {
+          if (!stage) return pos;
+          const sw = stage.width();
+          const sh = stage.height();
+          const s = this.scaleX();
+          const halfW = (this.width() * s) / 2;
+          const halfH = (this.height() * s) / 2;
+          const m = 6;
+          return {
+            x: Math.max(halfW + m, Math.min(pos.x, sw - halfW - m)),
+            y: Math.max(halfH + m, Math.min(pos.y, sh - halfH - m)),
+          };
+        },
+      });
+
+      imgObj.onload = () => layer.draw();
+
+      const patchObj = {
+        id: instanceId,
+        patchRefId: patchRefId,
+        type: patchType,
+        category: categoryStr,
+        categoryLabel: categoryLabel,
+        letterChar: titleStr,
+        node: node,
+        element: btnEl,
+        imgUrl: finalImgSrc,
+        relX: relX,
+        relY: relY,
+        baseScaleX: 1,
+        baseScaleY: 1,
+        rotation: 0,
+      };
+
+      function syncNodeRelativeState() {
+        const w = stage.width();
+        const h = stage.height();
+        patchObj.relX = node.x() / w;
+        patchObj.relY = node.y() / h;
+        patchObj.rotation = node.rotation();
+      }
+
+      node.on('dragmove dragend transform transformend', () => {
+        syncNodeRelativeState();
+        updateDeleteButtonPosition();
+      });
+
+      node.on('click tap', () => {
+        transformer.nodes([node]);
+        updateDeleteButtonPosition();
+      });
+
+      layer.add(node);
+      transformer.nodes([node]);
+      updateDeleteButtonPosition();
+
+      selectedPatches.push(patchObj);
+      updateUIBadges();
+    }
+
+    // Character Category Switcher Listeners
+    document.querySelectorAll('#podifai-char-categories .podifai-pill-btn').forEach((pill) => {
+      pill.addEventListener('click', () => {
+        document
+          .querySelectorAll('#podifai-char-categories .podifai-pill-btn')
+          .forEach((p) => p.classList.remove('active'));
+        pill.classList.add('active');
+
+        currentCharCategory = pill.dataset.charCat;
+        const catLabel = pill.dataset.label || pill.innerText;
+
+        const charHeaderLabel = document.getElementById('podifai-active-char-cat-label');
+        if (charHeaderLabel) charHeaderLabel.innerText = catLabel;
+
+        updateCharacterSublabel(pill);
+        filterCharacterPatchesGrid();
+        updateUIBadges();
+      });
+    });
+
+    // Attach Character Patch Click Listeners
+    document.querySelectorAll('#podifai-character-patches .podifai-patch-item').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const patchId = btn.dataset.patchId;
+        const patchType = btn.dataset.patchType || 'character';
+        const name = btn.dataset.patchName;
+        const img = btn.dataset.patchImg || btn.querySelector('img')?.src;
+        const cat = btn.dataset.charCategory;
+        handlePatchAdd(btn, patchId, patchType, name, img, cat, 'Character');
+      });
+    });
+
+    // Alphabet Category Switcher Listeners
+    document.querySelectorAll('#podifai-alphabet-categories .podifai-pill-btn').forEach((pill) => {
+      pill.addEventListener('click', () => {
+        document
+          .querySelectorAll('#podifai-alphabet-categories .podifai-pill-btn')
+          .forEach((p) => p.classList.remove('active'));
+        pill.classList.add('active');
+
+        currentAlphabetCategory = pill.dataset.cat;
+        const catLabel = pill.dataset.label || pill.innerText;
+
+        const categoryHeaderLabel = document.getElementById('podifai-active-category-label');
+        if (categoryHeaderLabel) categoryHeaderLabel.innerText = catLabel;
+
+        updateAlphabetSublabel(pill);
+        updateAlphabetGrid();
+        updateUIBadges();
+      });
+    });
+
+    // Attach Alphabet Patch Click Listeners
+    document.querySelectorAll('#podifai-alphabet-grid .podifai-letter-item').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const letter = btn.dataset.letter;
+        const activePill = document.querySelector('#podifai-alphabet-categories .podifai-pill-btn.active');
+        const categoryLabel = activePill ? activePill.dataset.label || activePill.innerText : currentAlphabetCategory;
+        const patchId = `letter-${currentAlphabetCategory}-${letter}`;
+        const imgUrl =
+          btn.dataset.customImg ||
+          btn.querySelector('.podifai-letter-img')?.src ||
+          getLetterPatchImageUrl(currentAlphabetCategory, letter);
+        handlePatchAdd(btn, patchId, 'letter', letter, imgUrl, currentAlphabetCategory, categoryLabel);
+      });
+    });
+
+    // ==========================================
+    // MULTI-TEXT EMBROIDERY MANAGEMENT SYSTEM
+    // ==========================================
+    const embroideryLinesContainer = document.getElementById('podifai-embroidery-lines');
+    const addTextBtn = document.getElementById('podifai-add-text-btn');
+    const threadSource = document.getElementById('podifai-thread-options-source');
+
+    function updateEmbroideryLineNode(lineObj, lineIndex) {
+      if (!stage || !layer) return;
+
+      const trimmedText = (lineObj.text || '').trim();
+
+      if (!trimmedText) {
+        if (lineObj.node) {
+          lineObj.node.destroy();
+          lineObj.node = null;
+          transformer.nodes([]);
+          layer.draw();
+        }
+        updateDynamicPrice();
+        return;
+      }
+
+      const currentW = stage.width();
+      const currentH = stage.height();
+      const scaleFactor = currentW / BASE_STAGE_REF;
+      const MAX_EMB_WIDTH = Math.min(220 * scaleFactor, currentW * 0.42);
+      const baseFontSize = 30;
+
+      if (!lineObj.node) {
+        const centerX = currentW / 2;
+        const centerY = currentH * 0.58 + lineIndex * (38 * scaleFactor);
+
+        lineObj.relX = centerX / currentW;
+        lineObj.relY = centerY / currentH;
+        lineObj.baseFontSize = baseFontSize;
+
+        const node = new Konva.Text({
+          x: centerX,
+          y: centerY,
+          text: lineObj.text,
+          fontSize: baseFontSize * scaleFactor,
+          fontFamily: lineObj.font,
+          fill: lineObj.color,
+          align: 'center',
+          draggable: true,
+          dragBoundFunc: function (pos) {
+            if (!stage) return pos;
+            const sw = stage.width();
+            const sh = stage.height();
+            const halfW = (this.width() * this.scaleX()) / 2;
+            const halfH = (this.height() * this.scaleY()) / 2;
+            const m = 6;
+            return {
+              x: Math.max(halfW + m, Math.min(pos.x, sw - halfW - m)),
+              y: Math.max(halfH + m, Math.min(pos.y, sh - halfH - m)),
+            };
+          },
+        });
+
+        // Enforce 8cm max width constraint
+        if (node.width() > MAX_EMB_WIDTH) {
+          node.fontSize(baseFontSize * scaleFactor * (MAX_EMB_WIDTH / node.width()));
+        }
+        node.offsetX(node.width() / 2);
+        node.offsetY(node.height() / 2);
+
+        function syncTextRelativeState() {
+          const w = stage.width();
+          const h = stage.height();
+          lineObj.relX = node.x() / w;
+          lineObj.relY = node.y() / h;
+          lineObj.rotation = node.rotation();
+        }
+
+        node.on('dragstart', () => {
+          lineObj.isDragged = true;
+        });
+
+        node.on('dragmove dragend transform transformend', () => {
+          syncTextRelativeState();
+          updateDeleteButtonPosition();
+        });
+
+        node.on('click tap', () => {
+          transformer.nodes([node]);
+          updateDeleteButtonPosition();
+        });
+
+        layer.add(node);
+        lineObj.node = node;
+      } else {
+        lineObj.node.text(lineObj.text);
+        lineObj.node.fontFamily(lineObj.font);
+        lineObj.node.fill(lineObj.color);
+        lineObj.node.fontSize(baseFontSize * scaleFactor);
+
+        // Enforce 8cm max width constraint
+        if (lineObj.node.width() > MAX_EMB_WIDTH) {
+          lineObj.node.fontSize(baseFontSize * scaleFactor * (MAX_EMB_WIDTH / lineObj.node.width()));
+        }
+        lineObj.node.offsetX(lineObj.node.width() / 2);
+        lineObj.node.offsetY(lineObj.node.height() / 2);
+
+        // Center placement unless manually dragged
+        if (!lineObj.isDragged) {
+          const centerX = currentW / 2;
+          const centerY = currentH * 0.58 + lineIndex * (38 * scaleFactor);
+          lineObj.node.x(centerX);
+          lineObj.node.y(centerY);
+          lineObj.relX = centerX / currentW;
+          lineObj.relY = centerY / currentH;
+        }
+      }
+
+      updateDeleteButtonPosition();
+      updateDynamicPrice();
+    }
+
+    function getFontDisplayName(fontStr) {
+      if (!fontStr) return 'DM Serif Display';
+      if (fontStr.includes('Garamond')) return 'Garamond';
+      if (fontStr.includes('Chancery')) return 'Chancery';
+      if (fontStr.includes('DM Serif Display')) return 'DM Serif Display';
+      if (fontStr.includes('Picturama Founder')) return 'Picturama Founder';
+      if (fontStr.includes('Gill Sans')) return 'Gill Sans Light';
+      if (fontStr.includes('Georgia')) return 'DM Serif Display';
+      if (fontStr.includes('Brush Script')) return 'Picturama Founder';
+      if (fontStr.includes('Inter')) return 'Gill Sans Light';
+      return 'DM Serif Display';
+    }
+
+    function renderEmbroideryLinesUI() {
+      if (!embroideryLinesContainer) return;
+
+      embroideryLinesContainer.innerHTML = '';
+
+      embroideryLines.forEach((line, index) => {
+        const card = document.createElement('div');
+        card.className = 'podifai-embroidery-card';
+        card.dataset.lineId = line.id;
+
+        card.innerHTML = `
+          ${
+            embroideryLines.length > 1
+              ? `<div class="podifai-card-header">
+                  <span class="podifai-card-title">Embroidery Text #${index + 1}</span>
+                  <button type="button" class="podifai-card-remove" data-id="${line.id}">&times; Remove</button>
+                </div>`
+              : ''
+          }
+
+          <!-- Font Style Picker -->
+          <div class="podifai-field-group">
+            <label class="podifai-field-label">Font: <strong class="podifai-selected-font-name">${getFontDisplayName(line.font)}</strong></label>
+            <div class="podifai-font-picker">
+              <button type="button" class="podifai-font-btn ${
+                line.font.includes('DM Serif Display') || line.font.includes('Georgia') ? 'active' : ''
+              }" data-font="'DM Serif Display', Georgia, serif" style="font-family: 'DM Serif Display', Georgia, serif;" title="DM Serif Display">
+                Aa
+              </button>
+              <button type="button" class="podifai-font-btn ${
+                line.font.includes('Picturama Founder') || line.font.includes('Brush Script') ? 'active' : ''
+              }" data-font="'Picturama Founder', 'Brush Script MT', cursive" style="font-family: 'Picturama Founder', 'Brush Script MT', cursive; font-style: italic;" title="Picturama Founder">
+                Aa
+              </button>
+              <button type="button" class="podifai-font-btn ${
+                line.font.includes('Gill Sans') || line.font.includes('Inter') ? 'active' : ''
+              }" data-font="'Gill Sans Light', 'Gill Sans', 'Inter', sans-serif" style="font-family: 'Gill Sans Light', 'Gill Sans', sans-serif; font-weight: 300;" title="Gill Sans Light">
+                Aa
+              </button>
+              <button type="button" class="podifai-font-btn ${
+                line.font.includes('Garamond') ? 'active' : ''
+              }" data-font="'EB Garamond', 'Garamond', serif" style="font-family: 'EB Garamond', 'Garamond', serif;" title="Garamond">
+                Aa
+              </button>
+              <button type="button" class="podifai-font-btn ${
+                line.font.includes('Chancery') ? 'active' : ''
+              }" data-font="'Apple Chancery', 'Zapf Chancery', cursive" style="font-family: 'Apple Chancery', 'Zapf Chancery', cursive; font-style: italic;" title="Chancery">
+                Aa
+              </button>
+            </div>
+          </div>
+
+          <!-- Text Input -->
+          <div class="podifai-field-group">
+            <div class="podifai-field-label-row">
+              <label class="podifai-field-label">${TEXT_INPUT_LABEL}</label>
+              <span class="podifai-char-counter">${(line.text || '').length}/10</span>
+            </div>
+            <input
+              type="text"
+              class="podifai-text-input"
+              maxlength="10"
+              value="${line.text || ''}"
+              autocomplete="off"
+            >
+          </div>
+
+          <!-- Thread Color Picker -->
+          <div class="podifai-field-group">
+            <label class="podifai-field-label">Thread colour: <strong class="podifai-selected-thread-name">${
+              line.colorName || 'Ivory'
+            }</strong></label>
+            <div class="podifai-color-picker">
+              ${threadSource ? threadSource.innerHTML : ''}
+            </div>
+          </div>
+        `;
+
+        const swatches = card.querySelectorAll('.podifai-color-swatch');
+        const threadNameLabel = card.querySelector('.podifai-selected-thread-name');
+
+        swatches.forEach((sw) => {
+          if (sw.dataset.color.toLowerCase() === line.color.toLowerCase()) {
+            sw.classList.add('active');
+          }
+          sw.addEventListener('click', () => {
+            swatches.forEach((s) => s.classList.remove('active'));
+            sw.classList.add('active');
+            line.color = sw.dataset.color;
+            line.colorName = sw.dataset.colorName || sw.title || 'Selected';
+            if (threadNameLabel) {
+              threadNameLabel.innerText = line.colorName;
+            }
+            updateEmbroideryLineNode(line, index);
+          });
+        });
+
+        const fontBtns = card.querySelectorAll('.podifai-font-btn');
+        const fontNameLabel = card.querySelector('.podifai-selected-font-name');
+        fontBtns.forEach((fb) => {
+          fb.addEventListener('click', () => {
+            fontBtns.forEach((b) => b.classList.remove('active'));
+            fb.classList.add('active');
+            line.font = fb.dataset.font;
+            if (fontNameLabel) {
+              fontNameLabel.innerText = getFontDisplayName(line.font);
+            }
+            updateEmbroideryLineNode(line, index);
+          });
+        });
+
+        const textInput = card.querySelector('.podifai-text-input');
+        const charCounter = card.querySelector('.podifai-char-counter');
+        textInput.addEventListener('input', (e) => {
+          line.text = e.target.value;
+          if (charCounter) charCounter.innerText = `${line.text.length}/10`;
+          updateEmbroideryLineNode(line, index);
+        });
+
+        const removeBtn = card.querySelector('.podifai-card-remove');
+        if (removeBtn) {
+          removeBtn.addEventListener('click', () => {
+            if (line.node) {
+              line.node.destroy();
+              transformer.nodes([]);
+              layer.draw();
+            }
+            embroideryLines = embroideryLines.filter((l) => l.id !== line.id);
+            renderEmbroideryLinesUI();
+            updateDynamicPrice();
+          });
+        }
+
+        embroideryLinesContainer.appendChild(card);
+      });
+    }
+
+    if (addTextBtn) {
+      addTextBtn.addEventListener('click', () => {
+        const newLine = {
+          id: `emb-line-${nextEmbroideryLineId++}`,
+          text: '',
+          font: "'Brush Script MT', cursive",
+          color: '#FAF8F5',
+          colorName: 'Ivory',
+          node: null,
+          relX: 0.35,
+          relY: 0.65 + embroideryLines.length * 0.08,
+          baseFontSize: 28,
+          baseScaleX: 1,
+          baseScaleY: 1,
+          rotation: 0,
+        };
+        embroideryLines.push(newLine);
+        renderEmbroideryLinesUI();
+        updateDynamicPrice();
+      });
+    }
+
+    // Ultra High-Definition Composite Snapshot Generator for Cloudinary
+    async function generateFullCustomizationSnapshot() {
+      const activeImgEl =
+        document.querySelector('.product-image-wrapper.active img') ||
+        document.querySelector('.product-main-image') ||
+        document.querySelector('.product-images img');
+
+      const exportW = 1200;
+      const exportH = 1200;
+
+      const exportCanvas = document.createElement('canvas');
+      exportCanvas.width = exportW;
+      exportCanvas.height = exportH;
+      const ctx = exportCanvas.getContext('2d');
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = 'high';
+
+      // 1. Draw product background image
+      if (activeImgEl && (activeImgEl.complete || activeImgEl.naturalWidth > 0)) {
+        try {
+          const imgW = activeImgEl.naturalWidth || exportW;
+          const imgH = activeImgEl.naturalHeight || exportH;
+          const imgRatio = imgW / imgH;
+          const containerRatio = exportW / exportH;
+
+          let drawW, drawH, drawX, drawY;
+          if (imgRatio > containerRatio) {
+            drawW = exportW;
+            drawH = exportW / imgRatio;
+            drawX = 0;
+            drawY = (exportH - drawH) / 2;
+          } else {
+            drawH = exportH;
+            drawW = exportH * imgRatio;
+            drawX = (exportW - drawW) / 2;
+            drawY = 0;
+          }
+
+          ctx.drawImage(activeImgEl, drawX, drawY, drawW, drawH);
+        } catch (e) {
+          console.warn('Background draw note:', e);
+        }
+      }
+
+      // 2. Temporarily detach transformer & hide delete button for clean export
+      if (deleteBtnGroup) {
+        deleteBtnGroup.visible(false);
+      }
+      if (transformer) {
+        transformer.detach();
+      }
+      layer.draw();
+
+      // 3. Draw Konva canvas elements in high resolution
+      if (stage) {
+        const konvaDataUrl = stage.toDataURL({ pixelRatio: 2 });
+        await new Promise((resolve) => {
+          const konvaImg = new Image();
+          konvaImg.crossOrigin = 'anonymous';
+          konvaImg.onload = () => {
+            ctx.drawImage(konvaImg, 0, 0, exportW, exportH);
+            resolve();
+          };
+          konvaImg.onerror = () => resolve();
+          konvaImg.src = konvaDataUrl;
+        });
+      }
+
+      return exportCanvas.toDataURL('image/png');
+    }
+
+    // Direct Cloudinary Upload Function
+    async function uploadPreviewToCloudinary(base64Data) {
+      if (!CLOUD_NAME || !UPLOAD_PRESET) return null;
+      try {
+        const formData = new FormData();
+        formData.append('file', base64Data);
+        formData.append('upload_preset', UPLOAD_PRESET);
+        formData.append('folder', 'podifai_customizations');
+
+        const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`, {
+          method: 'POST',
+          body: formData,
+        });
+        if (res.ok) {
+          const data = await res.json();
+          return data.secure_url;
+        }
+      } catch (err) {
+        console.warn('Cloudinary upload note:', err);
+      }
+      return null;
+    }
+
+    // Custom AJAX Add to Cart Handler
+    async function handleCustomAddToCart(form) {
+      const btn = form.querySelector('[type="submit"]') || document.getElementById('add-to-cart-btn');
+      const originalBtnHTML = btn ? btn.innerHTML : 'Add to bag';
+
+      if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<span>Capturing preview...</span>';
+      }
+
+      const fullMergedSnapshot = await generateFullCustomizationSnapshot();
+      const priceInfo = updateDynamicPrice() || {};
+      const mainVariantId =
+        form.querySelector('[name="id"]')?.value || document.getElementById('selected-variant-id')?.value;
+      const qty = parseInt(form.querySelector('[name="quantity"]')?.value) || 1;
+
+      if (!mainVariantId) {
+        if (btn) {
+          btn.disabled = false;
+          btn.innerHTML = originalBtnHTML;
+        }
+        return false;
+      }
+
+      const mainProductTitle = document.querySelector('.product-title')?.innerText || 'Customized Product';
+      let previewImageUrl = await uploadPreviewToCloudinary(fullMergedSnapshot);
+
+      const mainItemProperties = {};
+
+      if (priceInfo.patchCount > 0 || priceInfo.activeEmbroideryCount > 0) {
+        mainItemProperties['Customisation'] = `${priceInfo.patchCount || 0} Patches, ${
+          priceInfo.activeEmbroideryCount || 0
+        } Embroidery`;
+      }
+
+      const activeEmbLines = embroideryLines.filter((l) => l.text && l.text.trim() !== '');
+      activeEmbLines.forEach((line, idx) => {
+        const embKey = activeEmbLines.length > 1 ? `Embroidery ${idx + 1}` : 'Embroidery';
+        mainItemProperties[embKey] = `${line.text} (${line.font.split(',')[0].replace(/'/g, '')}, ${
+          line.colorName || line.color
+        })`;
+      });
+
+      mainItemProperties['_Customisation Breakdown'] = `${priceInfo.patchCount || 0} Patches (+${CURRENCY_SYMBOL}${(
+        priceInfo.patchTotal || 0
+      ).toFixed(2)}), ${priceInfo.activeEmbroideryCount || 0} Embroidery (+${CURRENCY_SYMBOL}${(
+        priceInfo.embroideryTotal || 0
+      ).toFixed(2)})`;
+      mainItemProperties['_Total Custom Price'] =
+        priceInfo.formattedPrice || `${CURRENCY_SYMBOL}${(priceInfo.grandTotal || 0).toFixed(2)}`;
+      mainItemProperties['_Base Product Price'] = `${CURRENCY_SYMBOL}${(priceInfo.basePrice || 0).toFixed(2)}`;
+
+      if (previewImageUrl) {
+        mainItemProperties['Preview'] = previewImageUrl;
+      } else {
+        mainItemProperties['Preview'] = fullMergedSnapshot;
+      }
+
+      if (selectedPatches.length > 0) {
+        mainItemProperties['_Selected Patches'] = selectedPatches.map((p) => p.letterChar || 'Patch').join(', ');
+      }
+
+      mainItemProperties['_Customization Data'] = JSON.stringify({
+        pricing: priceInfo,
+        patches: selectedPatches.map((p, idx) => ({
+          order: idx + 1,
+          id: p.id,
+          type: p.type,
+          category: p.category,
+          letterChar: p.letterChar,
+          relX: p.relX,
+          relY: p.relY,
+          rotation: p.rotation || 0,
+        })),
+        embroidery: embroideryLines
+          .filter((line) => line.text && line.text.trim() !== '')
+          .map((line, idx) => ({
+            line: idx + 1,
+            text: line.text,
+            font: line.font,
+            color: line.color,
+            colorName: line.colorName,
+            relX: line.relX,
+            relY: line.relY,
+            rotation: line.rotation || 0,
+          })),
+      });
+
+      mainItemProperties['_patches_per_bag'] = String(priceInfo.patchCount);
+      mainItemProperties['_embroidery_per_bag'] = String(priceInfo.activeEmbroideryCount);
+
+      const itemsPayload = [
+        {
+          id: parseInt(mainVariantId),
+          quantity: qty,
+          properties: mainItemProperties,
+        },
+      ];
+
+      if (ENABLE_ADDON && PATCH_ADDON_VARIANT && priceInfo.patchCount > 0) {
+        itemsPayload.push({
+          id: parseInt(PATCH_ADDON_VARIANT),
+          quantity: priceInfo.patchCount * qty,
+          properties: {
+            _parent_item: mainProductTitle,
+            _patches_per_bag: String(priceInfo.patchCount),
+            'Addon Type': `Patches Surcharge (${priceInfo.patchCount}x @ ${CURRENCY_SYMBOL}${PATCH_UNIT_PRICE.toFixed(
+              2
+            )})`,
+          },
+        });
+      }
+
+      if (ENABLE_ADDON && EMBROIDERY_ADDON_VARIANT && priceInfo.activeEmbroideryCount > 0) {
+        itemsPayload.push({
+          id: parseInt(EMBROIDERY_ADDON_VARIANT),
+          quantity: priceInfo.activeEmbroideryCount * qty,
+          properties: {
+            _parent_item: mainProductTitle,
+            _embroidery_per_bag: String(priceInfo.activeEmbroideryCount),
+            'Addon Type': `Embroidery Surcharge (${
+              priceInfo.activeEmbroideryCount
+            }x @ ${CURRENCY_SYMBOL}${EMBROIDERY_UNIT_PRICE.toFixed(2)})`,
+          },
+        });
+      }
+
+      if (btn) {
+        btn.innerHTML = '<span>Adding to bag...</span>';
+      }
+
+      try {
+        const response = await fetch('/cart/add.js', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Accept: 'application/json',
+          },
+          body: JSON.stringify({ items: itemsPayload }),
+        });
+
+        if (response.ok) {
+          const cartResponse = await response.json();
+          if (btn) {
+            btn.innerHTML = '<span>Added to bag!</span>';
+          }
+
+          const cartAddEvent = new CustomEvent('cart:update', {
+            bubbles: true,
+            detail: {
+              resource: cartResponse,
+              sourceId: form.id || 'product-form',
+              data: {},
+            },
+          });
+          document.dispatchEvent(cartAddEvent);
+
+          const cartDrawer = document.querySelector('cart-drawer-component');
+          if (cartDrawer && typeof cartDrawer.open === 'function') {
+            cartDrawer.open();
+          }
+
+          document.dispatchEvent(new CustomEvent('cart:updated', { detail: { cart: cartResponse } }));
+          window.dispatchEvent(new CustomEvent('cart:updated', { detail: { cart: cartResponse } }));
+          document.dispatchEvent(new CustomEvent('cart:refresh'));
+
+          document
+            .querySelectorAll(
+              '#header-component sup, header sup, sup, [data-cart-count], .cart-bubble__text, .header__cart-count'
+            )
+            .forEach((el) => {
+              const cur = parseInt(el.innerText) || 0;
+              el.innerText = cur + qty;
+              el.removeAttribute('hidden');
+              el.style.display = 'inline-flex';
+            });
+
+          // Reset Add to Bag button back to active state after 1.8 seconds
+          setTimeout(() => {
+            if (btn) {
+              btn.disabled = false;
+              btn.innerHTML = `<span id="add-to-cart-text">Add to bag · <span id="podifai-btn-price-display"></span></span>`;
+              if (typeof updateDynamicPrice === 'function') {
+                updateDynamicPrice();
+              }
+            }
+          }, 1800);
+
+          return true;
+        } else {
+          let previewInput = form.querySelector('.podifai-preview-input');
+          if (!previewInput) {
+            previewInput = document.createElement('input');
+            previewInput.type = 'hidden';
+            previewInput.name = 'properties[Customization Preview]';
+            previewInput.className = 'podifai-preview-input';
+            form.appendChild(previewInput);
+          }
+          previewInput.value = fullMergedSnapshot;
+
+          for (const [k, v] of Object.entries(mainItemProperties)) {
+            if (k !== 'Customization Preview') {
+              let propInput = form.querySelector(`input[name="properties[${k}]"]`);
+              if (!propInput) {
+                propInput = document.createElement('input');
+                propInput.type = 'hidden';
+                propInput.name = `properties[${k}]`;
+                form.appendChild(propInput);
+              }
+              propInput.value = typeof v === 'object' ? JSON.stringify(v) : v;
+            }
+          }
+          return false;
+        }
+      } catch (err) {
+        console.error('Add to cart bundle error:', err);
+        if (btn) {
+          btn.disabled = false;
+          btn.innerHTML = originalBtnHTML;
+        }
+        return false;
+      }
+    }
+
+    // Intercept Form Submit
+    document.addEventListener(
+      'submit',
+      async (e) => {
+        const form = e.target;
+        if (
+          form &&
+          (form.matches('form[action*="/cart/add"]') ||
+            form.matches('form[data-type="add-to-cart-form"]') ||
+            form.id === 'product-form')
+        ) {
+          e.preventDefault();
+          const success = await handleCustomAddToCart(form);
+          if (!success) {
+            form.submit();
+          }
+        }
+      },
+      true
+    );
+
+    window.PodifaiCustomizer = {
+      updatePrice: updateDynamicPrice,
+      getStage: () => stage,
+      reAnchor: resizeAndRedrawCanvas,
+    };
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', () => {
+        initKonvaOverlay();
+        filterCharacterPatchesGrid();
+        updateAlphabetGrid();
+        renderEmbroideryLinesUI();
+        updateActiveHeaderLabels();
+        updateDynamicPrice();
+      });
+    } else {
+      initKonvaOverlay();
+      filterCharacterPatchesGrid();
+      updateAlphabetGrid();
+      renderEmbroideryLinesUI();
+      updateActiveHeaderLabels();
+      updateDynamicPrice();
+    }
+  })();
+</script> 
+

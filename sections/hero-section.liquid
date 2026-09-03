@@ -1,0 +1,535 @@
+<section class="raw-hero-section-{{ section.id }} raw-hero-section" style="--hero-bg: {{ section.settings.bg_color }};">
+  
+  {%- if section.settings.media_type == 'video' -%}
+    {%- comment -%} ─── Background Video ─── {%- endcomment -%}
+    <div class="raw-hero-media-wrapper">
+      {%- if section.settings.video != blank -%}
+        {{
+          section.settings.video
+          | video_tag:
+            autoplay: true,
+            loop: true,
+            muted: true,
+            controls: false,
+            playsinline: true,
+            class: 'raw-hero-bg-video'
+        }}
+      {%- elsif section.settings.video_url != blank -%}
+        {%- if section.settings.video_url.type == 'youtube' -%}
+          <iframe 
+            src="https://www.youtube.com/embed/{{ section.settings.video_url.id }}?autoplay=1&loop=1&playlist={{ section.settings.video_url.id }}&mute=1&controls=0&showinfo=0&rel=0&modestbranding=1&iv_load_policy=3" 
+            class="raw-hero-bg-video-iframe" 
+            allow="autoplay; encrypted-media" 
+            allowfullscreen 
+            title="Background Video"
+          ></iframe>
+        {%- elsif section.settings.video_url.type == 'vimeo' -%}
+          <iframe 
+            src="https://player.vimeo.com/video/{{ section.settings.video_url.id }}?autoplay=1&loop=1&muted=1&background=1&autopause=0" 
+            class="raw-hero-bg-video-iframe" 
+            allow="autoplay; fullscreen" 
+            allowfullscreen 
+            title="Background Video"
+          ></iframe>
+        {%- endif -%}
+      {%- else -%}
+        {{ 'lifestyle-1' | placeholder_svg_tag: 'raw-hero-bg-img placeholder' }}
+      {%- endif -%}
+    </div>
+  {%- else -%}
+    {%- comment -%} ─── Background Image ─── {%- endcomment -%}
+    {%- if section.settings.image != blank -%}
+      <img 
+        src="{{ section.settings.image | image_url: width: 2000 }}" 
+        alt="{{ section.settings.image.alt | default: section.settings.title }}" 
+        loading="eager"
+        class="raw-hero-bg-img"
+        style="object-position: {{ section.settings.image_position }};"
+      >
+    {%- else -%}
+      {{ 'lifestyle-1' | placeholder_svg_tag: 'raw-hero-bg-img placeholder' }}
+    {%- endif -%}
+  {%- endif -%}
+  
+  {%- assign overlay_opacity = section.settings.overlay_opacity | divided_by: 100.0 -%}
+  <div class="raw-hero-overlay" style="background-color: {{ section.settings.overlay_color }}; opacity: {{ overlay_opacity }};"></div>
+  
+  <div class="raw-hero-container">
+    <div class="raw-hero-content-wrapper">
+      
+      {%- if section.settings.badge_text != blank -%}
+        <div class="raw-hero-badge">
+          <span class="raw-hero-badge-dot" style="background-color: {{ section.settings.badge_dot_color }};"></span> 
+          {{ section.settings.badge_text }}
+        </div>
+      {%- endif -%}
+      
+      {%- if section.settings.title != blank -%}
+        <h1 class="raw-hero-heading">
+          {{ section.settings.title | newline_to_br }}
+        </h1>
+      {%- endif -%}
+      
+      {%- if section.settings.description != blank -%}
+        <div class="raw-hero-desc">
+          {{ section.settings.description }}
+        </div>
+      {%- endif -%}
+      
+      <div class="raw-hero-btn-group">
+        {%- if section.settings.primary_button_text != blank -%}
+          <a href="{{ section.settings.primary_button_link | default: '#' }}" class="raw-hero-btn btn-primary-custom">
+            <span>{{ section.settings.primary_button_text }}</span>
+            {% comment %} <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="raw-hero-arrow-icon" aria-hidden="true">
+              <path d="M5 12h14"></path>
+              <path d="m12 5 7 7-7 7"></path>
+            </svg> {% endcomment %}
+          </a>
+        {%- endif -%}
+
+        {%- if section.settings.secondary_button_text != blank -%}
+          <a href="{{ section.settings.secondary_button_link | default: '#' }}" class="raw-hero-btn btn-secondary-custom">
+            {{ section.settings.secondary_button_text }}
+          </a>
+        {%- endif -%}
+      </div>
+      
+      <div class="raw-hero-footer">
+        {%- if section.settings.show_rating -%}
+          <div class="raw-hero-rating">
+            <span class="raw-hero-stars" style="color: {{ section.settings.star_color }};">{{ section.settings.rating_stars }}</span> 
+            <span class="raw-hero-rating-text">{{ section.settings.rating_text }}</span>
+          </div>
+        {%- endif -%}
+        
+        {%- if section.settings.info_text_1 != blank -%}
+          <div class="raw-hero-info-item">{{ section.settings.info_text_1 }}</div>
+        {%- endif -%}
+        
+        {%- if section.settings.info_text_2 != blank -%}
+          <div class="raw-hero-info-item">{{ section.settings.info_text_2 }}</div>
+        {%- endif -%}
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<style>
+  /* ─── Base Styles for Hero Section ─── */
+  .raw-hero-section-{{ section.id }}.raw-hero-section {
+    position: relative;
+    overflow: hidden;
+    background-color: var(--hero-bg);
+    color: #ffffff;
+    min-height: 550px;
+    display: flex;
+    align-items: center;
+    z-index: 1;
+  }
+
+  .raw-hero-section-{{ section.id }} .raw-hero-bg-img {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    z-index: -2;
+    transition: transform 0.8s ease;
+  }
+
+  /* Video Background Wrapper & Object Fit */
+  .raw-hero-section-{{ section.id }} .raw-hero-media-wrapper {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: -2;
+    overflow: hidden;
+  }
+
+  .raw-hero-section-{{ section.id }} .raw-hero-bg-video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+
+  /* Responsive video iframe style for YouTube/Vimeo to cover full background */
+  .raw-hero-section-{{ section.id }} .raw-hero-bg-video-iframe {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 100vw;
+    height: 56.25vw; /* 16:9 Aspect Ratio */
+    min-height: 100vh;
+    min-width: 177.77vh; /* 1.77 * height */
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+    border: none;
+  }
+
+  @media (max-width: 768px) {
+    .raw-hero-section-{{ section.id }} .raw-hero-bg-video-iframe {
+      width: 177.77vh;
+      height: 100vh;
+    }
+  }
+
+  .raw-hero-section-{{ section.id }} .raw-hero-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: -1;
+    pointer-events: none;
+  }
+
+  .raw-hero-section-{{ section.id }} .raw-hero-container {
+    width: 100%;
+    max-width: 1480px;
+    margin: 0 auto;
+    padding: 60px 20px;
+    position: relative;
+    z-index: 10;
+  }
+
+  .raw-hero-section-{{ section.id }} .raw-hero-content-wrapper {
+    max-width: 650px;
+    margin: auto;
+    text-align: center;
+}
+
+  .raw-hero-section-{{ section.id }} .raw-hero-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(255, 255, 255, 0.15);
+    backdrop-filter: blur(5px);
+    padding: 6px 14px;
+    border-radius: 50px;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    margin-bottom: 20px;
+  }
+
+  .raw-hero-section-{{ section.id }} .raw-hero-badge-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+  }
+
+  /* ─── Typography & Sizing Controls ─── */
+  .raw-hero-section-{{ section.id }} .raw-hero-heading {
+    font-size: {{ section.settings.heading_size_mobile }}px;
+    line-height: 1.2;
+    font-weight: 400;
+    margin: 0 0 15px 0;
+    color: #ffffff;
+  }
+
+  .raw-hero-section-{{ section.id }} .raw-hero-desc {
+    font-size: {{ section.settings.desc_size_mobile }}px;
+    line-height: 1.6;
+    color: rgba(255, 255, 255, 0.9);
+    margin-bottom: 30px;
+  }
+
+  /* --- Buttons & Hover Effects --- */
+  .raw-hero-section-{{ section.id }} .raw-hero-btn-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
+    margin-bottom: 35px;
+    justify-content: center;
+  }
+
+  .raw-hero-section-{{ section.id }} .raw-hero-btn {
+    padding: 14px 32px;
+    border-radius: 4px;
+    font-size: 14px;
+    font-weight: 400;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    cursor: pointer;
+    text-transform: uppercase;
+  }
+
+  .raw-hero-section-{{ section.id }} .btn-primary-custom {
+    background: #ffffff;
+    color: #000000;
+    border: 1px solid #ffffff;
+  }
+
+  /* Primary Button Hover */
+  .raw-hero-section-{{ section.id }} .btn-primary-custom:hover {
+    background: #000000;
+    color: #ffffff;
+    border-color: #000000;
+    transform: translateY(-3px);
+  }
+
+  .raw-hero-section-{{ section.id }} .raw-hero-arrow-icon {
+    transition: transform 0.3s ease;
+  }
+
+  .raw-hero-section-{{ section.id }} .btn-primary-custom:hover .raw-hero-arrow-icon {
+    transform: translateX(5px);
+  }
+
+  /* Secondary Button Hover */
+  .raw-hero-section-{{ section.id }} .btn-secondary-custom {
+    border: 1px solid rgba(255, 255, 255, 0.6);
+    color: #ffffff;
+    background: transparent;
+  }
+
+  .raw-hero-section-{{ section.id }} .btn-secondary-custom:hover {
+    background: rgba(255, 255, 255, 0.15);
+    border-color: #ffffff;
+    transform: translateY(-3px);
+  }
+
+  .raw-hero-section-{{ section.id }} .raw-hero-footer {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+    align-items: center;
+    font-size: 13px;
+    color: rgba(255, 255, 255, 0.8);
+  }
+
+  /* ─── Tablet and Desktop Breakpoints ─── */
+  @media (min-width: 992px) {
+    .raw-hero-section-{{ section.id }}.raw-hero-section { 
+      min-height: 720px; 
+    }
+    .raw-hero-section-{{ section.id }} .raw-hero-heading { 
+      font-size: {{ section.settings.heading_size_desktop }}px; 
+    }
+    .raw-hero-section-{{ section.id }} .raw-hero-desc { 
+      font-size: {{ section.settings.desc_size_desktop }}px; 
+    }
+  }
+</style>
+
+{% schema %}
+{
+  "name": "Custom Hero Section",
+  "settings": [
+    {
+      "type": "header",
+      "content": "Background Media Control"
+    },
+    {
+      "type": "select",
+      "id": "media_type",
+      "label": "Background Media Type",
+      "options": [
+        { "value": "image", "label": "Image" },
+        { "value": "video", "label": "Video" }
+      ],
+      "default": "image"
+    },
+    {
+      "type": "image_picker",
+      "id": "image",
+      "label": "Background Image"
+    },
+    {
+      "type": "select",
+      "id": "image_position",
+      "label": "Image Focal Point",
+      "options": [
+        { "value": "top center", "label": "Top" },
+        { "value": "center center", "label": "Center" },
+        { "value": "bottom center", "label": "Bottom" },
+        { "value": "center left", "label": "Left" },
+        { "value": "center right", "label": "Right" }
+      ],
+      "default": "center center"
+    },
+    {
+      "type": "video",
+      "id": "video",
+      "label": "Background Video (Shopify hosted)",
+      "info": "Upload an MP4/WebM video file directly. Highly recommended for performance."
+    },
+    {
+      "type": "video_url",
+      "id": "video_url",
+      "label": "External Video URL",
+      "accept": ["youtube", "vimeo"],
+      "info": "YouTube or Vimeo link."
+    },
+    {
+      "type": "color",
+      "id": "bg_color",
+      "label": "Fallback Color",
+      "default": "#0d0f12"
+    },
+    {
+      "type": "color",
+      "id": "overlay_color",
+      "label": "Overlay Color",
+      "default": "#000000"
+    },
+    {
+      "type": "range",
+      "id": "overlay_opacity",
+      "min": 0,
+      "max": 100,
+      "step": 5,
+      "unit": "%",
+      "label": "Overlay Opacity",
+      "default": 40
+    },
+    {
+      "type": "header",
+      "content": "Typography Settings"
+    },
+    {
+      "type": "range",
+      "id": "heading_size_desktop",
+      "label": "Heading Size on Desktop (px)",
+      "min": 24,
+      "max": 100,
+      "step": 2,
+      "default": 56
+    },
+    {
+      "type": "range",
+      "id": "heading_size_mobile",
+      "label": "Heading Size on Mobile (px)",
+      "min": 18,
+      "max": 60,
+      "step": 2,
+      "default": 36
+    },
+    {
+      "type": "range",
+      "id": "desc_size_desktop",
+      "label": "Description Size on Desktop (px)",
+      "min": 12,
+      "max": 32,
+      "step": 1,
+      "default": 18
+    },
+    {
+      "type": "range",
+      "id": "desc_size_mobile",
+      "label": "Description Size on Mobile (px)",
+      "min": 10,
+      "max": 24,
+      "step": 1,
+      "default": 16
+    },
+    {
+      "type": "header",
+      "content": "Content"
+    },
+    {
+      "type": "text",
+      "id": "badge_text",
+      "label": "Badge Text",
+      "default": "New 2026 Collection"
+    },
+    {
+      "type": "color",
+      "id": "badge_dot_color",
+      "label": "Badge Dot Color",
+      "default": "#ff4f33"
+    },
+    {
+      "type": "textarea",
+      "id": "title",
+      "label": "Heading",
+      "default": "Move smarter. \nLive stronger."
+    },
+    {
+      "type": "textarea",
+      "id": "description",
+      "label": "Description",
+      "default": "Engineered treadmills and ergonomic essentials."
+    },
+    {
+      "type": "header",
+      "content": "Buttons"
+    },
+    {
+      "type": "text",
+      "id": "primary_button_text",
+      "label": "Primary Button Text",
+      "default": "Shop Now"
+    },
+    {
+      "type": "url",
+      "id": "primary_button_link",
+      "label": "Primary Button Link"
+    },
+    {
+      "type": "text",
+      "id": "secondary_button_text",
+      "label": "Secondary Button Text",
+      "default": "Learn More"
+    },
+    {
+      "type": "url",
+      "id": "secondary_button_link",
+      "label": "Secondary Button Link"
+    },
+    {
+      "type": "header",
+      "content": "Footer Stars"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_rating",
+      "label": "Show Rating",
+      "default": true
+    },
+    {
+      "type": "text",
+      "id": "rating_stars",
+      "label": "Stars",
+      "default": "★★★★★"
+    },
+    {
+      "type": "color",
+      "id": "star_color",
+      "label": "Star Color",
+      "default": "#ffcc00"
+    },
+    {
+      "type": "text",
+      "id": "rating_text",
+      "label": "Rating Text",
+      "default": "4.9/5 (2k+ reviews)"
+    },
+    {
+      "type": "text",
+      "id": "info_text_1",
+      "label": "Info 1",
+      "default": "Free Shipping"
+    },
+    {
+      "type": "text",
+      "id": "info_text_2",
+      "label": "Info 2",
+      "default": "2 Years Warranty"
+    }
+  ],
+  "presets": [
+    {
+      "name": "Custom Hero Section"
+    }
+  ]
+}
+{% endschema %}

@@ -1,0 +1,110 @@
+{% doc %}
+  @prompt
+    In the Multicolumn section (section ID: template--27581231792496__section_tLkMf9), add custom CSS that places a visible pipe | style vertical divider between the columns containing "celebrate", "customise", and "joy". The divider should appear between column 1 and 2, and between column 2 and 3. Use a CSS approach such as a right border or ::after pseudo-element on the column items to create a clean vertical line divider that is clearly visible and matches a premium, clean aesthetic.
+{% enddoc %}
+{% assign ai_gen_id = block.id | replace: '_', '' | downcase %}
+
+{% style %}
+  .ai-column-divider-{{ ai_gen_id }} {
+    display: block;
+    width: 100%;
+  }
+
+  #template--27581231792496__section_tLkMf9 .multicolumn-list__item:not(:last-child) {
+    position: relative;
+  }
+
+  #template--27581231792496__section_tLkMf9 .multicolumn-list__item:not(:last-child)::after {
+    content: '';
+    position: absolute;
+    top: {{ block.settings.divider_top_offset }}%;
+    right: 0;
+    width: {{ block.settings.divider_width }}px;
+    height: {{ block.settings.divider_height }}%;
+    background-color: {{ block.settings.divider_color }};
+    opacity: {{ block.settings.divider_opacity | divided_by: 100.0 }};
+  }
+
+  @media screen and (max-width: 749px) {
+    #template--27581231792496__section_tLkMf9 .multicolumn-list__item:not(:last-child)::after {
+      {% if block.settings.hide_on_mobile %}
+        display: none;
+      {% endif %}
+    }
+  }
+{% endstyle %}
+
+<div class="ai-column-divider-{{ ai_gen_id }}" {{ block.shopify_attributes }}></div>
+
+{% schema %}
+{
+  "name": "Column dividers",
+  "settings": [
+    {
+      "type": "header",
+      "content": "Divider style"
+    },
+    {
+      "type": "color",
+      "id": "divider_color",
+      "label": "Color",
+      "default": "#e6e6e6"
+    },
+    {
+      "type": "range",
+      "id": "divider_width",
+      "label": "Width",
+      "min": 1,
+      "max": 5,
+      "step": 1,
+      "unit": "px",
+      "default": 1
+    },
+    {
+      "type": "range",
+      "id": "divider_height",
+      "label": "Height",
+      "min": 20,
+      "max": 100,
+      "step": 5,
+      "unit": "%",
+      "default": 60
+    },
+    {
+      "type": "range",
+      "id": "divider_top_offset",
+      "label": "Vertical position",
+      "min": 0,
+      "max": 40,
+      "step": 5,
+      "unit": "%",
+      "default": 20
+    },
+    {
+      "type": "range",
+      "id": "divider_opacity",
+      "label": "Opacity",
+      "min": 10,
+      "max": 100,
+      "step": 10,
+      "unit": "%",
+      "default": 100
+    },
+    {
+      "type": "header",
+      "content": "Mobile"
+    },
+    {
+      "type": "checkbox",
+      "id": "hide_on_mobile",
+      "label": "Hide on mobile",
+      "default": true
+    }
+  ],
+  "presets": [
+    {
+      "name": "Column dividers"
+    }
+  ]
+}
+{% endschema %}

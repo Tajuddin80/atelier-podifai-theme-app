@@ -1,0 +1,2023 @@
+{% comment %}
+  Atelier / Joy Bag Custom Product Section
+  Supports:
+  1. Customizable Text & Accent Color Pickers in Theme Schema.
+  2. Clean transparent product media display with guaranteed image loading.
+  3. Dynamic Character Categories & Alphabet Categories.
+  4. Native Store Variant Integration (Single variant isolation).
+  5. Multi-color Swatches without tick marks.
+{% endcomment %}
+
+<style id="podifai-critical-layout-style">
+  .product-images { position: relative; width: 100%; aspect-ratio: 1; min-height: 520px; overflow: hidden; }
+  @media (max-width: 850px) { .product-images { min-height: 340px; } }
+  .product-image-wrapper { position: absolute !important; inset: 0 !important; width: 100% !important; height: 100% !important; display: none !important; opacity: 0 !important; align-items: center; justify-content: center; }
+  .product-image-wrapper.active { display: flex !important; opacity: 1 !important; visibility: visible !important; z-index: 1 !important; }
+</style>
+
+<div class="product-page-container">
+  <!-- Left Side: Single Variant Image Media Gallery & Konva Canvas Overlay -->
+  <div class="product-media-column">
+    <div class="product-images" id="product-media-gallery">
+      {% assign active_variant = product.selected_or_first_available_variant %}
+      {% assign active_img = active_variant.featured_media
+        | default: active_variant.featured_image
+        | default: product.featured_media
+        | default: product.featured_image
+        | default: product.images.first
+      %}
+
+      {% assign found_active = false %}
+      {% for image in product.images %}
+        {% assign is_current = false %}
+        {% if active_img != blank and image.id == active_img.id and found_active == false %}
+          {% assign is_current = true %}
+          {% assign found_active = true %}
+        {% elsif forloop.first and active_img == blank and found_active == false %}
+          {% assign is_current = true %}
+          {% assign found_active = true %}
+        {% endif %}
+
+        <div
+          class="product-image-wrapper {% if is_current %}active{% else %}hidden{% endif %}"
+          data-image-id="{{ image.id }}"
+          data-alt="{{ image.alt | escape }}"
+        >
+          <img
+            src="{{ image | image_url: width: 1200 }}"
+            alt="{{ image.alt | default: product.title | escape }}"
+            class="product-main-image"
+            loading="eager"
+            width="1200"
+            height="1200"
+          >
+        </div>
+      {% endfor %}
+
+      {% if product.images.size == 0 and product.media.size > 0 %}
+        {% for media in product.media %}
+          <div
+            class="product-image-wrapper {% if forloop.first %}active{% else %}hidden{% endif %}"
+            data-image-id="{{ media.id }}"
+            data-alt="{{ media.alt | escape }}"
+          >
+            <img
+              src="{{ media | image_url: width: 1200 }}"
+              alt="{{ media.alt | default: product.title | escape }}"
+              class="product-main-image"
+              loading="eager"
+              width="1200"
+              height="1200"
+            >
+          </div>
+        {% endfor %}
+      {% endif %}
+
+      {% if product.images.size == 0 and product.media.size == 0 %}
+        <div class="product-image-wrapper active">
+          <img
+            src="https://res.cloudinary.com/tifgkltm/image/upload/v1787389774/podifai_customizations/hl3mfkfyxjzk3o3s5576.png"
+            alt="{{ product.title }}"
+            height=""
+            width=""
+            class="product-main-image"
+          >
+        </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Right Side: Product Details & Customization Panel -->
+  <div class="product-info-column">
+    <!-- Title & Price -->
+    <div class="product-header">
+      <h1 class="product-title">{{ product.title }}</h1>
+      <div
+        class="product-price"
+        id="podifai-product-price"
+        data-base-price="{{ product.selected_or_first_available_variant.price | default: product.price }}"
+      >
+        <span class="product-price-current" id="podifai-price-display">
+          {{- product.selected_or_first_available_variant.price | default: product.price | money -}}
+        </span>
+      </div>
+    </div>
+
+    {%- assign product_form_id = 'product-form-' | append: section.id -%}
+    <product-form-component
+      data-section-id="{{ section.id }}"
+      data-product-id="{{ product.id }}"
+      data-product-url="{{ product.url }}"
+      on:submit="/handleSubmit"
+    >
+      <div
+        class="visually-hidden"
+        aria-live="assertive"
+        role="status"
+        aria-atomic="true"
+        ref="liveRegion"
+        style="display: none;"
+      ></div>
+      <span class="product-form-text__error hidden" ref="addToCartTextError"></span>
+
+      {% form 'product', product, class: 'product-main-form', id: product_form_id, data-type: 'add-to-cart-form' %}
+        <input type="hidden" name="properties[Customization Preview]" class="podifai-preview-input" value="">
+        <input type="hidden" name="properties[_Customization Data]" class="podifai-data-input" value="">
+
+        {% assign current_variant = product.selected_or_first_available_variant %}
+        <input type="hidden" name="id" id="selected-variant-id" ref="variantId" value="{{ current_variant.id }}">
+
+        <!-- Dynamic Variant Options (Only Rendered If Product Actually Has Variants) -->
+        {% unless product.has_only_default_variant %}
+          {% comment %} 1. Render Size First (Step 1) {% endcomment %}
+          {% for option in product.options_with_values %}
+            {% assign downcase_name = option.name | downcase %}
+            {% assign opt_idx = forloop.index0 %}
+            {% if downcase_name == 'size' %}
+              <div
+                class="variant-option-group variant-option-group--size"
+                data-option-index="{{ opt_idx }}"
+                data-option-name="{{ option.name | escape }}"
+              >
+                <div class="variant-option-header">
+                  <span class="variant-option-label">
+                    <span class="step-badge">1</span> Pick your {{ option.name | downcase }}:
+                    <strong class="selected-option-value">
+                      {{- option.selected_value | default: option.values.first -}}
+                    </strong>
+                  </span>
+                  <div class="size-guide-wrapper">
+                    <button type="button" class="size-guide-link" onclick="openSizeGuideModal('{{ section.id }}')">
+                      Size guide
+                    </button>
+                  </div>
+                </div>
+                <div class="size-pill-swatches">
+                  {% for value in option.values %}
+                    {% assign matched_v = null %}
+                    {% for v in product.variants %}
+                      {% if v.options[opt_idx] == value %}
+                        {% assign matched_v = v %}
+                        {% break %}
+                      {% endif %}
+                    {% endfor %}
+                    {% assign img_url = matched_v.featured_media
+                      | default: matched_v.featured_image
+                      | default: product.featured_image
+                    %}
+                    {% assign val_down = value | downcase %}
+                    {% assign size_desc = '' %}
+                    {% if val_down contains 'small' %}
+                      {% assign size_desc = section.settings.size_small_desc
+                        | default: '20.5cm (W) x 7cm (D) x 7cm (H)'
+                      %}
+                    {% elsif val_down contains 'medium' %}
+                      {% assign size_desc = section.settings.size_medium_desc
+                        | default: '24cm (W) x 5cm (D) x 12.5cm (H)'
+                      %}
+                    {% elsif val_down contains 'large' %}
+                      {% assign size_desc = section.settings.size_large_desc
+                        | default: '26cm (W) x 8.5cm (D) x 12.5cm (H)'
+                      %}
+                    {% else %}
+                      {% assign size_desc = section.settings.size_general_desc | default: '' %}
+                    {% endif %}
+                    <label class="size-pill-label {% if option.selected_value == value or forloop.first %}active{% endif %}">
+                      <input
+                        type="radio"
+                        name="option-{{ option.name | handleize }}"
+                        value="{{ value | escape }}"
+                        class="size-pill-input"
+                        data-option-index="{{ opt_idx }}"
+                        data-size-desc="{{ size_desc | escape }}"
+                        data-image-id="{{ img_url.id }}"
+                        data-image-url="{{ img_url | image_url: width: 1200 }}"
+                        {% if option.selected_value == value or forloop.first %}
+                          checked
+                        {% endif %}
+                      >
+                      {% assign v_price_str = matched_v.price | money %}
+                      <span class="size-pill-text">{{ value }}{% if v_price_str != blank %} ({{ v_price_str }}){% endif %}</span>
+                    </label>
+                  {% endfor %}
+                </div>
+                <div class="size-description-container">
+                  <p class="size-description-text" id="size-description-text">
+                    {% assign first_val = option.selected_value | default: option.values.first | downcase %}
+                    {% if first_val contains 'small' %}
+                      {{
+                        section.settings.size_small_desc
+                        | default: '8" × 4" × 3" · Compact and lightweight for everyday essentials.'
+                      }}
+                    {% elsif first_val contains 'medium' %}
+                      {{
+                        section.settings.size_medium_desc
+                        | default: '10" × 4" × 4" · Fits your water bottle, wallet, keys, and daily essentials.'
+                      }}
+                    {% elsif first_val contains 'large' %}
+                      {{
+                        section.settings.size_large_desc
+                        | default: '10.5" × 4" × 5" · A proper carry-all — add a power bank, mini umbrella or snacks.'
+                      }}
+                    {% else %}
+                      {{ section.settings.size_general_desc }}
+                    {% endif %}
+                  </p>
+                </div>
+              </div>
+            {% endif %}
+          {% endfor %}
+
+          {% comment %} 2. Render Color / Colour Second (Step 2) {% endcomment %}
+          {% for option in product.options_with_values %}
+            {% assign downcase_name = option.name | downcase %}
+            {% assign opt_idx = forloop.index0 %}
+            {% if downcase_name == 'color' or downcase_name == 'colour' %}
+              <div
+                class="variant-option-group variant-option-group--colour"
+                data-option-index="{{ opt_idx }}"
+                data-option-name="{{ option.name | escape }}"
+              >
+                <div class="variant-option-header">
+                  <span class="variant-option-label">
+                    <span class="step-badge">2</span> Pick your colour:
+                    <strong class="selected-option-value">
+                      {{- option.selected_value | default: option.values.first -}}
+                    </strong>
+                  </span>
+                </div>
+                <div class="color-circle-swatches">
+                  {% for value in option.values %}
+                    {% assign matched_v = null %}
+                    {% for v in product.variants %}
+                      {% if v.options[opt_idx] == value %}
+                        {% assign matched_v = v %}
+                        {% break %}
+                      {% endif %}
+                    {% endfor %}
+                    {% assign img_url = matched_v.featured_media
+                      | default: matched_v.featured_image
+                      | default: product.featured_image
+                    %}
+
+                    {% assign val_down = value | downcase %}
+                    {% assign bg_color = value.swatch.color %}
+                    {% if bg_color == blank %}
+                      {% if val_down contains 'butter' or val_down contains 'cream' %}
+                        {% assign bg_color = '#F5F2DC' %}
+                      {% elsif val_down contains 'bubblegum' or val_down contains 'bubble' %}
+                        {% assign bg_color = '#FF69B4' %}
+                      {% elsif val_down contains 'jet' or val_down contains 'black' %}
+                        {% assign bg_color = '#1A1A1A' %}
+                      {% elsif val_down contains 'electric' or val_down contains 'orange' %}
+                        {% assign bg_color = '#FF5722' %}
+                      {% elsif val_down contains 'sky' or val_down contains 'blue' %}
+                        {% assign bg_color = '#87CEEB' %}
+                      {% elsif val_down contains 'lavender'
+                        or val_down contains 'purple'
+                        or val_down contains 'lilac'
+                      %}
+                        {% assign bg_color = '#A388A8' %}
+                      {% elsif val_down contains 'pink' %}
+                        {% assign bg_color = '#FFB6C1' %}
+                      {% elsif val_down contains 'white' %}
+                        {% assign bg_color = '#FFFFFF' %}
+                      {% elsif val_down contains 'green' %}
+                        {% assign bg_color = '#4CAF50' %}
+                      {% elsif val_down contains 'yellow' %}
+                        {% assign bg_color = '#FFEB3B' %}
+                      {% elsif val_down contains 'red' %}
+                        {% assign bg_color = '#E53935' %}
+                      {% elsif val_down contains 'sand' or val_down contains 'beige' %}
+                        {% assign bg_color = '#D1C2A5' %}
+                      {% elsif val_down contains 'grey' or val_down contains 'gray' %}
+                        {% assign bg_color = '#9E9E9E' %}
+                      {% else %}
+                        {% assign bg_color = val_down | split: ' ' | last %}
+                      {% endif %}
+                    {% endif %}
+
+                    <button
+                      type="button"
+                      class="color-swatch-btn {% if option.selected_value == value or forloop.first %}active{% endif %}"
+                      data-option-index="{{ opt_idx }}"
+                      data-option-value="{{ value | escape }}"
+                      data-variant-id="{{ matched_v.id }}"
+                      data-image-id="{{ img_url.id }}"
+                      data-image-url="{{ img_url | image_url: width: 1200 }}"
+                      style="background-color: {{ bg_color }}; {% if value.swatch.image %}background-image: url('{{ value.swatch.image | image_url: width: 64 }}'); background-size: cover;{% endif %}"
+                      title="{{ value }}"
+                      aria-label="{{ value }}"
+                    ></button>
+                  {% endfor %}
+                </div>
+              </div>
+            {% endif %}
+          {% endfor %}
+
+          {% comment %} 3. Render Other Remaining Options {% endcomment %}
+          {% for option in product.options_with_values %}
+            {% assign downcase_name = option.name | downcase %}
+            {% assign opt_idx = forloop.index0 %}
+            {% unless downcase_name == 'size' or downcase_name == 'color' or downcase_name == 'colour' %}
+              <div
+                class="variant-option-group"
+                data-option-index="{{ opt_idx }}"
+                data-option-name="{{ option.name | escape }}"
+              >
+                <div class="variant-option-header">
+                  <span class="variant-option-label">
+                    Pick your {{ option.name | downcase }}:
+                    <strong class="selected-option-value">
+                      {{- option.selected_value | default: option.values.first -}}
+                    </strong>
+                  </span>
+                </div>
+                <div class="size-pill-swatches">
+                  {% for value in option.values %}
+                    {% assign matched_v = null %}
+                    {% for v in product.variants %}
+                      {% if v.options[opt_idx] == value %}
+                        {% assign matched_v = v %}
+                        {% break %}
+                      {% endif %}
+                    {% endfor %}
+                    {% assign img_url = matched_v.featured_media
+                      | default: matched_v.featured_image
+                      | default: product.featured_image
+                    %}
+                    <label class="size-pill-label {% if option.selected_value == value or forloop.first %}active{% endif %}">
+                      <input
+                        type="radio"
+                        name="option-{{ option.name | handleize }}"
+                        value="{{ value | escape }}"
+                        class="size-pill-input"
+                        data-option-index="{{ opt_idx }}"
+                        data-image-id="{{ img_url.id }}"
+                        data-image-url="{{ img_url | image_url: width: 1200 }}"
+                        {% if option.selected_value == value or forloop.first %}
+                          checked
+                        {% endif %}
+                      >
+                      <span class="size-pill-text">{{ value }}</span>
+                    </label>
+                  {% endfor %}
+                </div>
+              </div>
+            {% endunless %}
+          {% endfor %}
+        {% endunless %}
+
+        <!-- Steps 3 & 4: Customizer Block (Patches & Embroidery) -->
+        {% assign customizer_block = section.blocks
+          | where: 'type', 'atelier-customizer'
+          | first
+          | default: section.blocks
+          | where: 'type', 'podifai-customizer'
+          | first
+        %}
+        {% render 'atelier-customizer', block: customizer_block, section_settings: section.settings %}
+
+        <!-- Quantity Selector & Add to Cart CTA -->
+        <div class="product-submit-row">
+          {% if section.settings.show_quantity_selector %}
+            <div class="product-quantity-wrapper">
+              <button
+                type="button"
+                class="quantity-btn quantity-btn-minus"
+                id="qty-minus-btn"
+                aria-label="Decrease quantity"
+              >
+                −
+              </button>
+              <input
+                type="number"
+                name="quantity"
+                id="product-quantity-input"
+                class="quantity-input"
+                value="1"
+                min="1"
+                max="99"
+                readonly
+              >
+              <button
+                type="button"
+                class="quantity-btn quantity-btn-plus"
+                id="qty-plus-btn"
+                aria-label="Increase quantity"
+              >
+                +
+              </button>
+            </div>
+          {% else %}
+            <input
+              type="hidden"
+              name="quantity"
+              id="product-quantity-input"
+              class="quantity-input"
+              value="1"
+            >
+          {% endif %}
+
+          <add-to-cart-component style="flex: 1; width: 100%;">
+            <button type="submit" name="add" class="product-add-to-cart-btn" id="add-to-cart-btn" ref="addToCartButton">
+              <span id="add-to-cart-text"
+                >Add to bag ·
+                <span id="podifai-btn-price-display">
+                  {{- product.selected_or_first_available_variant.price | default: product.price | money -}}
+                </span></span
+              >
+            </button>
+          </add-to-cart-component>
+        </div>
+      {% endform %}
+    </product-form-component>
+
+    <!-- Collapsible Accordions: Description, Care, Design -->
+    <div class="product-accordions">
+      <details class="product-accordion-item" open>
+        <summary class="product-accordion-summary">
+          <span>DESCRIPTION</span>
+          <span class="accordion-chevron">⌵</span>
+        </summary>
+        <div class="product-accordion-body">
+          <p>
+            {{
+              product.description
+              | default: 'Our signature Joy Bag designed for daily versatility. Personalize with character patches, alphabet letters, and custom embroidery.'
+            }}
+          </p>
+        </div>
+      </details>
+
+      <details class="product-accordion-item">
+        <summary class="product-accordion-summary">
+          <span>CARE</span>
+          <span class="accordion-chevron">⌵</span>
+        </summary>
+        <div class="product-accordion-body">
+          <p>Spot clean with a damp cloth. Do not machine wash or dry clean. Keep custom patches dry.</p>
+        </div>
+      </details>
+
+      <details class="product-accordion-item">
+        <summary class="product-accordion-summary">
+          <span>DESIGN</span>
+          <summary class="accordion-chevron">⌵</summary>
+        </summary>
+        <div class="product-accordion-body">
+          <p>
+            Made from durable premium nylon fabric with reinforced stitching, water-resistant lining, and custom metal
+            hardware.
+          </p>
+        </div>
+      </details>
+    </div>
+  </div>
+</div>
+
+{% comment %} Size Guide Popup Modal {% endcomment %}
+<div
+  id="SizeGuideModal-{{ section.id }}"
+  class="size-guide-modal"
+  role="dialog"
+  aria-modal="true"
+  aria-hidden="true"
+  style="display: none;"
+>
+  <div class="size-guide-modal__backdrop" onclick="closeSizeGuideModal('{{ section.id }}')"></div>
+  <div class="size-guide-modal__content">
+    <button
+      type="button"
+      class="size-guide-modal__close"
+      aria-label="Close"
+      onclick="closeSizeGuideModal('{{ section.id }}')"
+    >
+      <svg
+        width="18"
+        height="18"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2.5"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      >
+        <line x1="18" y1="6" x2="6" y2="18"></line>
+        <line x1="6" y1="6" x2="18" y2="18"></line>
+      </svg>
+    </button>
+    <div class="size-guide-modal__body">
+      {% if section.settings.size_guide_image != blank %}
+        <img
+          src="{{ section.settings.size_guide_image | image_url: width: 1400 }}"
+          alt="{{ section.settings.size_guide_image.alt | default: 'Size Guide Chart' | escape }}"
+          class="size-guide-modal__img"
+          loading="lazy"
+          width="{{ section.settings.size_guide_image.width }}"
+          height="{{ section.settings.size_guide_image.height }}"
+        >
+      {% else %}
+        <div class="size-guide-modal__empty">
+          <p><strong>Size Guide</strong></p>
+          <p>Please upload a Size Guide image in the Theme Customizer under this section's settings.</p>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<style>
+  :root {
+    --podifai-primary-btn-bg: {{ section.settings.primary_button_color | default: section.settings.accent_color | default: '#E85A37' }};
+    --podifai-primary-btn-text: {{ section.settings.primary_button_text_color | default: '#FFFFFF' }};
+    --podifai-atc-btn-bg: {{ section.settings.atc_button_color | default: '#5C314C' }};
+    --podifai-atc-btn-text: {{ section.settings.atc_button_text_color | default: '#FFFFFF' }};
+    --podifai-accent-color: {{ section.settings.accent_color | default: section.settings.primary_button_color | default: '#E85A37' }};
+    --podifai-green: {{ section.settings.accent_color | default: section.settings.primary_button_color | default: '#E85A37' }};
+    --podifai-heading-color: {{ section.settings.heading_color | default: '#1a1a1a' }};
+    --podifai-price-color: {{ section.settings.price_color | default: '#1a1a1a' }};
+    --podifai-body-color: {{ section.settings.body_text_color | default: '#666666' }};
+    --podifai-card-border: #EAE6E1;
+    --podifai-card-bg: #FAF8F5;
+  }
+
+  .product-page-container {
+    display: grid;
+    grid-template-columns: 1.3fr 1fr;
+    gap: 48px;
+    max-width: 1440px;
+    margin: 0 auto;
+    padding: 32px 24px;
+    font-family: inherit;
+  }
+
+  @media (max-width: 1024px) {
+    .product-page-container {
+      grid-template-columns: 1.15fr 1fr;
+      gap: 32px;
+    }
+  }
+
+  @media (max-width: 850px) {
+    .product-page-container {
+      grid-template-columns: 1fr;
+      gap: 24px;
+      padding: 16px;
+    }
+  }
+
+  /* Left Column Media Gallery */
+  .product-media-column {
+    position: relative;
+    width: 100%;
+  }
+
+  .product-images {
+    position: sticky;
+    top: 20px;
+    width: 100%;
+    aspect-ratio: 1;
+    min-height: 520px;
+    background: transparent;
+    border-radius: 0;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  @media (max-width: 850px) {
+    .product-images {
+      min-height: 340px;
+      position: relative;
+      top: 0;
+    }
+  }
+
+  .product-image-wrapper {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    visibility: hidden;
+    display: none;
+    transition: opacity 0.25s ease;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+  }
+
+  .product-image-wrapper.active {
+    display: flex !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+    z-index: 1;
+  }
+
+  .product-image-wrapper.hidden {
+    display: none !important;
+    opacity: 0 !important;
+    visibility: hidden !important;
+  }
+
+  .product-main-image {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+  }
+
+  /* Right Column Details */
+  .product-info-column {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .product-header {
+    margin-bottom: 20px;
+    text-align: center;
+  }
+
+  .product-title {
+    font-family: 'Newsreader', var(--font-h3--family, var(--font-primary--family, Georgia, serif)) !important;
+    font-style: var(--font-h3--style, normal);
+    font-weight: 200 !important;
+    font-size: 46.128px !important;
+    line-height: var(--font-h3--line-height, 1.2);
+    letter-spacing: var(--font-h3--letter-spacing, -0.01em);
+    text-transform: var(--font-h3--case, none);
+    color: var(--color, var(--font-h3-color, var(--podifai-heading-color)));
+    margin: 0 0 6px 0;
+    text-align: center;
+  }
+
+  .product-price {
+    display: flex;
+    align-items: baseline;
+    justify-content: center;
+    gap: 8px;
+    font-family: 'Red Hat Text', var(--font-body--family, sans-serif) !important;
+    font-size: 12px !important;
+    font-weight: 400 !important;
+    color: var(--podifai-price-color);
+    text-align: center;
+  }
+
+  .product-price-from {
+    font-family: 'Red Hat Text', var(--font-body--family, sans-serif);
+    font-size: 0.88rem;
+    font-weight: 400;
+    color: #888888;
+  }
+
+  /* Step Number Badge */
+  .step-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background-color: var(--podifai-primary-btn-bg);
+    color: var(--podifai-primary-btn-text);
+    font-size: 0.72rem;
+    font-weight: 700;
+    line-height: 1;
+    margin-right: 6px;
+    vertical-align: middle;
+    flex-shrink: 0;
+  }
+
+  /* Variant Selection Groups */
+  .variant-option-group {
+    margin-bottom: 20px;
+  }
+
+  .variant-option-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+  }
+
+  .variant-option-label {
+    font-size: 0.92rem;
+    font-weight: 500;
+    color: #1a1a1a;
+    display: flex;
+    align-items: center;
+  }
+
+  .variant-option-label strong,
+  .selected-option-value {
+    font-weight: 700 !important;
+    color: #000000 !important;
+    margin-left: 4px;
+  }
+
+  .size-guide-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .size-guide-link {
+    background: none;
+    border: none;
+    font-size: 0.82rem;
+    text-decoration: underline;
+    color: #777777;
+    cursor: pointer;
+    padding: 0;
+    transition: color 0.2s ease;
+  }
+
+  .size-guide-link:hover {
+    color: #1a1a1a;
+  }
+
+  /* Size Radio Pills */
+  .size-pill-swatches {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  .size-pill-label {
+    flex: 1;
+    min-width: 90px;
+    text-align: center;
+    border: 1.5px solid #E2E2E2;
+    border-radius: 8px;
+    padding: 10px 14px;
+    cursor: pointer;
+    user-select: none;
+    background: #ffffff;
+    transition: all 0.2s ease;
+  }
+
+  .size-pill-label:hover {
+    border-color: var(--podifai-primary-btn-bg);
+  }
+
+  .size-pill-input {
+    display: none;
+  }
+
+  .size-pill-text {
+    font-size: 0.88rem;
+    font-weight: 600;
+    color: #1a1a1a;
+    transition: color 0.2s ease;
+  }
+
+  .size-pill-label.active {
+    border-color: var(--podifai-primary-btn-bg);
+    background-color: var(--podifai-primary-btn-bg);
+  }
+
+  .size-pill-label.active .size-pill-text {
+    color: var(--podifai-primary-btn-text);
+  }
+
+  /* Size Dynamic Description */
+  .size-description-container {
+    margin-top: 8px;
+    min-height: 18px;
+  }
+
+  .size-description-text {
+    font-size: 0.82rem;
+    color: #888888;
+    line-height: 1.45;
+    margin: 0;
+  }
+
+  /* Color Swatches */
+  .color-circle-swatches {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+
+  .color-swatch-btn {
+    position: relative;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    border: 1px solid rgba(0, 0, 0, 0.12);
+    cursor: pointer;
+    display: inline-block;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    padding: 0;
+    outline: none;
+  }
+
+  .color-swatch-btn:hover {
+    transform: scale(1.08);
+  }
+
+  .color-swatch-btn.active {
+    box-shadow: 0 0 0 2px #ffffff, 0 0 0 4px var(--podifai-primary-btn-bg);
+    border-color: transparent;
+  }
+
+  /* Add to Cart CTA */
+  .product-submit-row {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    margin: 16px 0 24px 0;
+  }
+
+  .product-quantity-wrapper {
+    display: inline-flex;
+    align-items: center;
+    border: 1.5px solid #D3D3D3;
+    border-radius: 8px;
+    background: #ffffff;
+    height: 52px;
+    box-sizing: border-box;
+    overflow: hidden;
+  }
+
+  .quantity-btn {
+    background: none;
+    border: none;
+    width: 38px;
+    height: 100%;
+    font-size: 1.2rem;
+    font-weight: 500;
+    color: #333333;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 0.2s ease;
+  }
+
+  .quantity-input {
+    width: 44px;
+    height: 100%;
+    border: none;
+    text-align: center;
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: #1a1a1a;
+    background: transparent;
+    outline: none;
+    -moz-appearance: textfield;
+  }
+
+  .quantity-input::-webkit-outer-spin-button,
+  .quantity-input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+
+  .product-add-to-cart-btn {
+    width: 100%;
+    height: 52px;
+    background-color: var(--podifai-atc-btn-bg);
+    color: var(--podifai-atc-btn-text);
+    font-size: 1rem;
+    font-weight: 700;
+    letter-spacing: 0.01em;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 0 24px;
+    transition: opacity 0.2s ease, transform 0.1s ease;
+  }
+
+  .product-add-to-cart-btn:hover {
+    opacity: 0.93;
+  }
+
+  .product-add-to-cart-btn:active {
+    transform: scale(0.99);
+  }
+
+  /* Accordions */
+  .product-accordions {
+    border-top: 1px solid #eeeeee;
+    margin-top: 24px;
+  }
+
+  .product-accordion-item {
+    border-bottom: 1px solid #eeeeee;
+  }
+
+  .product-accordion-summary {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 0;
+    font-weight: 600;
+    font-size: 0.82rem;
+    letter-spacing: 0.04em;
+    cursor: pointer;
+    list-style: none;
+    user-select: none;
+    color: #333;
+  }
+
+  .product-accordion-summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .accordion-chevron {
+    font-size: 0.9rem;
+    color: #666;
+    transition: transform 0.2s ease;
+  }
+
+  .product-accordion-item[open] .accordion-chevron {
+    transform: rotate(180deg);
+  }
+
+  .product-accordion-body {
+    padding-bottom: 16px;
+    font-size: 0.88rem;
+    color: var(--podifai-body-color);
+    line-height: 1.6;
+  }
+
+  /* Size Guide Modal Popup */
+  .size-guide-modal {
+    position: fixed;
+    inset: 0;
+    width: 100vw;
+    height: 100vh;
+    z-index: 999999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.25s ease, visibility 0.25s ease;
+  }
+
+  .size-guide-modal.is-open {
+    opacity: 1;
+    visibility: visible;
+  }
+
+  .size-guide-modal__backdrop {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.65);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    cursor: pointer;
+  }
+
+  .size-guide-modal__content {
+    position: relative;
+    background: #ffffff;
+    border-radius: 12px;
+    max-width: min(90vw, 750px);
+    max-height: 88vh;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.35);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    transform: scale(0.94);
+    transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    z-index: 2;
+  }
+
+  .size-guide-modal.is-open .size-guide-modal__content {
+    transform: scale(1);
+  }
+
+  .size-guide-modal__close {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    background: rgba(0, 0, 0, 0.6);
+    color: #ffffff;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s ease, transform 0.2s ease;
+    z-index: 10;
+    padding: 0;
+  }
+
+  .size-guide-modal__close:hover {
+    background: rgba(0, 0, 0, 0.9);
+    transform: scale(1.08);
+  }
+
+  .size-guide-modal__body {
+    overflow-y: auto;
+    padding: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .size-guide-modal__img {
+    max-width: 100%;
+    max-height: calc(88vh - 30px);
+    width: auto;
+    height: auto;
+    object-fit: contain;
+    border-radius: 8px;
+    display: block;
+  }
+
+  .size-guide-modal__empty {
+    padding: 40px 30px;
+    text-align: center;
+    color: #555;
+    font-size: 0.9rem;
+    line-height: 1.5;
+  }
+</style>
+
+<script id="podifai-product-variants-json" type="application/json">
+  {{ product.variants | json }}
+</script>
+
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    // Quantity Stepper (if enabled)
+    const qtyInput = document.getElementById('product-quantity-input');
+    const minusBtn = document.getElementById('qty-minus-btn');
+    const plusBtn = document.getElementById('qty-plus-btn');
+
+    if (qtyInput && minusBtn && plusBtn) {
+      minusBtn.addEventListener('click', () => {
+        let current = parseInt(qtyInput.value) || 1;
+        if (current > 1) {
+          qtyInput.value = current - 1;
+          if (window.PodifaiCustomizer && window.PodifaiCustomizer.updatePrice) {
+            window.PodifaiCustomizer.updatePrice();
+          }
+        }
+      });
+
+      plusBtn.addEventListener('click', () => {
+        let current = parseInt(qtyInput.value) || 1;
+        if (current < 99) {
+          qtyInput.value = current + 1;
+          if (window.PodifaiCustomizer && window.PodifaiCustomizer.updatePrice) {
+            window.PodifaiCustomizer.updatePrice();
+          }
+        }
+      });
+    }
+
+    const variantsDataEl = document.getElementById('podifai-product-variants-json');
+    let productVariants = [];
+    try {
+      if (variantsDataEl) {
+        productVariants = JSON.parse(variantsDataEl.textContent);
+      }
+    } catch (e) {
+      console.error('Error parsing product variants JSON:', e);
+    }
+
+    const variantIdInput = document.getElementById('selected-variant-id');
+    const imageWrappers = document.querySelectorAll('.product-image-wrapper');
+    const optionGroups = document.querySelectorAll('.variant-option-group');
+    const priceContainer = document.getElementById('podifai-product-price');
+    const addToCartBtn = document.getElementById('add-to-cart-btn');
+
+    // Dynamic Size Description Switcher
+    function updateSizeDescription() {
+      const checkedSize = document.querySelector(
+        '.variant-option-group--size .size-pill-input:checked, .size-pill-input:checked'
+      );
+      const descEl = document.getElementById('size-description-text');
+      if (descEl && checkedSize) {
+        const desc = checkedSize.dataset.sizeDesc || '';
+        descEl.innerText = desc;
+      }
+    }
+
+    // Ensure at least one image wrapper is active on load
+    const activeWrapper = document.querySelector('.product-image-wrapper.active');
+    if (!activeWrapper && imageWrappers.length > 0) {
+      imageWrappers[0].classList.remove('hidden');
+      imageWrappers[0].classList.add('active');
+    }
+
+    function switchProductImage(imageId, imageUrl) {
+      if (imageWrappers.length === 0) return;
+
+      let matched = false;
+      if (imageId) {
+        imageWrappers.forEach((w) => {
+          if (String(w.dataset.imageId) === String(imageId)) {
+            w.classList.remove('hidden');
+            w.classList.add('active');
+            matched = true;
+          } else {
+            w.classList.remove('active');
+            w.classList.add('hidden');
+          }
+        });
+      }
+
+      if (!matched && imageUrl) {
+        const cleanTarget = imageUrl.replace(/^https?:/, '').split('?')[0];
+        imageWrappers.forEach((w) => {
+          const img = w.querySelector('img');
+          const imgSrc = (img?.src || '').replace(/^https?:/, '').split('?')[0];
+          if (imgSrc && (imgSrc.includes(cleanTarget) || cleanTarget.includes(imgSrc))) {
+            w.classList.remove('hidden');
+            w.classList.add('active');
+            matched = true;
+          } else {
+            w.classList.remove('active');
+            w.classList.add('hidden');
+          }
+        });
+
+        if (!matched) {
+          let cur = document.querySelector('.product-image-wrapper.active') || imageWrappers[0];
+          if (cur) {
+            cur.classList.remove('hidden');
+            cur.classList.add('active');
+            const img = cur.querySelector('img');
+            if (img) img.src = imageUrl;
+          }
+        }
+      }
+
+      setTimeout(() => {
+        if (window.PodifaiCustomizer && window.PodifaiCustomizer.reAnchor) {
+          window.PodifaiCustomizer.reAnchor();
+        }
+      }, 50);
+    }
+
+    // Dynamic Swatch Availability Filter based on Size selection & Variant Image / Stock presence
+    function updateAvailableSwatches() {
+      if (!productVariants || productVariants.length === 0) return;
+
+      const sizeGroup = document.querySelector('.variant-option-group--size, [data-option-name*="size" i]');
+      const colorGroup = document.querySelector('.variant-option-group--colour, [data-option-name*="colo" i]');
+
+      if (!colorGroup) return;
+
+      const sizeOptIdx = sizeGroup ? parseInt(sizeGroup.dataset.optionIndex) : null;
+      const colorOptIdx = parseInt(colorGroup.dataset.optionIndex);
+
+      const checkedSize = sizeGroup ? sizeGroup.querySelector('.size-pill-input:checked') : null;
+      const selectedSizeVal = checkedSize ? checkedSize.value : '';
+
+      // Check if product variants have any images configured
+      const storeHasVariantImages = productVariants.some(
+        (v) => !!(v.featured_image?.src || v.featured_media?.preview_image?.src || v.featured_media?.src)
+      );
+
+      const colorSwatches = colorGroup.querySelectorAll('.color-swatch-btn');
+      colorSwatches.forEach((swatch) => {
+        const colorVal = swatch.dataset.optionValue;
+
+        // Find the specific variant for (selectedSizeVal, colorVal)
+        const exactVariant = productVariants.find((v) => {
+          const matchSize = sizeOptIdx === null || !selectedSizeVal || v.options[sizeOptIdx] === selectedSizeVal;
+          const matchColor = v.options[colorOptIdx] === colorVal;
+          return matchSize && matchColor;
+        });
+
+        // Check image presence for this variant or color
+        const hasVariantImg = !!(
+          exactVariant?.featured_image?.src ||
+          exactVariant?.featured_media?.preview_image?.src ||
+          exactVariant?.featured_media?.src
+        );
+        const hasColorImg = productVariants.some(
+          (v) =>
+            v.options[colorOptIdx] === colorVal &&
+            !!(v.featured_image?.src || v.featured_media?.preview_image?.src || v.featured_media?.src)
+        );
+
+        const isImgAvailable = storeHasVariantImages ? hasVariantImg || hasColorImg : true;
+        const isAvailable = exactVariant && exactVariant.available !== false && isImgAvailable;
+
+        if (isAvailable) {
+          swatch.style.display = '';
+          swatch.classList.remove('swatch-hidden');
+        } else {
+          swatch.style.display = 'none';
+          swatch.classList.add('swatch-hidden');
+        }
+      });
+
+      // If active color became hidden, switch active to the first available visible color
+      const currentActiveVisible = colorGroup.querySelector('.color-swatch-btn.active:not(.swatch-hidden)');
+      if (!currentActiveVisible) {
+        const firstVisible = colorGroup.querySelector('.color-swatch-btn:not(.swatch-hidden)');
+        if (firstVisible) {
+          colorSwatches.forEach((s) => s.classList.remove('active'));
+          firstVisible.classList.add('active');
+        }
+      }
+    }
+
+    function resolveSelectedVariant() {
+      if (!productVariants || productVariants.length === 0) return;
+
+      const selectedOptions = {};
+      optionGroups.forEach((group) => {
+        const optIndex = parseInt(group.dataset.optionIndex);
+        const activeColorBtn =
+          group.querySelector('.color-swatch-btn.active:not(.swatch-hidden)') ||
+          group.querySelector('.color-swatch-btn.active');
+        const checkedRadio = group.querySelector('.size-pill-input:checked');
+
+        let val = '';
+        if (activeColorBtn) {
+          val = activeColorBtn.dataset.optionValue;
+        } else if (checkedRadio) {
+          val = checkedRadio.value;
+        }
+
+        if (typeof optIndex === 'number' && !isNaN(optIndex)) {
+          selectedOptions[optIndex] = val;
+        }
+
+        const valLabel = group.querySelector('.selected-option-value');
+        if (valLabel && val) {
+          valLabel.innerText = val;
+        }
+      });
+
+      updateSizeDescription();
+
+      const matchedVariant = productVariants.find((v) => {
+        return v.options.every((optVal, idx) => {
+          return !selectedOptions[idx] || optVal === selectedOptions[idx];
+        });
+      });
+
+      if (matchedVariant) {
+        if (variantIdInput) {
+          variantIdInput.value = matchedVariant.id;
+        }
+
+        if (priceContainer) {
+          priceContainer.dataset.basePrice = matchedVariant.price;
+        }
+
+        if (window.PodifaiCustomizer && window.PodifaiCustomizer.updatePrice) {
+          window.PodifaiCustomizer.updatePrice();
+        }
+
+        let variantImgId = matchedVariant.featured_media?.id || matchedVariant.featured_image?.id;
+        let variantImgUrl = matchedVariant.featured_media?.preview_image?.src || matchedVariant.featured_image?.src;
+
+        // If matched variant has no image assigned, fallback to any variant with the same selected Color
+        if (!variantImgId && !variantImgUrl) {
+          const colorGroup = document.querySelector('.variant-option-group--colour, [data-option-name*="colo" i]');
+          if (colorGroup) {
+            const colorOptIdx = parseInt(colorGroup.dataset.optionIndex);
+            const selectedColorVal = selectedOptions[colorOptIdx];
+            if (selectedColorVal) {
+              const colorVariantWithImg = productVariants.find(
+                (v) => v.options[colorOptIdx] === selectedColorVal && (v.featured_image || v.featured_media)
+              );
+              if (colorVariantWithImg) {
+                variantImgId = colorVariantWithImg.featured_media?.id || colorVariantWithImg.featured_image?.id;
+                variantImgUrl =
+                  colorVariantWithImg.featured_media?.preview_image?.src || colorVariantWithImg.featured_image?.src;
+              }
+            }
+          }
+        }
+
+        if (variantImgId || variantImgUrl) {
+          switchProductImage(variantImgId, variantImgUrl);
+        }
+
+        if (addToCartBtn) {
+          if (!matchedVariant.available) {
+            addToCartBtn.disabled = true;
+            const btnText = document.getElementById('add-to-cart-text');
+            if (btnText) btnText.innerHTML = 'SOLD OUT';
+          } else {
+            addToCartBtn.disabled = false;
+            const btnText = document.getElementById('add-to-cart-text');
+            if (btnText && !btnText.innerHTML.includes('Add to bag')) {
+              btnText.innerHTML = `Add to bag · <span id="podifai-btn-price-display"></span>`;
+              if (window.PodifaiCustomizer && window.PodifaiCustomizer.updatePrice) {
+                window.PodifaiCustomizer.updatePrice();
+              }
+            }
+          }
+        }
+      }
+    }
+
+    // Attach listeners to Color Swatches
+    document.querySelectorAll('.color-swatch-btn').forEach((swatch) => {
+      swatch.addEventListener('click', (e) => {
+        if (swatch.classList.contains('swatch-hidden')) return;
+        const group = swatch.closest('.variant-option-group');
+        if (group) {
+          group.querySelectorAll('.color-swatch-btn').forEach((s) => s.classList.remove('active'));
+          swatch.classList.add('active');
+        }
+        resolveSelectedVariant();
+      });
+    });
+
+    // Attach listeners to Size / Pill Swatches
+    document.querySelectorAll('.size-pill-label').forEach((pill) => {
+      pill.addEventListener('click', (e) => {
+        const group = pill.closest('.variant-option-group');
+        if (group) {
+          group.querySelectorAll('.size-pill-label').forEach((p) => p.classList.remove('active'));
+          pill.classList.add('active');
+          const input = pill.querySelector('input');
+          if (input) {
+            input.checked = true;
+          }
+        }
+        updateAvailableSwatches();
+        resolveSelectedVariant();
+      });
+    });
+
+    // Initial variant resolution & swatch filtering on page load
+    updateAvailableSwatches();
+    resolveSelectedVariant();
+    updateSizeDescription();
+
+    // Size Guide Modal Logic
+    window.openSizeGuideModal = function (sectionId) {
+      const modal = document.getElementById('SizeGuideModal-' + sectionId);
+      if (modal) {
+        modal.style.display = 'flex';
+        // Force reflow
+        void modal.offsetWidth;
+        modal.classList.add('is-open');
+        document.body.style.overflow = 'hidden';
+      }
+    };
+
+    window.closeSizeGuideModal = function (sectionId) {
+      const modal = document.getElementById('SizeGuideModal-' + sectionId);
+      if (modal) {
+        modal.classList.remove('is-open');
+        setTimeout(() => {
+          if (!modal.classList.contains('is-open')) {
+            modal.style.display = 'none';
+          }
+        }, 250);
+        document.body.style.overflow = '';
+      }
+    };
+  });
+</script>
+
+{% schema %}
+{
+  "name": "Atelier Custom Product",
+  "settings": [
+    {
+      "type": "header",
+      "content": "Theme & Button Colors"
+    },
+    {
+      "type": "color",
+      "id": "primary_button_color",
+      "label": "Primary Accent / Button Color",
+      "default": "#E85A37",
+      "info": "Color for active pills, step badges, active borders, and highlight buttons"
+    },
+    {
+      "type": "color",
+      "id": "primary_button_text_color",
+      "label": "Primary Button Text Color",
+      "default": "#FFFFFF"
+    },
+    {
+      "type": "color",
+      "id": "atc_button_color",
+      "label": "Add to Bag Button Color",
+      "default": "#5C314C",
+      "info": "Background color for the main Add to Bag button"
+    },
+    {
+      "type": "color",
+      "id": "atc_button_text_color",
+      "label": "Add to Bag Button Text Color",
+      "default": "#FFFFFF"
+    },
+    {
+      "type": "color",
+      "id": "heading_color",
+      "label": "Headings Color",
+      "default": "#1a1a1a"
+    },
+    {
+      "type": "color",
+      "id": "price_color",
+      "label": "Price Color",
+      "default": "#1a1a1a"
+    },
+    {
+      "type": "color",
+      "id": "accent_color",
+      "label": "Accent Color",
+      "default": "#E85A37"
+    },
+    {
+      "type": "color",
+      "id": "body_text_color",
+      "label": "Body Text Color",
+      "default": "#666666"
+    },
+    {
+      "type": "header",
+      "content": "Quantity Selector"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_quantity_selector",
+      "label": "Show Quantity Stepper (+/- buttons)",
+      "default": false,
+      "info": "Enable to show the +/- quantity selector next to the Add to Bag button."
+    },
+    {
+      "type": "header",
+      "content": "Size Descriptions"
+    },
+    {
+      "type": "text",
+      "id": "size_small_desc",
+      "label": "Small Size Description",
+      "default": "8\" × 4\" × 3\" · Compact and lightweight for everyday essentials."
+    },
+    {
+      "type": "text",
+      "id": "size_medium_desc",
+      "label": "Medium Size Description",
+      "default": "10\" × 4\" × 4\" · Fits your water bottle, wallet, keys, and daily essentials."
+    },
+    {
+      "type": "text",
+      "id": "size_large_desc",
+      "label": "Large Size Description",
+      "default": "10.5\" × 4\" × 5\" · A proper carry-all — add a power bank, mini umbrella or snacks."
+    },
+    {
+      "type": "text",
+      "id": "size_general_desc",
+      "label": "General / Fallback Size Description"
+    },
+    {
+      "type": "header",
+      "content": "Size Guide Modal"
+    },
+    {
+      "type": "image_picker",
+      "id": "size_guide_image",
+      "label": "Size Guide Image",
+      "info": "Upload an image to display in the Size Guide popup modal."
+    },
+    {
+      "type": "header",
+      "content": "Visual Patch Size Difference Settings"
+    },
+    {
+      "type": "checkbox",
+      "id": "enable_proportional_scaling_char",
+      "label": "Enable Visual Size Difference for Character Patches",
+      "default": true,
+      "info": "When enabled, character patch sizes (e.g. 2cm, 3.5cm, 5cm) render with visual size differences on canvas. If disabled, all character patches render at uniform size."
+    },
+    {
+      "type": "checkbox",
+      "id": "enable_proportional_scaling_alpha",
+      "label": "Enable Visual Size Difference for Alphabet Patches",
+      "default": true,
+      "info": "When enabled, alphabet letter sizes (e.g. 2cm, 3.5cm, 5cm) render with visual size differences on canvas. If disabled, all alphabet letters render at uniform size."
+    }
+  ],
+  "blocks": [
+    {
+      "type": "atelier-customizer",
+      "name": "Atelier Customizer",
+      "limit": 1,
+      "settings": [
+        {
+          "type": "header",
+          "content": "Cloud Image Hosting (Optional - Cloudinary Direct)"
+        },
+        {
+          "type": "text",
+          "id": "cloudinary_cloud_name",
+          "label": "Cloudinary Cloud Name",
+          "info": "Your free Cloudinary Cloud Name (e.g. demo or my-store)",
+          "default": "tifgkltm"
+        },
+        {
+          "type": "text",
+          "id": "cloudinary_upload_preset",
+          "label": "Cloudinary Unsigned Upload Preset",
+          "info": "Your unsigned upload preset name (e.g. unsigned_presets)",
+          "default": "shopify_preset_podifai"
+        },
+        {
+          "type": "header",
+          "content": "Pricing & Checkout Surcharge Addons"
+        },
+        {
+          "type": "checkbox",
+          "id": "enable_addon_surcharges",
+          "label": "Charge Surcharges at Checkout via Addons",
+          "default": true,
+          "info": "Automatically bundles patch and embroidery fees into checkout"
+        },
+        {
+          "type": "product",
+          "id": "patch_addon_product",
+          "label": "Patch Surcharge Product",
+          "info": "Select the addon product priced per patch (e.g. $6.00)"
+        },
+        {
+          "type": "product",
+          "id": "embroidery_addon_product",
+          "label": "Embroidery Surcharge Product",
+          "info": "Select the addon product priced per embroidery text (e.g. $20.00)"
+        },
+        {
+          "type": "text",
+          "id": "patch_addon_variant_id",
+          "label": "Direct Patch Addon Variant ID (Optional)",
+          "info": "Paste the numerical Variant ID (e.g. 45678901234) if using direct ID"
+        },
+        {
+          "type": "text",
+          "id": "embroidery_addon_variant_id",
+          "label": "Direct Embroidery Addon Variant ID (Optional)",
+          "info": "Paste the numerical Variant ID (e.g. 45678901235) if using direct ID"
+        },
+        {
+          "type": "text",
+          "id": "currency_symbol",
+          "label": "Currency Symbol / Prefix",
+          "default": "RM"
+        },
+        {
+          "type": "text",
+          "id": "patch_unit_price",
+          "label": "Fallback Patch Price Per Item",
+          "default": "6.00"
+        },
+        {
+          "type": "text",
+          "id": "patch_label_text",
+          "label": "Patch Sublabel Text",
+          "default": "Choose your patches:"
+        },
+        {
+          "type": "text",
+          "id": "embroidery_unit_price",
+          "label": "Fallback Embroidery Price Per Text",
+          "default": "20.00"
+        },
+        {
+          "type": "text",
+          "id": "embroidery_heading_text",
+          "label": "Embroidery Section Title",
+          "default": "Select Embroidery (optional)"
+        },
+        {
+          "type": "text",
+          "id": "text_input_label_text",
+          "label": "Text Field Label",
+          "default": "Enter Text (Up to 10 characters):"
+        }
+      ]
+    },
+    {
+      "type": "character_category",
+      "name": "Character Category",
+      "settings": [
+        {
+          "type": "text",
+          "id": "title",
+          "label": "Category Title",
+          "default": "Cute Animals"
+        },
+        {
+          "type": "text",
+          "id": "size",
+          "label": "Patch Size / Dimensions",
+          "default": "8cm x 8cm",
+          "info": "Displayed in the category sublabel, e.g. 8cm x 8cm"
+        },
+        {
+          "type": "header",
+          "content": "Unlimited Metafield Data Source"
+        },
+        {
+          "type": "checkbox",
+          "id": "use_metafield",
+          "label": "Load from Product Metafield (Unlimited Files)",
+          "default": false,
+          "info": "Attach unlimited images via Product Metafield (List of files)"
+        },
+        {
+          "type": "text",
+          "id": "metafield_key",
+          "label": "Product Metafield Key",
+          "info": "e.g. custom.character_patches or custom.animal_patches",
+          "default": "custom.character_patches",
+          "visible_if": "{{ block.settings.use_metafield == true }}"
+        },
+        {
+          "type": "header",
+          "content": "Manual Patch Upload Slots (Optional - Up to 10)",
+          "visible_if": "{{ block.settings.use_metafield == false }}"
+        },
+        {
+          "type": "image_picker",
+          "id": "img_1",
+          "label": "Patch Image 1",
+          "visible_if": "{{ block.settings.use_metafield == false }}"
+        },
+        {
+          "type": "image_picker",
+          "id": "img_2",
+          "label": "Patch Image 2",
+          "visible_if": "{{ block.settings.use_metafield == false }}"
+        },
+        {
+          "type": "image_picker",
+          "id": "img_3",
+          "label": "Patch Image 3",
+          "visible_if": "{{ block.settings.use_metafield == false }}"
+        },
+        {
+          "type": "image_picker",
+          "id": "img_4",
+          "label": "Patch Image 4",
+          "visible_if": "{{ block.settings.use_metafield == false }}"
+        },
+        {
+          "type": "image_picker",
+          "id": "img_5",
+          "label": "Patch Image 5",
+          "visible_if": "{{ block.settings.use_metafield == false }}"
+        },
+        {
+          "type": "image_picker",
+          "id": "img_6",
+          "label": "Patch Image 6",
+          "visible_if": "{{ block.settings.use_metafield == false }}"
+        },
+        {
+          "type": "image_picker",
+          "id": "img_7",
+          "label": "Patch Image 7",
+          "visible_if": "{{ block.settings.use_metafield == false }}"
+        },
+        {
+          "type": "image_picker",
+          "id": "img_8",
+          "label": "Patch Image 8",
+          "visible_if": "{{ block.settings.use_metafield == false }}"
+        },
+        {
+          "type": "image_picker",
+          "id": "img_9",
+          "label": "Patch Image 9",
+          "visible_if": "{{ block.settings.use_metafield == false }}"
+        },
+        {
+          "type": "image_picker",
+          "id": "img_10",
+          "label": "Patch Image 10",
+          "visible_if": "{{ block.settings.use_metafield == false }}"
+        }
+      ]
+    },
+    {
+      "type": "alphabet_category",
+      "name": "Alphabet Category",
+      "settings": [
+        {
+          "type": "text",
+          "id": "title",
+          "label": "Category Title",
+          "default": "Black capital letters"
+        },
+        {
+          "type": "text",
+          "id": "size",
+          "label": "Letter Patch Size / Dimensions",
+          "default": "8cm x 8cm",
+          "info": "Displayed in the category sublabel, e.g. 8cm x 8cm"
+        },
+        {
+          "type": "header",
+          "content": "Unlimited Metafield Data Source"
+        },
+        {
+          "type": "checkbox",
+          "id": "use_metafield",
+          "label": "Load from Product Metafield (Unlimited Files)",
+          "default": false,
+          "info": "Attach unlimited letter images via Product Metafield (List of files)"
+        },
+        {
+          "type": "text",
+          "id": "metafield_key",
+          "label": "Product Metafield Key",
+          "info": "e.g. custom.alpha_black or custom.alpha_pink_glitter",
+          "default": "custom.alphabet_patches",
+          "visible_if": "{{ block.settings.use_metafield == true }}"
+        },
+        {
+          "type": "header",
+          "content": "Manual Letter Upload Slots (Optional - A to Z)",
+          "visible_if": "{{ block.settings.use_metafield == false }}"
+        },
+        {
+          "type": "image_picker",
+          "id": "img_a",
+          "label": "Letter A Image",
+          "visible_if": "{{ block.settings.use_metafield == false }}"
+        },
+        {
+          "type": "image_picker",
+          "id": "img_b",
+          "label": "Letter B Image",
+          "visible_if": "{{ block.settings.use_metafield == false }}"
+        },
+        {
+          "type": "image_picker",
+          "id": "img_c",
+          "label": "Letter C Image",
+          "visible_if": "{{ block.settings.use_metafield == false }}"
+        },
+        {
+          "type": "image_picker",
+          "id": "img_d",
+          "label": "Letter D Image",
+          "visible_if": "{{ block.settings.use_metafield == false }}"
+        },
+        {
+          "type": "image_picker",
+          "id": "img_e",
+          "label": "Letter E Image",
+          "visible_if": "{{ block.settings.use_metafield == false }}"
+        },
+        {
+          "type": "image_picker",
+          "id": "img_f",
+          "label": "Letter F Image",
+          "visible_if": "{{ block.settings.use_metafield == false }}"
+        },
+        {
+          "type": "image_picker",
+          "id": "img_g",
+          "label": "Letter G Image",
+          "visible_if": "{{ block.settings.use_metafield == false }}"
+        },
+        {
+          "type": "image_picker",
+          "id": "img_h",
+          "label": "Letter H Image",
+          "visible_if": "{{ block.settings.use_metafield == false }}"
+        },
+        {
+          "type": "image_picker",
+          "id": "img_i",
+          "label": "Letter I Image",
+          "visible_if": "{{ block.settings.use_metafield == false }}"
+        },
+        {
+          "type": "image_picker",
+          "id": "img_j",
+          "label": "Letter J Image",
+          "visible_if": "{{ block.settings.use_metafield == false }}"
+        },
+        {
+          "type": "image_picker",
+          "id": "img_k",
+          "label": "Letter K Image",
+          "visible_if": "{{ block.settings.use_metafield == false }}"
+        },
+        {
+          "type": "image_picker",
+          "id": "img_l",
+          "label": "Letter L Image",
+          "visible_if": "{{ block.settings.use_metafield == false }}"
+        },
+        {
+          "type": "image_picker",
+          "id": "img_m",
+          "label": "Letter M Image",
+          "visible_if": "{{ block.settings.use_metafield == false }}"
+        },
+        {
+          "type": "image_picker",
+          "id": "img_n",
+          "label": "Letter N Image",
+          "visible_if": "{{ block.settings.use_metafield == false }}"
+        },
+        {
+          "type": "image_picker",
+          "id": "img_o",
+          "label": "Letter O Image",
+          "visible_if": "{{ block.settings.use_metafield == false }}"
+        },
+        {
+          "type": "image_picker",
+          "id": "img_p",
+          "label": "Letter P Image",
+          "visible_if": "{{ block.settings.use_metafield == false }}"
+        },
+        {
+          "type": "image_picker",
+          "id": "img_q",
+          "label": "Letter Q Image",
+          "visible_if": "{{ block.settings.use_metafield == false }}"
+        },
+        {
+          "type": "image_picker",
+          "id": "img_r",
+          "label": "Letter R Image",
+          "visible_if": "{{ block.settings.use_metafield == false }}"
+        },
+        {
+          "type": "image_picker",
+          "id": "img_s",
+          "label": "Letter S Image",
+          "visible_if": "{{ block.settings.use_metafield == false }}"
+        },
+        {
+          "type": "image_picker",
+          "id": "img_t",
+          "label": "Letter T Image",
+          "visible_if": "{{ block.settings.use_metafield == false }}"
+        },
+        {
+          "type": "image_picker",
+          "id": "img_u",
+          "label": "Letter U Image",
+          "visible_if": "{{ block.settings.use_metafield == false }}"
+        },
+        {
+          "type": "image_picker",
+          "id": "img_v",
+          "label": "Letter V Image",
+          "visible_if": "{{ block.settings.use_metafield == false }}"
+        },
+        {
+          "type": "image_picker",
+          "id": "img_w",
+          "label": "Letter W Image",
+          "visible_if": "{{ block.settings.use_metafield == false }}"
+        },
+        {
+          "type": "image_picker",
+          "id": "img_x",
+          "label": "Letter X Image",
+          "visible_if": "{{ block.settings.use_metafield == false }}"
+        },
+        {
+          "type": "image_picker",
+          "id": "img_y",
+          "label": "Letter Y Image",
+          "visible_if": "{{ block.settings.use_metafield == false }}"
+        },
+        {
+          "type": "image_picker",
+          "id": "img_z",
+          "label": "Letter Z Image",
+          "visible_if": "{{ block.settings.use_metafield == false }}"
+        }
+      ]
+    },
+    {
+      "type": "patch_item",
+      "name": "Single Patch Item",
+      "settings": [
+        {
+          "type": "image_picker",
+          "id": "patch_image",
+          "label": "Patch Image"
+        },
+        {
+          "type": "text",
+          "id": "patch_name",
+          "label": "Patch Name",
+          "default": "Cute Bunny"
+        },
+        {
+          "type": "text",
+          "id": "category_id",
+          "label": "Assign to Category ID",
+          "default": "cat-1",
+          "info": "Match the Category ID from your Character Category blocks"
+        }
+      ]
+    },
+    {
+      "type": "thread_color",
+      "name": "Embroidery Thread Color",
+      "settings": [
+        {
+          "type": "text",
+          "id": "color_name",
+          "label": "Thread Color Name",
+          "default": "White"
+        },
+        {
+          "type": "color",
+          "id": "color",
+          "label": "Thread Color",
+          "default": "#FFFFFF"
+        }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "Atelier Custom Product",
+      "blocks": [
+        {
+          "type": "atelier-customizer"
+        },
+        {
+          "type": "character_category",
+          "settings": {
+            "title": "Cute Animals"
+          }
+        },
+        {
+          "type": "character_category",
+          "settings": {
+            "title": "Food & Snacks"
+          }
+        },
+        {
+          "type": "alphabet_category",
+          "settings": {
+            "title": "Black capital letters"
+          }
+        },
+        {
+          "type": "alphabet_category",
+          "settings": {
+            "title": "White capital letters"
+          }
+        },
+        {
+          "type": "thread_color",
+          "settings": {
+            "color_name": "White",
+            "color": "#FFFFFF"
+          }
+        },
+        {
+          "type": "thread_color",
+          "settings": {
+            "color_name": "Soft Pink",
+            "color": "#FFB6C1"
+          }
+        },
+        {
+          "type": "thread_color",
+          "settings": {
+            "color_name": "Electric Blue",
+            "color": "#00E5FF"
+          }
+        },
+        {
+          "type": "thread_color",
+          "settings": {
+            "color_name": "Golden Yellow",
+            "color": "#FFD700"
+          }
+        }
+      ]
+    }
+  ]
+}
+{% endschema %}

@@ -1,0 +1,355 @@
+{% comment %}
+  Wedding Gallery Slider - Dynamic Padding & Transparent Video Controls Added
+{% endcomment %}
+
+<link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/slick-carousel@1.8.1/slick/slick.css"/>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300;1,400&family=Jost:wght@300;400;500&display=swap" rel="stylesheet">
+
+<style>
+  .wedding-section-{{ section.id }} {
+    --cream: {{ section.settings.bg_color }};
+    --warm-gray: #c8bfb5;
+    --dark: #1a1714;
+    --accent: #b8956a;
+    --card-radius: 18px;
+    background: var(--cream);
+   
+    /* Dynamic Padding Controls */
+    padding-top: {{ section.settings.padding_top }}px;
+    padding-bottom: {{ section.settings.padding_bottom }}px;
+   
+    width: 100%;
+    overflow: hidden;
+  }
+
+  .header { text-align: center; margin-bottom: 30px; }
+  .header p { font-size: .72rem; letter-spacing: .35em; text-transform: uppercase; color: var(--accent); margin-bottom: 8px; }
+  .header h1 { font-size: clamp(2rem, 4vw, 56px); color: var(--dark); font-weight: 300; }
+  .header h1 em { font-style: italic; color: var(--accent); }
+
+  .slider-container { width: 100%; max-width: 100vw; }
+  .slick-slide { margin: 0 10px; outline: none; }
+
+  /* ── Original Card Designs ── */
+  .card {
+    position: relative;
+    border-radius: var(--card-radius);
+    overflow: hidden;
+    background: #e8e0d8;
+    box-shadow: 0 10px 30px rgba(0,0,0,.08);
+    transition: transform .4s ease;
+  }
+ 
+  .card.wide   { width: 300px; height: 380px; }
+  .card.tall   { width: 220px; height: 380px; }
+  .card.square { width: 280px; height: 380px; }
+
+  .card img, .card video { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+  /* Transparent Video Controls (Top Corner) */
+  .video-controls {
+    position: absolute;
+    top: 15px; right: 15px;
+    display: flex;
+    gap: 8px;
+    z-index: 10;
+  }
+  .vid-btn {
+    width: 32px; height: 32px;
+    background: rgba(255, 255, 255, 0.4); /* Elegant Transparent Background */
+    backdrop-filter: blur(4px); /* Premium Glassmorphism Look */
+    -webkit-backdrop-filter: blur(4px);
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.3s ease;
+  }
+  .vid-btn:hover { 
+    background: rgba(255, 255, 255, 0.7); 
+    transform: scale(1.05);
+  }
+  .vid-btn svg { width: 16px; height: 16px; fill: var(--dark); }
+  
+  /* Initial Icon visibility setup */
+  .vid-btn .icon-play { display: none; }
+  .vid-btn .icon-pause { display: block; }
+  .vid-btn .icon-mute { display: block; }
+  .vid-btn .icon-unmute { display: none; }
+
+  /* Instagram Badge Link */
+  .badge-link {
+    position: absolute;
+    bottom: 15px; right: 15px;
+    z-index: 2;
+    display: block;
+  }
+  .badge {
+    width: 32px; height: 32px;
+    background: rgba(255, 255, 255, 0.9);
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    transition: 0.3s;
+  }
+  .badge:hover { background: #fff; transform: scale(1.05); }
+  .badge svg { width: 18px; height: 18px; fill: var(--dark); }
+
+  .recap-label {
+    position: absolute; bottom: 50px; left: 20px; color: #fff;
+    font-family: 'Cormorant Garamond', serif; font-size: 1.2rem;
+    text-shadow: 0 2px 8px rgba(0,0,0,0.5);
+  }
+
+  /* ── Controls ── */
+  .controls-wrapper { display: flex; flex-direction: column; align-items: center; margin-top: 25px; }
+  .arrows { display: flex; gap: 15px; }
+  .arrow-btn {
+    width: 50px; height: 50px; border-radius: 50%;
+    border: 1px solid var(--warm-gray); background: white;
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
+    transition: 0.3s;
+  }
+  .arrow-btn:hover { background: var(--dark); border-color: var(--dark); }
+  .arrow-btn:hover svg { stroke: white; }
+  .arrow-btn svg { width: 20px; height: 20px; stroke: var(--dark); fill: none; stroke-width: 2; }
+</style>
+
+<div class="wedding-section-{{ section.id }}">
+  <div class="header">
+    <p>{{ section.settings.sub_heading }}</p>
+    <h1>{{ section.settings.main_heading }}</h1>
+  </div>
+
+  <div class="slider-container">
+    <div class="wedding-slick-{{ section.id }}">
+      {% for block in section.blocks %}
+        <div class="card {{ block.settings.card_type }}" {{ block.shopify_attributes }}>
+          
+          {% comment %} Condition to check Video or Image {% endcomment %}
+          {% if block.settings.video != blank %}
+            <div class="video-wrapper" style="width:100%; height:100%;">
+              {{ block.settings.video | video_tag: autoplay: true, loop: true, muted: true, playsinline: true, controls: false, class: 'gallery-video' }}
+              
+              {% comment %} Play/Pause & Sound Controls {% endcomment %}
+              <div class="video-controls">
+                <button class="vid-btn play-pause-toggle" aria-label="Play/Pause">
+                  <svg class="icon-play" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                  <svg class="icon-pause" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+                </button>
+                <button class="vid-btn mute-toggle" aria-label="Mute/Unmute">
+                  <svg class="icon-mute" viewBox="0 0 24 24"><path d="M5.88 12L2.94 9.06 1.53 10.47l2.94 2.94 1.41-1.41zM11.5 4.88L6.81 9.5H3v5h3.81l4.69 4.62V4.88zm4.5 7.12c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>
+                  <svg class="icon-unmute" viewBox="0 0 24 24"><path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77zM3 9v6h4l5 5V4L7 9H3z"/></svg>
+                </button>
+              </div>
+            </div>
+          {% elsif block.settings.image != blank %}
+            <img src="{{ block.settings.image | img_url: '600x' }}" alt="{{ block.settings.label }}">
+          {% else %}
+            {{ 'image' | placeholder_svg_tag: 'placeholder-svg' }}
+          {% endif %}
+         
+          {% comment %} On/Off Condition for Text Label {% endcomment %}
+          {% if block.settings.show_label and block.settings.label != blank %}
+            <div class="recap-label">{{ block.settings.label }}</div>
+          {% endif %}
+         
+          {% comment %} On/Off Condition for Instagram Icon + Main Link Setting {% endcomment %}
+          {% if block.settings.show_icon %}
+            <a href="{{ section.settings.insta_link | default: '#' }}" target="_blank" class="badge-link">
+              <div class="badge"><svg viewBox="0 0 24 24"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg></div>
+            </a>
+          {% endif %}
+
+        </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <div class="controls-wrapper">
+    <div class="arrows">
+      <button class="arrow-btn" id="prev-{{ section.id }}"><svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg></button>
+      <button class="arrow-btn" id="next-{{ section.id }}"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></button>
+    </div>
+  </div>
+</div>
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script type="text/javascript" src="https://cdn.jsdelivr.net/npm/slick-carousel@1.8.1/slick/slick.min.js"></script>
+
+<script>
+$(document).ready(function(){
+  var $slider = $('.wedding-slick-{{ section.id }}');
+
+  $slider.slick({
+    infinite: true,
+    centerMode: true,
+    variableWidth: true,
+    slidesToShow: 3,
+    slidesToScroll: 1,
+    autoplay: true,
+    autoplaySpeed: 3000,
+    speed: 1000,
+    cssEase: 'cubic-bezier(0.45, 0.05, 0.55, 0.95)',
+    dots: false,
+    arrows: false,
+    pauseOnHover: true, /* Hover এ স্লাইডার থামবে */
+    draggable: true,
+    swipeToSlide: true
+  });
+
+  $('#next-{{ section.id }}').click(function(){
+    $slider.slick('slickNext');
+  });
+  $('#prev-{{ section.id }}').click(function(){
+    $slider.slick('slickPrev');
+  });
+
+  // Video Play/Pause Functionality
+  $('.play-pause-toggle').click(function(e){
+    e.preventDefault();
+    var video = $(this).closest('.video-wrapper').find('.gallery-video')[0];
+    if (video.paused) {
+      video.play();
+      $(this).find('.icon-play').hide();
+      $(this).find('.icon-pause').show();
+    } else {
+      video.pause();
+      $(this).find('.icon-pause').hide();
+      $(this).find('.icon-play').show();
+    }
+  });
+
+  // Video Mute/Unmute Functionality (Default Status: Muted)
+  $('.mute-toggle').click(function(e){
+    e.preventDefault();
+    var video = $(this).closest('.video-wrapper').find('.gallery-video')[0];
+    if (video.muted) {
+      video.muted = false;
+      $(this).find('.icon-mute').hide();
+      $(this).find('.icon-unmute').show();
+    } else {
+      video.muted = true;
+      $(this).find('.icon-unmute').hide();
+      $(this).find('.icon-mute').show();
+    }
+  });
+});
+</script>
+
+{% schema %}
+{
+  "name": "Wedding Gallery",
+  "settings": [
+    {
+      "type": "header",
+      "content": "Content Settings"
+    },
+    {
+      "type": "text",
+      "id": "sub_heading",
+      "label": "Sub Heading",
+      "default": "Collection"
+    },
+    {
+      "type": "html",
+      "id": "main_heading",
+      "label": "Main Heading",
+      "default": "The Wedding <em>Moments</em>"
+    },
+    {
+      "type": "url",
+      "id": "insta_link",
+      "label": "Instagram Profile Link",
+      "info": "এখানে লিংক দিলে স্লাইডারের সব ইন্সটাগ্রাম আইকন এই লিংকে রিডাইরেক্ট হবে।"
+    },
+    {
+      "type": "color",
+      "id": "bg_color",
+      "label": "Background Color",
+      "default": "#faf6f1"
+    },
+    {
+      "type": "header",
+      "content": "Section Padding"
+    },
+    {
+      "type": "range",
+      "id": "padding_top",
+      "min": 0,
+      "max": 100,
+      "step": 4,
+      "unit": "px",
+      "label": "Padding Top",
+      "default": 60
+    },
+    {
+      "type": "range",
+      "id": "padding_bottom",
+      "min": 0,
+      "max": 100,
+      "step": 4,
+      "unit": "px",
+      "label": "Padding Bottom",
+      "default": 60
+    }
+  ],
+  "blocks": [
+    {
+      "type": "image_block",
+      "name": "Slide Image / Video",
+      "settings": [
+        {
+          "type": "image_picker",
+          "id": "image",
+          "label": "Select Image"
+        },
+        {
+          "type": "video",
+          "id": "video",
+          "label": "Select Video (Optional)",
+          "info": "If video is selected, it will show instead of the image."
+        },
+        {
+          "type": "checkbox",
+          "id": "show_label",
+          "label": "Show Label Text",
+          "default": true
+        },
+        {
+          "type": "text",
+          "id": "label",
+          "label": "Label Text",
+          "default": "2026 Recap"
+        },
+        {
+          "type": "checkbox",
+          "id": "show_icon",
+          "label": "Show Instagram Icon",
+          "default": true
+        },
+        {
+          "type": "select",
+          "id": "card_type",
+          "label": "Card Style",
+          "options": [
+            { "value": "wide", "label": "Wide" },
+            { "value": "tall", "label": "Tall" },
+            { "value": "square", "label": "Square" }
+          ],
+          "default": "wide"
+        }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "Insta Gallery Slider",
+      "blocks": [
+        { "type": "image_block" },
+        { "type": "image_block" },
+        { "type": "image_block" }
+      ]
+    }
+  ]
+}
+{% endschema %}

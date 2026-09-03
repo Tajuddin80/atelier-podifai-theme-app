@@ -1,0 +1,56 @@
+{%- liquid
+  assign threshold = 10000
+  assign current_value = cart.total_price
+  assign percentage = current_value | times: 100.0 | divided_by: threshold
+  if percentage > 100
+    assign percentage = 100
+  endif
+  assign remaining = threshold | minus: current_value
+-%}
+
+<div class="free-shipping-progress">
+  <div class="free-shipping-progress__text">
+    {%- if current_value >= threshold -%}
+      You've unlocked free shipping!
+    {%- else -%}
+      You're <strong>{{ remaining | money }}</strong> away from free shipping
+    {%- endif -%}
+  </div>
+  <div class="free-shipping-progress__bar-container">
+    <div class="free-shipping-progress__bar" style="width: {{ percentage }}%"></div>
+  </div>
+</div>
+
+<style>
+  .free-shipping-progress {
+    background-color: #F6F4EB;
+    padding: var(--padding-lg) var(--padding-xl);
+    border-radius: min(var(--style-border-radius-buttons-primary, 12px), 12px);
+    margin: 0 var(--padding-xl) var(--padding-xl) var(--padding-xl);
+    box-shadow: inset 0 0 0 1px rgba(0,0,0,0.05);
+  }
+  @media screen and (min-width: 750px) {
+    .free-shipping-progress {
+        margin-inline: var(--padding-2xl);
+    }
+  }
+  .free-shipping-progress__text {
+    font-size: 14px;
+    color: var(--color-foreground, #111);
+    margin-bottom: 12px;
+    font-family: var(--font-body-family, inherit);
+  }
+  .free-shipping-progress__bar-container {
+    background-color: #E6E0D2;
+    height: 6px;
+    border-radius: 4px;
+    width: 100%;
+    overflow: hidden;
+  }
+  .free-shipping-progress__bar {
+    background-color: var(--color-primary-button-background, #CC4A22); 
+    height: 100%;
+    border-radius: 4px;
+    transition: width 0.3s ease;
+  }
+</style>

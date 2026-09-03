@@ -1,0 +1,736 @@
+{% comment %}
+  Section: progress Over Time
+  - Center heading, eyebrow, description
+  - Horizontal line with circle milestone markers
+  - Unlimited blocks (step label, title, description)
+  - Full schema customization
+{% endcomment %}
+
+<style>
+  #tl-{{ section.id }} {
+    background-color: {{ section.settings.section_bg_color }};
+    padding-top: {{ section.settings.padding_top }}px;
+    padding-bottom: {{ section.settings.padding_bottom }}px;
+  }
+
+  #tl-{{ section.id }} .tl-container {
+    max-width: {{ section.settings.section_width }};
+    margin: 0 auto;
+    padding: 0 {{ section.settings.padding_lr }}px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: {{ section.settings.heading_gap }}px;
+    text-align: center;
+  }
+
+  /* ── EYEBROW ── */
+  #tl-{{ section.id }} .tl-eyebrow {
+    margin: 0;
+    font-size: {{ section.settings.eyebrow_font_size }}px;
+    color: {{ section.settings.eyebrow_color }};
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    font-family: {{ section.settings.font_family }};
+    font-weight: 400;
+  }
+
+  /* ── HEADING ── */
+  #tl-{{ section.id }} .tl-heading {
+    margin: 0;
+    font-size: {{ section.settings.heading_font_size }}px;
+    color: {{ section.settings.heading_color }};
+    font-weight: 400;
+    line-height: 1.2;
+    font-family: {{ section.settings.heading_font_family }};
+  }
+
+  /* ── DESCRIPTION ── */
+  #tl-{{ section.id }} .tl-desc {
+    margin: 0;
+    font-size: {{ section.settings.desc_font_size }}px;
+    color: {{ section.settings.desc_color }};
+    line-height: 1.7;
+    font-family: {{ section.settings.font_family }};
+    max-width: 600px;
+  }
+
+  /* ── TIMELINE AREA ── */
+  #tl-{{ section.id }} .tl-track-wrap {
+    width: 100%;
+    margin-top: {{ section.settings.timeline_margin_top }}px;
+    position: relative;
+  }
+
+  /* horizontal line */
+  #tl-{{ section.id }} .tl-line {
+    position: absolute;
+    top: 23%;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background-color: #243327;
+    transform: translateY(-50%);
+    z-index: 0;
+    display: block;
+  }
+
+  /* steps row */
+  #tl-{{ section.id }} .tl-steps {
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    position: relative;
+    z-index: 1;
+  }
+
+  /* single step */
+  #tl-{{ section.id }} .tl-step {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: {{ section.settings.step_gap }}px;
+    padding: 0 {{ section.settings.step_padding }}px;
+  }
+
+  /* circle */
+  #tl-{{ section.id }} .tl-circle {
+    width: {{ section.settings.circle_size }}px;
+    height: {{ section.settings.circle_size }}px;
+    border-radius: 50%;
+    border: {{ section.settings.circle_border_width }}px solid {{ section.settings.circle_border_color }};
+    background-color: {{ section.settings.circle_bg }};
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    position: relative;
+    z-index: 2;
+  }
+
+  #tl-{{ section.id }} .tl-circle-label {
+    font-size: {{ section.settings.circle_label_font_size }}px;
+    color: {{ section.settings.circle_label_color }};
+    font-family: {{ section.settings.font_family }};
+    font-weight: 400;
+    letter-spacing: 0.05em;
+    font-style: italic;
+  }
+
+  /* content below circle */
+  #tl-{{ section.id }} .tl-step-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    text-align: center;
+  }
+
+  #tl-{{ section.id }} .tl-step-title {
+    margin: 0;
+    font-size: {{ section.settings.step_title_font_size }}px;
+    color: {{ section.settings.step_title_color }};
+    font-weight: 400;
+    font-family: {{ section.settings.heading_font_family }};
+    line-height: 1.3;
+  }
+
+  #tl-{{ section.id }} .tl-step-desc {
+    margin: 0;
+    font-size: {{ section.settings.step_desc_font_size }}px;
+    color: {{ section.settings.step_desc_color }};
+    line-height: 1.65;
+    font-family: {{ section.settings.font_family }};
+  }
+
+  /* ── RESPONSIVE Tablet ── */
+  @media screen and (max-width: 900px) {
+    #tl-{{ section.id }} {
+      padding-top: {{ section.settings.padding_top_tablet }}px;
+      padding-bottom: {{ section.settings.padding_bottom_tablet }}px;
+    }
+    #tl-{{ section.id }} .tl-container {
+      padding: 0 {{ section.settings.padding_lr_tablet }}px;
+    }
+    #tl-{{ section.id }} .tl-heading {
+      font-size: {{ section.settings.heading_font_size | times: 0.78 | round }}px;
+    }
+  }
+
+  /* ── RESPONSIVE Mobile ── */
+  @media screen and (max-width: 600px) {
+    #tl-{{ section.id }} {
+      padding-top: {{ section.settings.padding_top_mobile }}px;
+      padding-bottom: {{ section.settings.padding_bottom_mobile }}px;
+    }
+    #tl-{{ section.id }} .tl-container {
+      padding: 0 {{ section.settings.padding_lr_mobile }}px;
+    }
+    #tl-{{ section.id }} .tl-heading {
+      font-size: {{ section.settings.heading_font_size | times: 0.62 | round }}px;
+    }
+    /* mobile: vertical stack */
+    #tl-{{ section.id }} .tl-steps {
+      flex-direction: column;
+      gap: 36px;
+      align-items: center;
+    }
+    #tl-{{ section.id }} .tl-step {
+      flex: none;
+      width: 100%;
+      max-width: 320px;
+    }
+    #tl-{{ section.id }} .tl-line {
+      display: none;
+      top: 0;
+      bottom: 0;
+      left: 50%;
+      right: auto;
+      width: 1px;
+      height: 100%;
+      transform: translateX(-50%);
+    }
+    .pf-card-icon-template--27779393782128__how_it_works_JzHp9K {
+    margin: 0 auto 16px;
+}
+.pf-card-template--27779393782128__how_it_works_JzHp9K {
+    text-align: center;
+}
+  }
+</style>
+
+<div id="tl-{{ section.id }}">
+  <div class="tl-container">
+
+    {%- if section.settings.eyebrow != blank -%}
+      <p class="tl-eyebrow">{{ section.settings.eyebrow }}</p>
+    {%- endif -%}
+
+    {%- if section.settings.heading != blank -%}
+      <h2 class="tl-heading">{{ section.settings.heading }}</h2>
+    {%- endif -%}
+
+    {%- if section.settings.description != blank -%}
+      <p class="tl-desc">{{ section.settings.description }}</p>
+    {%- endif -%}
+
+    {%- if section.blocks.size > 0 -%}
+      <div class="tl-track-wrap">
+        <div class="tl-line"></div>
+        <div class="tl-steps">
+          {%- for block in section.blocks -%}
+            {%- if block.type == 'milestone' -%}
+              <div class="tl-step" {{ block.shopify_attributes }}>
+                <div class="tl-circle">
+                  {%- if block.settings.icon_type == 'image' and block.settings.icon_image != blank -%}
+                    <img
+                      src="{{ block.settings.icon_image | image_url: width: 80 }}"
+                      alt="{{ block.settings.title | escape }}"
+                      style="width: 55%; height: 55%; object-fit: contain; display: block;"
+                      loading="lazy"
+                    >
+                  {%- elsif block.settings.icon_type == 'svg' -%}
+                    {%- case block.settings.icon_svg -%}
+                      {%- when 'leaf' -%}
+                        <svg width="52%" height="52%" viewBox="0 0 24 24" fill="none" stroke="{{ section.settings.circle_label_color }}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 8C8 10 5.9 16.17 3.82 19.5L5.71 21l1-1C11 15 17 11 21 11V8h-4z"/></svg>
+                      {%- when 'drop' -%}
+                        <svg width="52%" height="52%" viewBox="0 0 24 24" fill="none" stroke="{{ section.settings.circle_label_color }}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2C12 2 5 10 5 15a7 7 0 0014 0C19 10 12 2 12 2z"/></svg>
+                      {%- when 'star' -%}
+                        <svg width="52%" height="52%" viewBox="0 0 24 24" fill="none" stroke="{{ section.settings.circle_label_color }}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                      {%- when 'heart' -%}
+                        <svg width="52%" height="52%" viewBox="0 0 24 24" fill="none" stroke="{{ section.settings.circle_label_color }}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg>
+                      {%- when 'shield' -%}
+                        <svg width="52%" height="52%" viewBox="0 0 24 24" fill="none" stroke="{{ section.settings.circle_label_color }}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l8 4v5c0 5-4 9.74-8 11-4-1.26-8-6-8-11V7l8-4z"/></svg>
+                      {%- when 'sun' -%}
+                        <svg width="52%" height="52%" viewBox="0 0 24 24" fill="none" stroke="{{ section.settings.circle_label_color }}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+                      {%- when 'check' -%}
+                        <svg width="52%" height="52%" viewBox="0 0 24 24" fill="none" stroke="{{ section.settings.circle_label_color }}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+                      {%- when 'flower' -%}
+                        <svg width="52%" height="52%" viewBox="0 0 24 24" fill="none" stroke="{{ section.settings.circle_label_color }}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 2a3 3 0 000 6 3 3 0 000-6zM12 16a3 3 0 000 6 3 3 0 000-6zM2 12a3 3 0 006 0 3 3 0 00-6 0zM16 12a3 3 0 006 0 3 3 0 00-6 0z"/></svg>
+                      {%- when 'sparkle' -%}
+                        <svg width="52%" height="52%" viewBox="0 0 24 24" fill="none" stroke="{{ section.settings.circle_label_color }}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6L12 2z"/></svg>
+                      {%- when 'award' -%}
+                        <svg width="52%" height="52%" viewBox="0 0 24 24" fill="none" stroke="{{ section.settings.circle_label_color }}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89L17 22l-5-3-5 3 1.523-9.11"/></svg>
+                      {%- else -%}
+                        <span class="tl-circle-label">{{ block.settings.step_label }}</span>
+                    {%- endcase -%}
+                  {%- else -%}
+                    <span class="tl-circle-label">{{ block.settings.step_label }}</span>
+                  {%- endif -%}
+                </div>
+                <div class="tl-step-content">
+                  {%- if block.settings.title != blank -%}
+                    <h3 class="tl-step-title">{{ block.settings.title }}</h3>
+                  {%- endif -%}
+                  {%- if block.settings.description != blank -%}
+                    <p class="tl-step-desc">{{ block.settings.description }}</p>
+                  {%- endif -%}
+                </div>
+              </div>
+            {%- endif -%}
+          {%- endfor -%}
+        </div>
+      </div>
+    {%- endif -%}
+
+  </div>
+</div>
+
+{% schema %}
+{
+  "name": "Timeline Section",
+  "tag": "div",
+  "class": "tl-wrapper",
+  "settings": [
+    {
+      "type": "header",
+      "content": "↔️ Layout"
+    },
+    {
+      "type": "select",
+      "id": "section_width",
+      "label": "Section Max Width",
+      "options": [
+        { "value": "100%", "label": "Full Width" },
+        { "value": "1400px", "label": "Wide (1400px)" },
+        { "value": "1200px", "label": "Default (1200px)" },
+        { "value": "1000px", "label": "Narrow (1000px)" },
+        { "value": "800px", "label": "Small (800px)" }
+      ],
+      "default": "1200px"
+    },
+    {
+      "type": "range",
+      "id": "heading_gap",
+      "min": 4,
+      "max": 48,
+      "step": 2,
+      "unit": "px",
+      "label": "Gap Between Header Elements",
+      "default": 16
+    },
+    {
+      "type": "range",
+      "id": "timeline_margin_top",
+      "min": 0,
+      "max": 80,
+      "step": 4,
+      "unit": "px",
+      "label": "Timeline Top Margin",
+      "default": 32
+    },
+    {
+      "type": "header",
+      "content": "🎨 Background"
+    },
+    {
+      "type": "color",
+      "id": "section_bg_color",
+      "label": "Background Color",
+      "default": "#f0ece4"
+    },
+    {
+      "type": "header",
+      "content": "📐 Desktop Padding"
+    },
+    {
+      "type": "range",
+      "id": "padding_top",
+      "min": 0,
+      "max": 160,
+      "step": 4,
+      "unit": "px",
+      "label": "Padding Top",
+      "default": 80
+    },
+    {
+      "type": "range",
+      "id": "padding_bottom",
+      "min": 0,
+      "max": 160,
+      "step": 4,
+      "unit": "px",
+      "label": "Padding Bottom",
+      "default": 80
+    },
+    {
+      "type": "range",
+      "id": "padding_lr",
+      "min": 0,
+      "max": 100,
+      "step": 4,
+      "unit": "px",
+      "label": "Padding Left / Right",
+      "default": 40
+    },
+    {
+      "type": "header",
+      "content": "📱 Tablet Padding"
+    },
+    {
+      "type": "range",
+      "id": "padding_top_tablet",
+      "min": 0,
+      "max": 120,
+      "step": 4,
+      "unit": "px",
+      "label": "Padding Top (Tablet)",
+      "default": 60
+    },
+    {
+      "type": "range",
+      "id": "padding_bottom_tablet",
+      "min": 0,
+      "max": 120,
+      "step": 4,
+      "unit": "px",
+      "label": "Padding Bottom (Tablet)",
+      "default": 60
+    },
+    {
+      "type": "range",
+      "id": "padding_lr_tablet",
+      "min": 0,
+      "max": 80,
+      "step": 4,
+      "unit": "px",
+      "label": "Padding Left / Right (Tablet)",
+      "default": 24
+    },
+    {
+      "type": "header",
+      "content": "📲 Mobile Padding"
+    },
+    {
+      "type": "range",
+      "id": "padding_top_mobile",
+      "min": 0,
+      "max": 100,
+      "step": 4,
+      "unit": "px",
+      "label": "Padding Top (Mobile)",
+      "default": 48
+    },
+    {
+      "type": "range",
+      "id": "padding_bottom_mobile",
+      "min": 0,
+      "max": 100,
+      "step": 4,
+      "unit": "px",
+      "label": "Padding Bottom (Mobile)",
+      "default": 48
+    },
+    {
+      "type": "range",
+      "id": "padding_lr_mobile",
+      "min": 0,
+      "max": 60,
+      "step": 4,
+      "unit": "px",
+      "label": "Padding Left / Right (Mobile)",
+      "default": 20
+    },
+    {
+      "type": "header",
+      "content": "✍️ Eyebrow"
+    },
+    {
+      "type": "text",
+      "id": "eyebrow",
+      "label": "Eyebrow Text",
+      "default": "WHAT TO EXPECT"
+    },
+    {
+      "type": "color",
+      "id": "eyebrow_color",
+      "label": "Eyebrow Color",
+      "default": "#5c5c4e"
+    },
+    {
+      "type": "range",
+      "id": "eyebrow_font_size",
+      "min": 10,
+      "max": 20,
+      "step": 1,
+      "unit": "px",
+      "label": "Eyebrow Font Size",
+      "default": 12
+    },
+    {
+      "type": "header",
+      "content": "📝 Heading"
+    },
+    {
+      "type": "text",
+      "id": "heading",
+      "label": "Heading",
+      "default": "Your results, over time."
+    },
+    {
+      "type": "color",
+      "id": "heading_color",
+      "label": "Heading Color",
+      "default": "#2c2c22"
+    },
+    {
+      "type": "range",
+      "id": "heading_font_size",
+      "min": 24,
+      "max": 80,
+      "step": 2,
+      "unit": "px",
+      "label": "Heading Font Size",
+      "default": 52
+    },
+    {
+      "type": "header",
+      "content": "📄 Description"
+    },
+    {
+      "type": "textarea",
+      "id": "description",
+      "label": "Description",
+      "default": "True hair wellness is patient. Here's how the journey often unfolds."
+    },
+    {
+      "type": "color",
+      "id": "desc_color",
+      "label": "Description Color",
+      "default": "#5c5c4e"
+    },
+    {
+      "type": "range",
+      "id": "desc_font_size",
+      "min": 12,
+      "max": 22,
+      "step": 1,
+      "unit": "px",
+      "label": "Description Font Size",
+      "default": 15
+    },
+    {
+      "type": "header",
+      "content": "➖ Timeline Line"
+    },
+    {
+      "type": "color",
+      "id": "line_color",
+      "label": "Line Color",
+      "default": "#a8a898"
+    },
+    {
+      "type": "header",
+      "content": "⭕ Circle"
+    },
+    {
+      "type": "range",
+      "id": "circle_size",
+      "min": 40,
+      "max": 100,
+      "step": 4,
+      "unit": "px",
+      "label": "Circle Size",
+      "default": 64
+    },
+    {
+      "type": "color",
+      "id": "circle_bg",
+      "label": "Circle Background",
+      "default": "#f0ece4"
+    },
+    {
+      "type": "color",
+      "id": "circle_border_color",
+      "label": "Circle Border Color",
+      "default": "#a8a898"
+    },
+    {
+      "type": "range",
+      "id": "circle_border_width",
+      "min": 1,
+      "max": 4,
+      "step": 1,
+      "unit": "px",
+      "label": "Circle Border Width",
+      "default": 1
+    },
+    {
+      "type": "color",
+      "id": "circle_label_color",
+      "label": "Circle Label Color",
+      "default": "#2c2c22"
+    },
+    {
+      "type": "range",
+      "id": "circle_label_font_size",
+      "min": 10,
+      "max": 22,
+      "step": 1,
+      "unit": "px",
+      "label": "Circle Label Font Size",
+      "default": 13
+    },
+    {
+      "type": "header",
+      "content": "📋 Step Content"
+    },
+    {
+      "type": "range",
+      "id": "step_gap",
+      "min": 8,
+      "max": 40,
+      "step": 4,
+      "unit": "px",
+      "label": "Gap: Circle to Content",
+      "default": 20
+    },
+    {
+      "type": "range",
+      "id": "step_padding",
+      "min": 0,
+      "max": 60,
+      "step": 4,
+      "unit": "px",
+      "label": "Step Horizontal Padding",
+      "default": 24
+    },
+    {
+      "type": "color",
+      "id": "step_title_color",
+      "label": "Step Title Color",
+      "default": "#2c2c22"
+    },
+    {
+      "type": "range",
+      "id": "step_title_font_size",
+      "min": 14,
+      "max": 32,
+      "step": 1,
+      "unit": "px",
+      "label": "Step Title Font Size",
+      "default": 20
+    },
+    {
+      "type": "color",
+      "id": "step_desc_color",
+      "label": "Step Description Color",
+      "default": "#5c5c4e"
+    },
+    {
+      "type": "range",
+      "id": "step_desc_font_size",
+      "min": 11,
+      "max": 20,
+      "step": 1,
+      "unit": "px",
+      "label": "Step Description Font Size",
+      "default": 14
+    },
+    {
+      "type": "header",
+      "content": "🖋️ Font"
+    }
+  ],
+  "blocks": [
+    {
+      "type": "milestone",
+      "name": "Milestone",
+      "settings": [
+        {
+          "type": "header",
+          "content": "⭕ Circle Content"
+        },
+        {
+          "type": "select",
+          "id": "icon_type",
+          "label": "Circle Content Type",
+          "options": [
+            { "value": "label", "label": "Text Label (W1, W3...)" },
+            { "value": "svg", "label": "Built-in Icon" },
+            { "value": "image", "label": "Custom Image" }
+          ],
+          "default": "label"
+        },
+        {
+          "type": "text",
+          "id": "step_label",
+          "label": "Text Label (if Text selected)",
+          "default": "W1"
+        },
+        {
+          "type": "select",
+          "id": "icon_svg",
+          "label": "Built-in Icon (if Icon selected)",
+          "options": [
+            { "value": "leaf", "label": "Leaf" },
+            { "value": "drop", "label": "Water Drop" },
+            { "value": "star", "label": "Star" },
+            { "value": "heart", "label": "Heart" },
+            { "value": "shield", "label": "Shield" },
+            { "value": "sun", "label": "Sun" },
+            { "value": "check", "label": "Checkmark" },
+            { "value": "flower", "label": "Flower" },
+            { "value": "sparkle", "label": "Sparkle" },
+            { "value": "award", "label": "Award" }
+          ],
+          "default": "leaf"
+        },
+        {
+          "type": "image_picker",
+          "id": "icon_image",
+          "label": "Custom Image (if Image selected)"
+        },
+        {
+          "type": "header",
+          "content": "✍️ Step Content"
+        },
+        {
+          "type": "text",
+          "id": "title",
+          "label": "Step Title",
+          "default": "Refreshed"
+        },
+        {
+          "type": "textarea",
+          "id": "description",
+          "label": "Step Description",
+          "default": "Scalp feels lighter, calmer, more cared for."
+        }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "progress Section",
+      "blocks": [
+        {
+          "type": "milestone",
+          "settings": {
+            "step_label": "W1",
+            "title": "Refreshed",
+            "description": "Scalp feels lighter, calmer, more cared for."
+          }
+        },
+        {
+          "type": "milestone",
+          "settings": {
+            "step_label": "W3",
+            "title": "Stronger",
+            "description": "Noticeably less visible breakage day to day."
+          }
+        },
+        {
+          "type": "milestone",
+          "settings": {
+            "step_label": "W6",
+            "title": "Fuller",
+            "description": "Healthier-looking density and natural shine."
+          }
+        }
+      ]
+    }
+  ]
+}
+{% endschema %}

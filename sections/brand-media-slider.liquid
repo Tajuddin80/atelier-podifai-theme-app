@@ -1,0 +1,525 @@
+{%- style -%}
+  #shopify-section-{{ section.id }} {
+    background-color: {{ section.settings.bg_color }};
+    padding-top: {{ section.settings.padding_top_mobile }}px;
+    padding-bottom: {{ section.settings.padding_bottom_mobile }}px;
+  }
+
+  @media screen and (min-width: 769px) {
+    #shopify-section-{{ section.id }} {
+      padding-top: {{ section.settings.padding_top_desktop }}px;
+      padding-bottom: {{ section.settings.padding_bottom_desktop }}px;
+    }
+  }
+
+  .media_slider_wrapper {
+    max-width: {{ section.settings.max_width }}px;
+    margin: 0 auto;
+    padding: 0 20px;
+    position: relative;
+  }
+
+  .media_slider_heading {
+    text-align: {{ section.settings.text_alignment }};
+    margin-bottom: 40px;
+  }
+
+  .media_slider_heading h2 {
+    font-size: {{ section.settings.heading_size }}px;
+    color: {{ section.settings.heading_color }};
+    margin: 0;
+    font-weight: 300;
+  }
+
+  .media_slider_description {
+    color: {{ section.settings.description_color }};
+    margin-top: 15px;
+  }
+
+  /* --- Unified Slider Layout (Mobile & Desktop) --- */
+  .media_slider_inner_container {
+    position: relative;
+    display: flex;
+    align-items: center;
+  }
+
+  .media_slider_inner {
+    display: flex;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    scroll-behavior: smooth;
+    gap: 15px;
+    padding-bottom: 15px;
+    width: 100%;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none;  /* IE & Edge */
+  }
+
+  .media_slider_inner::-webkit-scrollbar {
+    display: none; /* Chrome, Safari, Opera */
+  }
+
+  /* Mobile: smaller card + next card preview */
+  .media_item_card {
+    flex: 0 0 85%;
+    scroll-snap-align: start;
+    cursor: pointer;
+    position: relative;
+  }
+
+  /* Mobile spacing */
+  .media_slider_inner {
+    gap: 12px;
+    padding-right: 35px;
+  }
+
+  /* --- Square Shape Ratio Helper --- */
+  .media_card_square{
+    position:relative;
+    width:100%;
+    aspect-ratio:1/1;      /* চাইলে 1/1 করতে পারো */
+    padding-top:0;
+    overflow:hidden;
+    border-radius:{{ section.settings.card_radius }}px;
+    background:#f5f5f5;
+}
+
+  .media_card_square img,
+  .media_card_square video,
+  .media_card_square iframe,
+  .media_card_square .placeholder-svg {
+    position:absolute;
+    inset:0;
+    width:100%;
+    height:100%;
+    object-fit:cover;
+    border:none;
+  }
+
+  .media_item_card:hover .media_card_square img,
+  .media_item_card:hover .media_card_square video {
+    transform: scale(1.06);
+  }
+
+
+
+  /* Video Icon Overlay */
+  .media_video_overlay {
+    position:absolute;
+    inset:0;
+
+    display:flex;
+    align-items:center;
+    justify-content:center;
+
+    background:rgba(0,0,0,.35);
+
+    opacity:0;
+
+    transition:.35s;
+
+    z-index:5;
+
+    pointer-events:none;
+  }
+  .media_video_overlay svg {
+    width: 14px;
+    height: 14px;
+    fill: #fff;
+  }
+
+  /* --- Slider Navigation Arrows --- */
+  .slider_nav_btn {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 40px;
+    height: 40px;
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 50%;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 10;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    transition: all 0.3s ease;
+  }
+  .slider_nav_btn:hover {
+    background: #f5f5f5;
+  }
+  .slider_nav_btn svg {
+    width: 16px;
+    height: 16px;
+    fill: #333;
+  }
+  .slider_nav_btn.prev_btn { left: -5px; }
+  .slider_nav_btn.next_btn { right: -5px; }
+
+  /* --- Desktop Slider Layout Upgrades --- */
+  @media screen and (min-width: 769px) {
+    .media_slider_inner {
+      gap: {{ section.settings.gap_desktop }}px;
+      padding-bottom: 20px;
+      padding-right: 0;
+    }
+    /* Dynamic width calculations based on theme setting columns */
+    .media_item_card {
+      {%- assign desktop_columns = section.settings.columns_desktop | plus: 0 -%}
+      flex: 0 0 calc((100% - ({{ section.settings.gap_desktop }}px * ({{ desktop_columns }} - 1))) / {{ desktop_columns }});
+    }
+    .slider_nav_btn {
+      display: flex;
+    }
+  }
+
+
+{%- endstyle -%}
+
+<section class="brand_media_slider_section" id="BrandMediaSlider-{{ section.id }}">
+  <div class="media_slider_wrapper">
+    
+    {%- if section.settings.heading != blank or section.settings.description != blank -%}
+      <div class="media_slider_heading">
+        {%- if section.settings.heading != blank -%}
+          <h2>{{ section.settings.heading }}</h2>
+        {%- endif -%}
+        {%- if section.settings.description != blank -%}
+          <div class="media_slider_description">{{ section.settings.description }}</div>
+        {%- endif -%}
+      </div>
+    {%- endif -%}
+
+    <div class="media_slider_inner_container">
+      <button class="slider_nav_btn prev_btn" aria-label="Previous slide">
+        <svg viewBox="0 0 24 24"><path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg>
+      </button>
+
+      <div class="media_slider_inner">
+        {%- if section.blocks.size > 0 -%}
+          {%- for block in section.blocks -%}
+            
+            <div class="media_item_card" 
+                 data-media-type="{{ block.settings.media_type }}"
+                 {{ block.shopify_attributes }}>
+              
+              <div class="media_card_square">
+                {%- if block.settings.media_type == 'video' -%}
+                  <div class="media_video_overlay">
+                    <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                  </div>
+
+                  {%- if block.settings.video_file != blank -%}
+                    <video muted loop playsinline preload="metadata" {% if block.settings.image != blank %}poster="{{ block.settings.image | img_url: '800x800', crop: 'center' }}"{% endif %} class="target-media-src">
+                      <source src="{{ block.settings.video_file.sources[0].url }}" type="video/mp4">
+                    </video>
+                  {%- elsif block.settings.video_url != blank -%}
+                    <video muted loop playsinline preload="metadata" {% if block.settings.image != blank %}poster="{{ block.settings.image | img_url: '800x800', crop: 'center' }}"{% endif %} class="target-media-src">
+                      <source src="{{ block.settings.video_url }}" type="video/mp4">
+                    </video>
+                  {%- else -%}
+                    {{ 'lifestyle-1' | placeholder_svg_tag: 'placeholder-svg target-media-src' }}
+                  {%- endif -%}
+                {%- else -%}
+                  {%- if block.settings.image != blank -%}
+                    <img src="{{ block.settings.image | img_url: '800x800', crop: 'center' }}" alt="{{ block.settings.image.alt | default: 'Brand Media' }}" class="target-media-src" loading="lazy">
+                  {%- else -%}
+                    {{ 'image' | placeholder_svg_tag: 'placeholder-svg target-media-src' }}
+                  {%- endif -%}
+                {%- endif -%}
+
+                <div class="media_card_overlay">
+                  <div class="overlay_instagram_icon">
+                    <svg viewBox="0 0 24 24"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.051.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/></svg>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+          {%- endfor -%}
+        {%- else -%}
+          {%- for i in (1..6) -%}
+            <div class="media_item_card" 
+                 data-media-type="image">
+              <div class="media_card_square">
+                {{ 'image' | placeholder_svg_tag: 'placeholder-svg target-media-src' }}
+                <div class="media_card_overlay">
+                  <div class="overlay_instagram_icon">
+                    <svg viewBox="0 0 24 24"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.051.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/></svg>
+                  </div>
+                </div>
+              </div>
+            </div>
+          {%- endfor -%}
+        {%- endif -%}
+      </div>
+
+      <button class="slider_nav_btn next_btn" aria-label="Next slide">
+        <svg viewBox="0 0 24 24"><path d="M8.59 16.59L10 18l6-6-6-6-1.41 1.41L13.17 12z"/></svg>
+      </button>
+    </div>
+
+  </div>
+</section>
+
+
+
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+  const sliderInner = document.querySelector("#shopify-section-{{ section.id }} .media_slider_inner");
+  const prevBtn = document.querySelector("#shopify-section-{{ section.id }} .prev_btn");
+  const nextBtn = document.querySelector("#shopify-section-{{ section.id }} .next_btn");
+
+  // --- Slider Functionality ---
+  if (sliderInner && prevBtn && nextBtn) {
+    nextBtn.addEventListener("click", () => {
+      const card = sliderInner.querySelector(".media_item_card");
+      if (card) {
+        const cardWidth = card.clientWidth;
+        sliderInner.scrollBy({ left: cardWidth + 15, behavior: "smooth" });
+      }
+    });
+
+    prevBtn.addEventListener("click", () => {
+      const card = sliderInner.querySelector(".media_item_card");
+      if (card) {
+        const cardWidth = card.clientWidth;
+        sliderInner.scrollBy({ left: -(cardWidth + 15), behavior: "smooth" });
+      }
+    });
+  }
+
+  function initVideoHoverPlay() {
+    document.querySelectorAll("#shopify-section-{{ section.id }} .media_item_card").forEach(card => {
+      const video = card.querySelector("video");
+      if (video) {
+        card.addEventListener("mouseenter", () => {
+          video.play().catch(e => {});
+        });
+        card.addEventListener("mouseleave", () => {
+          video.pause();
+          video.currentTime = 0;
+        });
+      }
+    });
+  }
+
+  // Initial Execution
+  initVideoHoverPlay();
+});
+</script>
+
+{% schema %}
+{
+  "name": "Brand Media Slider",
+  "settings": [
+    {
+      "type": "header",
+      "content": "Content Settings"
+    },
+    {
+      "type": "text",
+      "id": "heading",
+      "label": "Section Heading",
+      "default": "Shop our Instagram"
+    },
+    {
+      "type": "range",
+      "id": "heading_size",
+      "min": 16,
+      "max": 60,
+      "step": 2,
+      "unit": "px",
+      "label": "Heading Font Size",
+      "default": 36
+    },
+    {
+      "type": "color",
+      "id": "heading_color",
+      "label": "Heading Color",
+      "default": "#121212"
+    },
+    {
+      "type": "select",
+      "id": "text_alignment",
+      "label": "Text Alignment",
+      "options": [
+        {
+          "value": "left",
+          "label": "Left"
+        },
+        {
+          "value": "center",
+          "label": "Center"
+        },
+        {
+          "value": "right",
+          "label": "Right"
+        }
+      ],
+      "default": "center"
+    },
+    {
+      "type": "richtext",
+      "id": "description",
+      "label": "Description"
+    },
+    {
+      "type": "color",
+      "id": "description_color",
+      "label": "Description Color",
+      "default": "#555555"
+    },
+    {
+      "type": "header",
+      "content": "Layout Settings"
+    },
+    {
+      "type": "range",
+      "id": "max_width",
+      "min": 1100,
+      "max": 1920,
+      "step": 10,
+      "unit": "px",
+      "label": "Section Max Width",
+      "default": 1480
+    },
+    {
+      "type": "range",
+      "id": "columns_desktop",
+      "min": 3,
+      "max": 6,
+      "step": 1,
+      "label": "Visible Cards Per View (Desktop)",
+      "default": 4
+    },
+    {
+      "type": "range",
+      "id": "gap_desktop",
+      "min": 10,
+      "max": 50,
+      "step": 5,
+      "unit": "px",
+      "label": "Gap Between Cards (Desktop)",
+      "default": 20
+    },
+    {
+      "type": "range",
+      "id": "card_radius",
+      "min": 0,
+      "max": 30,
+      "step": 2,
+      "unit": "px",
+      "label": "Card Border Radius",
+      "default": 12
+    },
+    {
+      "type": "color",
+      "id": "bg_color",
+      "label": "Section Background Color",
+      "default": "#ffffff"
+    },
+    {
+      "type": "header",
+      "content": "Section Spacing / Padding"
+    },
+    {
+      "type": "range",
+      "id": "padding_top_desktop",
+      "min": 0,
+      "max": 120,
+      "step": 5,
+      "unit": "px",
+      "label": "Padding Top (Desktop)",
+      "default": 60
+    },
+    {
+      "type": "range",
+      "id": "padding_bottom_desktop",
+      "min": 0,
+      "max": 120,
+      "step": 5,
+      "unit": "px",
+      "label": "Padding Bottom (Desktop)",
+      "default": 60
+    },
+    {
+      "type": "range",
+      "id": "padding_top_mobile",
+      "min": 0,
+      "max": 100,
+      "step": 5,
+      "unit": "px",
+      "label": "Padding Top (Mobile)",
+      "default": 40
+    },
+    {
+      "type": "range",
+      "id": "padding_bottom_mobile",
+      "min": 0,
+      "max": 100,
+      "step": 5,
+      "unit": "px",
+      "label": "Padding Bottom (Mobile)",
+      "default": 40
+    }
+  ],
+  "blocks": [
+    {
+      "type": "media_block",
+      "name": "Media Item",
+      "settings": [
+
+        {
+          "type": "header",
+          "content": "Media & Content"
+        },
+        {
+          "type": "image_picker",
+          "id": "image",
+          "label": "Card Image",
+          "info": "Upload the image to display in the card and popup."
+        },
+        {
+          "type": "select",
+          "id": "media_type",
+          "label": "Select Card Media Type",
+          "options": [
+            { "value": "image", "label": "Image" },
+            { "value": "video", "label": "Video" }
+          ],
+          "default": "image",
+          "info": "Set to Video if you want to support video hover-play on the card."
+        },
+        {
+          "type": "video",
+          "id": "video_file",
+          "label": "Shopify Video File",
+          "info": "Used for hover-play if Media Type is Video."
+        },
+        {
+          "type": "text",
+          "id": "video_url",
+          "label": "External Video URL (.mp4)",
+          "info": "Used for hover-play if Media Type is Video."
+        }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "Brand Media Slider",
+      "blocks": [
+        { "type": "media_block" },
+        { "type": "media_block" },
+        { "type": "media_block" },
+        { "type": "media_block" },
+        { "type": "media_block" },
+        { "type": "media_block" }
+      ]
+    }
+  ]
+}
+{% endschema %}

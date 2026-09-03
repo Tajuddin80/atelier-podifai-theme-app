@@ -1,0 +1,1773 @@
+/*
+ * ------------------------------------------------------------
+ * IMPORTANT: The contents of this file are auto-generated.
+ *
+ * This file may be updated by the Shopify admin theme editor
+ * or related systems. Please exercise caution as any changes
+ * made to this file may be overwritten.
+ * ------------------------------------------------------------
+ */
+{
+  "sections": {
+    "main": {
+      "type": "main-page",
+      "blocks": {
+        "heading": {
+          "type": "text",
+          "name": "Title",
+          "settings": {
+            "text": "<h1>{{ closest.page.title }}</h1>",
+            "width": "100%",
+            "max_width": "normal",
+            "alignment": "left",
+            "type_preset": "h2",
+            "font": "var(--font-body--family)",
+            "font_size": "1rem",
+            "line_height": "normal",
+            "letter_spacing": "normal",
+            "case": "none",
+            "wrap": "pretty",
+            "color": "var(--color-foreground)",
+            "background": false,
+            "background_color": "#00000026",
+            "corner_radius": 0,
+            "padding-block-start": 0,
+            "padding-block-end": 0,
+            "padding-inline-start": 0,
+            "padding-inline-end": 0
+          },
+          "blocks": {}
+        },
+        "page-content": {
+          "type": "page-content",
+          "settings": {},
+          "blocks": {}
+        }
+      },
+      "block_order": [
+        "heading",
+        "page-content"
+      ],
+      "disabled": true,
+      "settings": {
+        "content_direction": "column",
+        "gap": 32,
+        "color_scheme": "",
+        "padding-block-start": 40,
+        "padding-block-end": 80
+      }
+    },
+    "about_the_founder_UYR63M": {
+      "type": "about-the-founder",
+      "disabled": true,
+      "custom_css": [
+        ".nouvelle-story-title {font-weight: 300; font-size: 56px;}"
+      ],
+      "name": "Our Story Banner",
+      "settings": {
+        "container_width": 1100,
+        "sub_label": "OUR STORY",
+        "heading": "The atelier of joy",
+        "description": "<p>apopofjoy began with a simple belief: the little things genuinely make ordinary days better. A pop of colour. A tiny character. Something made just for you.</p>",
+        "sub_label_size": 16,
+        "sub_label_color": "#2c3e2b",
+        "title_size": 56,
+        "title_color": "#000000",
+        "italic_accent_color": "#000000",
+        "desc_size": 16,
+        "desc_color": "#000000",
+        "banner_image": "shopify://shop_images/IMG_5921.jpg",
+        "placeholder_text": "— FOUNDER PORTRAIT —",
+        "box_border_radius": 16,
+        "bg_color": "#fbf9f6",
+        "box_bg_gradient": "linear-gradient(135deg, #cbd4c5 0%, #9fae96 100%)",
+        "padding_top": 40,
+        "padding_bottom": 40,
+        "header_margin_bottom": 40
+      }
+    },
+    "about_us_hero_TY97zm": {
+      "type": "about-us-hero",
+      "blocks": {
+        "grid_feature_HFY6qj": {
+          "type": "grid_feature",
+          "settings": {
+            "text": "Fast DIY Install"
+          }
+        },
+        "grid_feature_iq7ykG": {
+          "type": "grid_feature",
+          "settings": {
+            "text": "Australian Compliant\n(AS: 3786:2014)"
+          }
+        },
+        "grid_feature_xqPdHP": {
+          "type": "grid_feature",
+          "settings": {
+            "text": "10-Year Sealed Battery"
+          }
+        },
+        "grid_feature_7YMeKF": {
+          "type": "grid_feature",
+          "settings": {
+            "text": "Supplied Interconnected\n& Install-ready"
+          }
+        },
+        "footer_feature_bWWyzj": {
+          "type": "footer_feature",
+          "settings": {
+            "text": "<strong>Designed for</strong><br>Australian homes"
+          }
+        },
+        "footer_feature_CRNQY7": {
+          "type": "footer_feature",
+          "settings": {
+            "text": "<strong>Trusted by</strong><br>Australians"
+          }
+        },
+        "footer_feature_b4KMnA": {
+          "type": "footer_feature",
+          "settings": {
+            "text": "<strong>Support before you buy</strong><br>Need help choosing a kit?"
+          }
+        }
+      },
+      "block_order": [
+        "grid_feature_HFY6qj",
+        "grid_feature_iq7ykG",
+        "grid_feature_xqPdHP",
+        "grid_feature_7YMeKF",
+        "footer_feature_bWWyzj",
+        "footer_feature_CRNQY7",
+        "footer_feature_b4KMnA"
+      ],
+      "disabled": true,
+      "name": "Advanced Image with Text",
+      "settings": {
+        "section_width": "full",
+        "custom_max_width": 1200,
+        "layout": "image_right",
+        "column_width": "50/50",
+        "section_height": 620,
+        "padding_top": 60,
+        "padding_bottom": 60,
+        "image": "shopify://shop_images/686886013_17951025468141184_6560301582587837128_n.jpg",
+        "overlay_color": "#000000",
+        "overlay_opacity": 40,
+        "heading": "Celebrate\nEvery Day.",
+        "highlight_text": "Story",
+        "highlight_color": "#e60000",
+        "description": "Because joy doesn't wait.",
+        "btn_1_text": "Find the Right Home Kit",
+        "btn_1_link": "",
+        "btn_2_text": "Smoke Alarm Calculator",
+        "btn_2_link": "",
+        "bg_color": "#ffffff",
+        "heading_color": "#000000",
+        "text_color": "#333333",
+        "feature_border_color": "#e0e0e0",
+        "feature_bg_color": "#ffffff",
+        "btn_1_bg": "#d10000",
+        "btn_1_text_color": "#ffffff",
+        "btn_2_bg": "#ffffff",
+        "btn_2_text_color": "#000000",
+        "btn_2_border": "#000000",
+        "heading_size": 52,
+        "text_size": 16
+      }
+    },
+    "section_K9TtXC": {
+      "type": "section",
+      "blocks": {
+        "group_ecbTEV": {
+          "type": "group",
+          "name": "t:names.group",
+          "settings": {
+            "content_direction": "column",
+            "vertical_on_mobile": true,
+            "horizontal_alignment": "flex-start",
+            "vertical_alignment": "center",
+            "align_baseline": false,
+            "horizontal_alignment_flex_direction_column": "center",
+            "vertical_alignment_flex_direction_column": "center",
+            "gap": 12,
+            "width": "custom",
+            "custom_width": 50,
+            "width_mobile": "fill",
+            "custom_width_mobile": 100,
+            "height": "fill",
+            "custom_height": 100,
+            "inherit_color_scheme": true,
+            "color_scheme": "",
+            "background_media": "none",
+            "video_position": "cover",
+            "background_image_position": "cover",
+            "border": "none",
+            "border_width": 1,
+            "border_opacity": 100,
+            "border_radius": 0,
+            "toggle_overlay": false,
+            "overlay_color": "#00000026",
+            "overlay_style": "solid",
+            "gradient_direction": "to top",
+            "link": "",
+            "open_in_new_tab": false,
+            "placeholder": "",
+            "padding-block-start": 0,
+            "padding-block-end": 0,
+            "padding-inline-start": 0,
+            "padding-inline-end": 0
+          },
+          "blocks": {
+            "text_w6JwP7": {
+              "type": "text",
+              "name": "t:names.heading",
+              "settings": {
+                "text": "<p><em>Our Story</em></p>",
+                "width": "fit-content",
+                "max_width": "normal",
+                "alignment": "left",
+                "type_preset": "custom",
+                "font": "var(--font-body--family)",
+                "font_size": "3rem",
+                "line_height": "normal",
+                "letter_spacing": "normal",
+                "case": "none",
+                "wrap": "pretty",
+                "color": "var(--color-foreground)",
+                "background": false,
+                "background_color": "#00000026",
+                "corner_radius": 0,
+                "padding-block-start": 0,
+                "padding-block-end": 0,
+                "padding-inline-start": 0,
+                "padding-inline-end": 0
+              },
+              "blocks": {}
+            },
+            "text_KJEMWF": {
+              "type": "text",
+              "name": "t:names.text",
+              "disabled": true,
+              "settings": {
+                "text": "<p>Celebrate Every Day.</p>",
+                "width": "fit-content",
+                "max_width": "normal",
+                "alignment": "left",
+                "type_preset": "rte",
+                "font": "var(--font-body--family)",
+                "font_size": "1rem",
+                "line_height": "normal",
+                "letter_spacing": "normal",
+                "case": "none",
+                "wrap": "pretty",
+                "color": "var(--color-foreground)",
+                "background": false,
+                "background_color": "#00000026",
+                "corner_radius": 0,
+                "padding-block-start": 0,
+                "padding-block-end": 0,
+                "padding-inline-start": 0,
+                "padding-inline-end": 0
+              },
+              "blocks": {}
+            },
+            "text_dzGde7": {
+              "type": "text",
+              "name": "t:names.text",
+              "disabled": true,
+              "settings": {
+                "text": "<h4>Because joy doesn't wait.</h4>",
+                "width": "fit-content",
+                "max_width": "normal",
+                "alignment": "left",
+                "type_preset": "rte",
+                "font": "var(--font-body--family)",
+                "font_size": "1rem",
+                "line_height": "normal",
+                "letter_spacing": "normal",
+                "case": "none",
+                "wrap": "pretty",
+                "color": "var(--color-foreground)",
+                "background": false,
+                "background_color": "#00000026",
+                "corner_radius": 0,
+                "padding-block-start": 0,
+                "padding-block-end": 0,
+                "padding-inline-start": 0,
+                "padding-inline-end": 0
+              },
+              "blocks": {}
+            }
+          },
+          "block_order": [
+            "text_w6JwP7",
+            "text_KJEMWF",
+            "text_dzGde7"
+          ]
+        }
+      },
+      "block_order": [
+        "group_ecbTEV"
+      ],
+      "custom_css": [
+        "@media (min-width: 767px) {.group-block-content.layout-panel-flex.layout-panel-flex--column.mobile-column {/* padding-left: 235px; */ }}",
+        "em {color: #d1a74c; font-size: 56px; font-family: \"Newsreader\";}"
+      ],
+      "name": "t:names.custom_section",
+      "settings": {
+        "content_direction": "row",
+        "vertical_on_mobile": true,
+        "horizontal_alignment": "center",
+        "vertical_alignment": "center",
+        "align_baseline": false,
+        "horizontal_alignment_flex_direction_column": "flex-start",
+        "vertical_alignment_flex_direction_column": "center",
+        "gap": 12,
+        "section_width": "full-width",
+        "section_height": "custom",
+        "section_height_custom": 19,
+        "color_scheme": "scheme-19c7a94f-8bc7-4b88-b5f4-25453023695e",
+        "background_media": "none",
+        "video_position": "cover",
+        "background_image_position": "cover",
+        "border": "none",
+        "border_width": 1,
+        "border_opacity": 100,
+        "border_radius": 0,
+        "toggle_overlay": false,
+        "overlay_color": "#00000026",
+        "overlay_style": "solid",
+        "gradient_direction": "to top",
+        "padding-block-start": 0,
+        "padding-block-end": 0
+      }
+    },
+    "section_rrJezm": {
+      "type": "section",
+      "blocks": {
+        "text_UBCGUg": {
+          "type": "text",
+          "name": "t:names.text",
+          "settings": {
+            "text": "<p>I'm the maker behind apopofjoy — a small joy atelier based in Penang. I started this because I kept noticing how the small, considered things in my own life — the pouch I reached for every morning, the little charm on a keychain, the colour of a bag — quietly shaped how my day felt. There was something powerful in that, and I wanted to make more of it for other people.</p><p>Every joy bag starts with a colourful nylon pouch finished with a soft gold zip pull and our little engraved disc. From there, you choose your path: grab one ready-made for an easy yes, or make it entirely your own with patches and embroidery — your name, your favourite characters, the details only you would think of.</p><p>We're starting with pouches because everyone needs something to carry their joy in. But apopofjoy was always meant to be bigger — an atelier for life's celebrations. Birthdays, graduations, festivals. Some made just for you, some ready to celebrate with. There's so much more coming.</p><p>For now, thank you for being here this early. Every order genuinely makes my day — I see your name on the label, I tuck a little extra joy in the parcel, and I think about how it might brighten someone's ordinary Tuesday. That's the whole point.</p><p>— with all my joy, JT 💛</p>",
+            "width": "fit-content",
+            "max_width": "none",
+            "alignment": "center",
+            "type_preset": "custom",
+            "font": "var(--font-body--family)",
+            "font_size": "1rem",
+            "line_height": "normal",
+            "letter_spacing": "normal",
+            "case": "none",
+            "wrap": "pretty",
+            "color": "var(--color-foreground)",
+            "background": false,
+            "background_color": "#00000026",
+            "corner_radius": 0,
+            "padding-block-start": 0,
+            "padding-block-end": 0,
+            "padding-inline-start": 0,
+            "padding-inline-end": 0
+          },
+          "blocks": {}
+        }
+      },
+      "block_order": [
+        "text_UBCGUg"
+      ],
+      "disabled": true,
+      "custom_css": [
+        "h3 {font-weight: 600;}"
+      ],
+      "name": "t:names.rich_text_section",
+      "settings": {
+        "content_direction": "column",
+        "vertical_on_mobile": true,
+        "horizontal_alignment": "flex-start",
+        "vertical_alignment": "center",
+        "align_baseline": false,
+        "horizontal_alignment_flex_direction_column": "center",
+        "vertical_alignment_flex_direction_column": "center",
+        "gap": 25,
+        "section_width": "page-width",
+        "section_height": "small",
+        "section_height_custom": 50,
+        "color_scheme": "scheme-4",
+        "background_media": "none",
+        "video_position": "cover",
+        "background_image_position": "cover",
+        "border": "none",
+        "border_width": 1,
+        "border_opacity": 100,
+        "border_radius": 0,
+        "toggle_overlay": false,
+        "overlay_color": "#00000026",
+        "overlay_style": "solid",
+        "gradient_direction": "to top",
+        "padding-block-start": 60,
+        "padding-block-end": 60
+      }
+    },
+    "section_BBNQ7J": {
+      "type": "section",
+      "blocks": {
+        "image_PXjkyi": {
+          "type": "image",
+          "settings": {
+            "link": "",
+            "image_ratio": "square",
+            "width": "fill",
+            "custom_width": 100,
+            "width_mobile": "fill",
+            "custom_width_mobile": 100,
+            "height": "fit",
+            "border": "none",
+            "border_width": 1,
+            "border_opacity": 100,
+            "border_radius": 0,
+            "padding-block-start": 0,
+            "padding-block-end": 0,
+            "padding-inline-start": 0,
+            "padding-inline-end": 0
+          },
+          "blocks": {}
+        },
+        "group_PEqm9y": {
+          "type": "group",
+          "settings": {
+            "content_direction": "column",
+            "vertical_on_mobile": true,
+            "horizontal_alignment": "flex-start",
+            "vertical_alignment": "center",
+            "align_baseline": false,
+            "horizontal_alignment_flex_direction_column": "flex-start",
+            "vertical_alignment_flex_direction_column": "center",
+            "gap": 12,
+            "width": "custom",
+            "custom_width": 100,
+            "width_mobile": "fill",
+            "custom_width_mobile": 100,
+            "height": "fit",
+            "custom_height": 100,
+            "inherit_color_scheme": true,
+            "color_scheme": "",
+            "background_media": "none",
+            "video_position": "cover",
+            "background_image_position": "cover",
+            "border": "none",
+            "border_width": 1,
+            "border_opacity": 100,
+            "border_radius": 0,
+            "toggle_overlay": false,
+            "overlay_color": "#00000026",
+            "overlay_style": "solid",
+            "gradient_direction": "to top",
+            "link": "",
+            "open_in_new_tab": false,
+            "placeholder": "",
+            "padding-block-start": 0,
+            "padding-block-end": 0,
+            "padding-inline-start": 0,
+            "padding-inline-end": 0
+          },
+          "blocks": {
+            "text_AmEGet": {
+              "type": "text",
+              "name": "t:names.heading",
+              "settings": {
+                "text": "<h2>Our signature product</h2>",
+                "width": "fit-content",
+                "max_width": "normal",
+                "alignment": "left",
+                "type_preset": "h3",
+                "font": "var(--font-body--family)",
+                "font_size": "1rem",
+                "line_height": "normal",
+                "letter_spacing": "normal",
+                "case": "none",
+                "wrap": "pretty",
+                "color": "var(--color-foreground)",
+                "background": false,
+                "background_color": "#00000026",
+                "corner_radius": 0,
+                "padding-block-start": 0,
+                "padding-block-end": 0,
+                "padding-inline-start": 0,
+                "padding-inline-end": 0
+              },
+              "blocks": {}
+            },
+            "text_9xwy6r": {
+              "type": "text",
+              "settings": {
+                "text": "<p>Made with care and unconditionally loved by our customers, this signature bestseller exceeds all expectations.</p>",
+                "width": "fit-content",
+                "max_width": "narrow",
+                "alignment": "left",
+                "type_preset": "rte",
+                "font": "var(--font-body--family)",
+                "font_size": "1rem",
+                "line_height": "normal",
+                "letter_spacing": "normal",
+                "case": "none",
+                "wrap": "pretty",
+                "color": "var(--color-foreground)",
+                "background": false,
+                "background_color": "#00000026",
+                "corner_radius": 0,
+                "padding-block-start": 0,
+                "padding-block-end": 0,
+                "padding-inline-start": 0,
+                "padding-inline-end": 0
+              },
+              "blocks": {}
+            }
+          },
+          "block_order": [
+            "text_AmEGet",
+            "text_9xwy6r"
+          ]
+        }
+      },
+      "block_order": [
+        "image_PXjkyi",
+        "group_PEqm9y"
+      ],
+      "name": "t:names.image_with_text",
+      "settings": {
+        "content_direction": "row",
+        "vertical_on_mobile": true,
+        "horizontal_alignment": "flex-start",
+        "vertical_alignment": "center",
+        "align_baseline": false,
+        "horizontal_alignment_flex_direction_column": "flex-start",
+        "vertical_alignment_flex_direction_column": "center",
+        "gap": 32,
+        "section_width": "page-width",
+        "section_height": "",
+        "section_height_custom": 50,
+        "color_scheme": "",
+        "background_media": "none",
+        "video_position": "cover",
+        "background_image_position": "cover",
+        "border": "none",
+        "border_width": 1,
+        "border_opacity": 100,
+        "border_radius": 0,
+        "toggle_overlay": false,
+        "overlay_color": "#00000026",
+        "overlay_style": "solid",
+        "gradient_direction": "to top",
+        "padding-block-start": 40,
+        "padding-block-end": 40
+      }
+    },
+    "section_efUrRy": {
+      "type": "section",
+      "blocks": {
+        "group_UYanUq": {
+          "type": "group",
+          "settings": {
+            "content_direction": "column",
+            "vertical_on_mobile": true,
+            "horizontal_alignment": "flex-start",
+            "vertical_alignment": "center",
+            "align_baseline": false,
+            "horizontal_alignment_flex_direction_column": "flex-start",
+            "vertical_alignment_flex_direction_column": "center",
+            "gap": 27,
+            "width": "custom",
+            "custom_width": 100,
+            "width_mobile": "fill",
+            "custom_width_mobile": 100,
+            "height": "fit",
+            "custom_height": 100,
+            "inherit_color_scheme": true,
+            "color_scheme": "",
+            "background_media": "none",
+            "video_position": "cover",
+            "background_image_position": "cover",
+            "border": "none",
+            "border_width": 1,
+            "border_opacity": 100,
+            "border_radius": 0,
+            "toggle_overlay": false,
+            "overlay_color": "#00000026",
+            "overlay_style": "solid",
+            "gradient_direction": "to top",
+            "link": "",
+            "open_in_new_tab": false,
+            "placeholder": "",
+            "padding-block-start": 0,
+            "padding-block-end": 0,
+            "padding-inline-start": 0,
+            "padding-inline-end": 0
+          },
+          "blocks": {
+            "text_zqqbGb": {
+              "type": "text",
+              "name": "t:names.heading",
+              "settings": {
+                "text": "<h3>So why —<strong>apopofjoy ?</strong></h3>",
+                "width": "fit-content",
+                "max_width": "normal",
+                "alignment": "left",
+                "type_preset": "h3",
+                "font": "var(--font-body--family)",
+                "font_size": "1rem",
+                "line_height": "normal",
+                "letter_spacing": "normal",
+                "case": "none",
+                "wrap": "pretty",
+                "color": "var(--color-foreground)",
+                "background": false,
+                "background_color": "#00000026",
+                "corner_radius": 0,
+                "padding-block-start": 0,
+                "padding-block-end": 0,
+                "padding-inline-start": 0,
+                "padding-inline-end": 0
+              },
+              "blocks": {}
+            },
+            "text_ezrzTJ": {
+              "type": "text",
+              "settings": {
+                "text": "<p>say it slowly —a pop of joy.</p><p>A small, unexpected moment of delight.Personal. Heartfelt. The kind that catches you on an ordinary day and quietly makes it brighter.We used to think joy needed a reason. A birthday.A milestone. Something big.But the small days count too. The ordinary Tuesdays. The just-because moments.apopofjoy is here for all of them.This started because we believe joy shouldn't have to wait for a special occasion — and that the everyday stuff can feel a little less ordinary, and a lot more you.Some pieces are ready just as they are. Others, you make your own — a name, a colour, the little detail that makes it yours. Either way, it's made to make an ordinary day feel a little more like yours.It starts with bags and pouches. But it doesn't end there — bit by bit, we're building a whole home for celebration, the everyday kind and the confetti-everywhere kind.Because joy lives in the details. And it's worth carrying with you.</p>",
+                "width": "100%",
+                "max_width": "normal",
+                "alignment": "left",
+                "type_preset": "paragraph",
+                "font": "var(--font-body--family)",
+                "font_size": "1rem",
+                "line_height": "normal",
+                "letter_spacing": "normal",
+                "case": "none",
+                "wrap": "pretty",
+                "color": "var(--color-foreground)",
+                "background": false,
+                "background_color": "#00000026",
+                "corner_radius": 0,
+                "padding-block-start": 0,
+                "padding-block-end": 0,
+                "padding-inline-start": 0,
+                "padding-inline-end": 0
+              },
+              "blocks": {}
+            }
+          },
+          "block_order": [
+            "text_zqqbGb",
+            "text_ezrzTJ"
+          ]
+        },
+        "image_TXhiTP": {
+          "type": "image",
+          "settings": {
+            "link": "",
+            "image_ratio": "square",
+            "width": "fill",
+            "custom_width": 100,
+            "width_mobile": "fill",
+            "custom_width_mobile": 100,
+            "height": "fit",
+            "border": "none",
+            "border_width": 1,
+            "border_opacity": 100,
+            "border_radius": 0,
+            "padding-block-start": 0,
+            "padding-block-end": 0,
+            "padding-inline-start": 0,
+            "padding-inline-end": 0
+          },
+          "blocks": {}
+        }
+      },
+      "block_order": [
+        "group_UYanUq",
+        "image_TXhiTP"
+      ],
+      "name": "t:names.image_with_text",
+      "settings": {
+        "content_direction": "row",
+        "vertical_on_mobile": true,
+        "horizontal_alignment": "flex-start",
+        "vertical_alignment": "center",
+        "align_baseline": false,
+        "horizontal_alignment_flex_direction_column": "flex-start",
+        "vertical_alignment_flex_direction_column": "center",
+        "gap": 0,
+        "section_width": "page-width",
+        "section_height": "",
+        "section_height_custom": 50,
+        "color_scheme": "",
+        "background_media": "none",
+        "video_position": "cover",
+        "background_image_position": "cover",
+        "border": "none",
+        "border_width": 1,
+        "border_opacity": 100,
+        "border_radius": 0,
+        "toggle_overlay": false,
+        "overlay_color": "#00000026",
+        "overlay_style": "solid",
+        "gradient_direction": "to top",
+        "padding-block-start": 40,
+        "padding-block-end": 40
+      }
+    },
+    "section_H9VRbM": {
+      "type": "section",
+      "blocks": {
+        "text_Fzdg7P": {
+          "type": "text",
+          "name": "t:names.text",
+          "settings": {
+            "text": "<p>apopofjoy</p>",
+            "width": "100%",
+            "max_width": "none",
+            "alignment": "center",
+            "type_preset": "custom",
+            "font": "var(--font-body--family)",
+            "font_size": "1.125rem",
+            "line_height": "normal",
+            "letter_spacing": "normal",
+            "case": "none",
+            "wrap": "pretty",
+            "color": "var(--color-foreground)",
+            "background": false,
+            "background_color": "#00000026",
+            "corner_radius": 0,
+            "padding-block-start": 0,
+            "padding-block-end": 0,
+            "padding-inline-start": 0,
+            "padding-inline-end": 0
+          },
+          "blocks": {}
+        },
+        "text_3HgbNw": {
+          "type": "text",
+          "name": "t:names.text",
+          "settings": {
+            "text": "<p>say it slowly —<strong>a pop of joy.</strong></p>",
+            "width": "100%",
+            "max_width": "normal",
+            "alignment": "center",
+            "type_preset": "custom",
+            "font": "var(--font-accent--family)",
+            "font_size": "1.25rem",
+            "line_height": "normal",
+            "letter_spacing": "normal",
+            "case": "none",
+            "wrap": "pretty",
+            "color": "var(--color-foreground)",
+            "background": false,
+            "background_color": "#00000026",
+            "corner_radius": 0,
+            "padding-block-start": 0,
+            "padding-block-end": 0,
+            "padding-inline-start": 0,
+            "padding-inline-end": 0
+          },
+          "blocks": {}
+        },
+        "text_iradhi": {
+          "type": "text",
+          "name": "t:names.text",
+          "settings": {
+            "text": "<p>A small, unexpected moment of delight. Personal. Heartfelt. The kind that catches you on an ordinary day and quietly makes it brighter.</p>",
+            "width": "100%",
+            "max_width": "normal",
+            "alignment": "center",
+            "type_preset": "custom",
+            "font": "var(--font-accent--family)",
+            "font_size": "1.125rem",
+            "line_height": "normal",
+            "letter_spacing": "normal",
+            "case": "none",
+            "wrap": "pretty",
+            "color": "var(--color-foreground)",
+            "background": false,
+            "background_color": "#00000026",
+            "corner_radius": 0,
+            "padding-block-start": 0,
+            "padding-block-end": 0,
+            "padding-inline-start": 0,
+            "padding-inline-end": 0
+          },
+          "blocks": {}
+        },
+        "text_NcfDPP": {
+          "type": "text",
+          "name": "t:names.text",
+          "settings": {
+            "text": "<p>We used to think joy needed a reason. A birthday. A milestone.<em> </em>Something big.</p>",
+            "width": "100%",
+            "max_width": "none",
+            "alignment": "center",
+            "type_preset": "custom",
+            "font": "var(--font-accent--family)",
+            "font_size": "1.125rem",
+            "line_height": "normal",
+            "letter_spacing": "normal",
+            "case": "none",
+            "wrap": "pretty",
+            "color": "var(--color-foreground)",
+            "background": false,
+            "background_color": "#00000026",
+            "corner_radius": 0,
+            "padding-block-start": 20,
+            "padding-block-end": 0,
+            "padding-inline-start": 0,
+            "padding-inline-end": 0
+          },
+          "blocks": {}
+        },
+        "text_6TcyUP": {
+          "type": "text",
+          "name": "t:names.text",
+          "settings": {
+            "text": "<p>But the small days count too. The ordinary Tuesdays. The just-because moments.</p>",
+            "width": "100%",
+            "max_width": "normal",
+            "alignment": "center",
+            "type_preset": "custom",
+            "font": "var(--font-accent--family)",
+            "font_size": "1.125rem",
+            "line_height": "normal",
+            "letter_spacing": "normal",
+            "case": "none",
+            "wrap": "pretty",
+            "color": "var(--color-foreground)",
+            "background": false,
+            "background_color": "#00000026",
+            "corner_radius": 0,
+            "padding-block-start": 5,
+            "padding-block-end": 0,
+            "padding-inline-start": 0,
+            "padding-inline-end": 0
+          },
+          "blocks": {}
+        },
+        "text_cjifPd": {
+          "type": "text",
+          "name": "t:names.text",
+          "settings": {
+            "text": "<p>apopofjoy is here for all of them.</p>",
+            "width": "100%",
+            "max_width": "normal",
+            "alignment": "center",
+            "type_preset": "custom",
+            "font": "var(--font-accent--family)",
+            "font_size": "1.125rem",
+            "line_height": "normal",
+            "letter_spacing": "normal",
+            "case": "none",
+            "wrap": "pretty",
+            "color": "var(--color-foreground)",
+            "background": false,
+            "background_color": "#00000026",
+            "corner_radius": 0,
+            "padding-block-start": 5,
+            "padding-block-end": 0,
+            "padding-inline-start": 0,
+            "padding-inline-end": 0
+          },
+          "blocks": {}
+        },
+        "text_tbAKQj": {
+          "type": "text",
+          "name": "t:names.text",
+          "settings": {
+            "text": "<p>This started because we believe joy shouldn't have to wait for a special occasion — and that the everyday stuff can feel a little less ordinary, and a lot more <em>you.</em></p>",
+            "width": "100%",
+            "max_width": "normal",
+            "alignment": "center",
+            "type_preset": "custom",
+            "font": "var(--font-body--family)",
+            "font_size": "1.125rem",
+            "line_height": "normal",
+            "letter_spacing": "normal",
+            "case": "none",
+            "wrap": "pretty",
+            "color": "var(--color-foreground)",
+            "background": false,
+            "background_color": "#00000026",
+            "corner_radius": 0,
+            "padding-block-start": 20,
+            "padding-block-end": 0,
+            "padding-inline-start": 0,
+            "padding-inline-end": 0
+          },
+          "blocks": {}
+        },
+        "custom_liquid_caFqig": {
+          "type": "custom-liquid",
+          "name": "t:names.custom_liquid",
+          "settings": {
+            "custom_liquid": "<div class=\"custom-divider-wrapper\">\n  <hr class=\"custom-horizontal-line\">\n</div>\n\n<style>\n  .custom-divider-wrapper {\n    width: 100%;\n    display: flex;\n    justify-content: center; /* লাইনটি মাঝে রাখার জন্য (left বা right ও করতে পারেন) */\n    margin: 10px 0; /* ওপর ও নিচের গ্যাপ বা মার্জিন */\n  }\n\n  .custom-horizontal-line {\n    width: 38px; /* আপনার পছন্দমতো লাইনের দৈর্ঘ্য ছোট বা বড় করতে পারেন */\n    height: 1px; /* লাইনের পুরুত্ব বা মোটা কত হবে */\n    background-color: #a97c4f; /* ছবির কালারের সাথে মিলিয়ে গোল্ডেন/ব্রাউন কালার */\n    border: none;\n    margin: 0;\n  }\n</style>"
+          },
+          "blocks": {}
+        },
+        "text_EhCiC6": {
+          "type": "text",
+          "name": "t:names.text",
+          "settings": {
+            "text": "<p>Some pieces are ready just as they are. Others, you make your own — a name, a colour, the little detail that makes it yours. Either way, it's made to make an ordinary day feel a little more like yours.</p>",
+            "width": "100%",
+            "max_width": "normal",
+            "alignment": "center",
+            "type_preset": "custom",
+            "font": "var(--font-accent--family)",
+            "font_size": "1.125rem",
+            "line_height": "normal",
+            "letter_spacing": "normal",
+            "case": "none",
+            "wrap": "pretty",
+            "color": "var(--color-foreground)",
+            "background": false,
+            "background_color": "#00000026",
+            "corner_radius": 0,
+            "padding-block-start": 20,
+            "padding-block-end": 0,
+            "padding-inline-start": 0,
+            "padding-inline-end": 0
+          },
+          "blocks": {}
+        },
+        "text_xAQUMq": {
+          "type": "text",
+          "name": "t:names.text",
+          "settings": {
+            "text": "<p>It starts with bags and pouches. But it doesn't end there — bit by bit, we're building a whole home for celebration, the everyday kind and the confetti-everywhere kind.</p>",
+            "width": "100%",
+            "max_width": "normal",
+            "alignment": "center",
+            "type_preset": "custom",
+            "font": "var(--font-accent--family)",
+            "font_size": "1.125rem",
+            "line_height": "normal",
+            "letter_spacing": "normal",
+            "case": "none",
+            "wrap": "pretty",
+            "color": "var(--color-foreground)",
+            "background": false,
+            "background_color": "#00000026",
+            "corner_radius": 0,
+            "padding-block-start": 0,
+            "padding-block-end": 0,
+            "padding-inline-start": 0,
+            "padding-inline-end": 0
+          },
+          "blocks": {}
+        },
+        "text_QL9kTX": {
+          "type": "text",
+          "name": "t:names.text",
+          "settings": {
+            "text": "<p>Because joy lives in the details. And it's <em>worth carrying with you.</em></p>",
+            "width": "100%",
+            "max_width": "normal",
+            "alignment": "center",
+            "type_preset": "custom",
+            "font": "var(--font-accent--family)",
+            "font_size": "1.125rem",
+            "line_height": "normal",
+            "letter_spacing": "normal",
+            "case": "none",
+            "wrap": "pretty",
+            "color": "var(--color-foreground)",
+            "background": false,
+            "background_color": "#00000026",
+            "corner_radius": 0,
+            "padding-block-start": 0,
+            "padding-block-end": 0,
+            "padding-inline-start": 0,
+            "padding-inline-end": 0
+          },
+          "blocks": {}
+        }
+      },
+      "block_order": [
+        "text_Fzdg7P",
+        "text_3HgbNw",
+        "text_iradhi",
+        "text_NcfDPP",
+        "text_6TcyUP",
+        "text_cjifPd",
+        "text_tbAKQj",
+        "custom_liquid_caFqig",
+        "text_EhCiC6",
+        "text_xAQUMq",
+        "text_QL9kTX"
+      ],
+      "disabled": true,
+      "custom_css": [
+        "h3 {font-weight: 600;}",
+        "em {color: #e36a5f;}"
+      ],
+      "name": "t:names.rich_text_section",
+      "settings": {
+        "content_direction": "column",
+        "vertical_on_mobile": true,
+        "horizontal_alignment": "flex-start",
+        "vertical_alignment": "center",
+        "align_baseline": false,
+        "horizontal_alignment_flex_direction_column": "center",
+        "vertical_alignment_flex_direction_column": "center",
+        "gap": 25,
+        "section_width": "full-width",
+        "section_height": "small",
+        "section_height_custom": 50,
+        "color_scheme": "scheme-1",
+        "background_media": "none",
+        "video_position": "cover",
+        "background_image_position": "cover",
+        "border": "none",
+        "border_width": 1,
+        "border_opacity": 100,
+        "border_radius": 0,
+        "toggle_overlay": false,
+        "overlay_color": "#00000026",
+        "overlay_style": "solid",
+        "gradient_direction": "to top",
+        "padding-block-start": 60,
+        "padding-block-end": 60
+      }
+    },
+    "proccess_eYTALA": {
+      "type": "proccess",
+      "blocks": {
+        "milestone_rfmFAG": {
+          "type": "milestone",
+          "settings": {
+            "icon_type": "label",
+            "step_label": "1",
+            "icon_svg": "leaf",
+            "title": "Celebrate",
+            "description": "Every moment is worth marking."
+          }
+        },
+        "milestone_NrRDaE": {
+          "type": "milestone",
+          "settings": {
+            "icon_type": "label",
+            "step_label": "2",
+            "icon_svg": "leaf",
+            "title": "Customise",
+            "description": "Made entirely for you."
+          }
+        },
+        "milestone_Y38GA9": {
+          "type": "milestone",
+          "settings": {
+            "icon_type": "label",
+            "step_label": "3",
+            "icon_svg": "leaf",
+            "title": "Joy",
+            "description": "The feeling in everything we make."
+          }
+        }
+      },
+      "block_order": [
+        "milestone_rfmFAG",
+        "milestone_NrRDaE",
+        "milestone_Y38GA9"
+      ],
+      "disabled": true,
+      "name": "progress Section",
+      "settings": {
+        "section_width": "100%",
+        "heading_gap": 16,
+        "timeline_margin_top": 32,
+        "section_bg_color": "#ffffff",
+        "padding_top": 40,
+        "padding_bottom": 60,
+        "padding_lr": 40,
+        "padding_top_tablet": 60,
+        "padding_bottom_tablet": 60,
+        "padding_lr_tablet": 24,
+        "padding_top_mobile": 60,
+        "padding_bottom_mobile": 60,
+        "padding_lr_mobile": 20,
+        "eyebrow": "",
+        "eyebrow_color": "#a97b2f",
+        "eyebrow_font_size": 16,
+        "heading": "",
+        "heading_color": "#000000",
+        "heading_font_size": 56,
+        "description": "",
+        "desc_color": "#5c5c4e",
+        "desc_font_size": 16,
+        "line_color": "#f3eed6",
+        "circle_size": 64,
+        "circle_bg": "#f3eed6",
+        "circle_border_color": "#a8a898",
+        "circle_border_width": 1,
+        "circle_label_color": "#2c2c22",
+        "circle_label_font_size": 16,
+        "step_gap": 20,
+        "step_padding": 24,
+        "step_title_color": "#2c2c22",
+        "step_title_font_size": 20,
+        "step_desc_color": "#5c5c4e",
+        "step_desc_font_size": 16
+      }
+    },
+    "advanced_icon_text_iD793m": {
+      "type": "advanced-icon-text",
+      "blocks": {
+        "feature_item_Nq4P7A": {
+          "type": "feature_item",
+          "settings": {
+            "dot_color": "#e5b158",
+            "heading": "Celebrate",
+            "description": "Every moment is worth marking."
+          }
+        },
+        "feature_item_6a9ntk": {
+          "type": "feature_item",
+          "settings": {
+            "dot_color": "#d96b6b",
+            "heading": "Customise",
+            "description": "Made entirely for you."
+          }
+        },
+        "feature_item_Er9LCL": {
+          "type": "feature_item",
+          "settings": {
+            "dot_color": "#7d5e7b",
+            "heading": "Joy",
+            "description": "The feeling in everything we make."
+          }
+        }
+      },
+      "block_order": [
+        "feature_item_Nq4P7A",
+        "feature_item_6a9ntk",
+        "feature_item_Er9LCL"
+      ],
+      "disabled": true,
+      "name": "Feature Highlights",
+      "settings": {
+        "section_width": 1200,
+        "bg_color": "#fdfbf7",
+        "border_color": "#e6e2d6",
+        "border_thickness": 1,
+        "inner_padding_vertical": 45,
+        "padding_top_desktop": 40,
+        "padding_bottom_desktop": 40,
+        "padding_top_mobile": 20,
+        "padding_bottom_mobile": 20,
+        "text_color": "#1a1a1a",
+        "desc_color": "#666666",
+        "heading_size_desktop": 28,
+        "heading_size_mobile": 22,
+        "desc_size_desktop": 16,
+        "desc_size_mobile": 13
+      }
+    },
+    "section_dmzdrT": {
+      "type": "section",
+      "blocks": {
+        "text_k79pcn": {
+          "type": "text",
+          "name": "t:names.text",
+          "settings": {
+            "text": "<p><em>So don't wait for the occasion.</em></p>",
+            "width": "100%",
+            "max_width": "narrow",
+            "alignment": "center",
+            "type_preset": "rte",
+            "font": "var(--font-body--family)",
+            "font_size": "1rem",
+            "line_height": "normal",
+            "letter_spacing": "normal",
+            "case": "none",
+            "wrap": "pretty",
+            "color": "var(--color-foreground)",
+            "background": false,
+            "background_color": "#00000026",
+            "corner_radius": 0,
+            "padding-block-start": 0,
+            "padding-block-end": 0,
+            "padding-inline-start": 0,
+            "padding-inline-end": 0
+          },
+          "blocks": {}
+        },
+        "text_emqfbW": {
+          "type": "text",
+          "name": "t:names.heading",
+          "settings": {
+            "text": "<h2>Celebrate every day.</h2>",
+            "width": "100%",
+            "max_width": "narrow",
+            "alignment": "center",
+            "type_preset": "rte",
+            "font": "var(--font-heading--family)",
+            "font_size": "2.5rem",
+            "line_height": "normal",
+            "letter_spacing": "normal",
+            "case": "none",
+            "wrap": "pretty",
+            "color": "var(--color-foreground)",
+            "background": false,
+            "background_color": "#00000026",
+            "corner_radius": 0,
+            "padding-block-start": 0,
+            "padding-block-end": 0,
+            "padding-inline-start": 0,
+            "padding-inline-end": 0
+          },
+          "blocks": {}
+        },
+        "text_3aMDdT": {
+          "type": "text",
+          "name": "t:names.heading",
+          "settings": {
+            "text": "<h3><em>Carry a little joy.</em></h3>",
+            "width": "100%",
+            "max_width": "narrow",
+            "alignment": "center",
+            "type_preset": "rte",
+            "font": "var(--font-body--family)",
+            "font_size": "1rem",
+            "line_height": "normal",
+            "letter_spacing": "normal",
+            "case": "none",
+            "wrap": "pretty",
+            "color": "var(--color-foreground)",
+            "background": false,
+            "background_color": "#00000026",
+            "corner_radius": 0,
+            "padding-block-start": 0,
+            "padding-block-end": 15,
+            "padding-inline-start": 0,
+            "padding-inline-end": 0
+          },
+          "blocks": {}
+        },
+        "group_xdPKDP": {
+          "type": "group",
+          "name": "t:names.group",
+          "settings": {
+            "content_direction": "row",
+            "vertical_on_mobile": true,
+            "horizontal_alignment": "center",
+            "vertical_alignment": "center",
+            "align_baseline": false,
+            "horizontal_alignment_flex_direction_column": "flex-start",
+            "vertical_alignment_flex_direction_column": "center",
+            "gap": 12,
+            "width": "fill",
+            "custom_width": 100,
+            "width_mobile": "fill",
+            "custom_width_mobile": 100,
+            "height": "fit",
+            "custom_height": 100,
+            "inherit_color_scheme": true,
+            "color_scheme": "",
+            "background_media": "none",
+            "video_position": "cover",
+            "background_image_position": "cover",
+            "border": "none",
+            "border_width": 1,
+            "border_opacity": 100,
+            "border_radius": 0,
+            "toggle_overlay": false,
+            "overlay_color": "#00000026",
+            "overlay_style": "solid",
+            "gradient_direction": "to top",
+            "link": "",
+            "open_in_new_tab": false,
+            "placeholder": "",
+            "padding-block-start": 0,
+            "padding-block-end": 0,
+            "padding-inline-start": 0,
+            "padding-inline-end": 0
+          },
+          "blocks": {
+            "button_YMMKFQ": {
+              "type": "button",
+              "name": "t:names.button",
+              "settings": {
+                "label": "Make yours",
+                "link": "shopify://collections/all",
+                "open_in_new_tab": false,
+                "style_class": "button",
+                "width": "fit-content",
+                "custom_width": 100,
+                "width_mobile": "fit-content",
+                "custom_width_mobile": 100
+              },
+              "blocks": {}
+            },
+            "button_a6pjzG": {
+              "type": "button",
+              "name": "t:names.button",
+              "settings": {
+                "label": "Shop ready-made",
+                "link": "shopify://collections/all",
+                "open_in_new_tab": false,
+                "style_class": "button-secondary",
+                "width": "fit-content",
+                "custom_width": 100,
+                "width_mobile": "fit-content",
+                "custom_width_mobile": 100
+              },
+              "blocks": {}
+            }
+          },
+          "block_order": [
+            "button_YMMKFQ",
+            "button_a6pjzG"
+          ]
+        }
+      },
+      "block_order": [
+        "text_k79pcn",
+        "text_emqfbW",
+        "text_3aMDdT",
+        "group_xdPKDP"
+      ],
+      "disabled": true,
+      "custom_css": [
+        "a.size-style.button.button--AYjFBaUFkeDh2di9LK__button_YMMKFQ {background-color: #000000; border-radius: 0;}",
+        "em {color: #e36a5f;}"
+      ],
+      "name": "t:names.custom_section",
+      "settings": {
+        "content_direction": "column",
+        "vertical_on_mobile": true,
+        "horizontal_alignment": "flex-start",
+        "vertical_alignment": "center",
+        "align_baseline": false,
+        "horizontal_alignment_flex_direction_column": "flex-start",
+        "vertical_alignment_flex_direction_column": "center",
+        "gap": 12,
+        "section_width": "page-width",
+        "section_height": "small",
+        "section_height_custom": 50,
+        "color_scheme": "scheme-2",
+        "background_media": "none",
+        "video_position": "cover",
+        "background_image_position": "cover",
+        "border": "none",
+        "border_width": 1,
+        "border_opacity": 100,
+        "border_radius": 0,
+        "toggle_overlay": false,
+        "overlay_color": "#00000026",
+        "overlay_style": "solid",
+        "gradient_direction": "to top",
+        "padding-block-start": 0,
+        "padding-block-end": 0
+      }
+    },
+    "section_Ctzg6J": {
+      "type": "section",
+      "blocks": {
+        "image_HTAtRC": {
+          "type": "image",
+          "name": "t:names.image",
+          "settings": {
+            "image": "shopify://shop_images/Untitled_design_29.png",
+            "link": "",
+            "image_ratio": "adapt",
+            "width": "custom",
+            "custom_width": 33,
+            "width_mobile": "fill",
+            "custom_width_mobile": 100,
+            "height": "fill",
+            "border": "none",
+            "border_width": 1,
+            "border_opacity": 100,
+            "border_radius": 0,
+            "padding-block-start": 0,
+            "padding-block-end": 0,
+            "padding-inline-start": 0,
+            "padding-inline-end": 0
+          },
+          "blocks": {}
+        },
+        "image_bLE3dm": {
+          "type": "image",
+          "name": "t:names.image",
+          "settings": {
+            "image": "shopify://shop_images/IMG_5921.jpg",
+            "link": "",
+            "image_ratio": "adapt",
+            "width": "custom",
+            "custom_width": 33,
+            "width_mobile": "fill",
+            "custom_width_mobile": 100,
+            "height": "fill",
+            "border": "none",
+            "border_width": 1,
+            "border_opacity": 100,
+            "border_radius": 0,
+            "padding-block-start": 0,
+            "padding-block-end": 0,
+            "padding-inline-start": 0,
+            "padding-inline-end": 0
+          },
+          "blocks": {}
+        },
+        "image_JJLixN": {
+          "type": "image",
+          "name": "t:names.image",
+          "settings": {
+            "image": "shopify://shop_images/659011602_17945750943141184_7778789942155226887_n.jpg",
+            "link": "",
+            "image_ratio": "adapt",
+            "width": "custom",
+            "custom_width": 33,
+            "width_mobile": "fill",
+            "custom_width_mobile": 100,
+            "height": "fill",
+            "border": "none",
+            "border_width": 1,
+            "border_opacity": 100,
+            "border_radius": 0,
+            "padding-block-start": 0,
+            "padding-block-end": 0,
+            "padding-inline-start": 0,
+            "padding-inline-end": 0
+          },
+          "blocks": {}
+        }
+      },
+      "block_order": [
+        "image_HTAtRC",
+        "image_bLE3dm",
+        "image_JJLixN"
+      ],
+      "disabled": true,
+      "custom_css": [
+        "a.size-style.button.button--AYjFBaUFkeDh2di9LK__button_YMMKFQ {background-color: #000000; border-radius: 0;}"
+      ],
+      "name": "t:names.custom_section",
+      "settings": {
+        "content_direction": "row",
+        "vertical_on_mobile": true,
+        "horizontal_alignment": "flex-start",
+        "vertical_alignment": "center",
+        "align_baseline": false,
+        "horizontal_alignment_flex_direction_column": "flex-start",
+        "vertical_alignment_flex_direction_column": "center",
+        "gap": 0,
+        "section_width": "full-width",
+        "section_height": "small",
+        "section_height_custom": 50,
+        "color_scheme": "scheme-2",
+        "background_media": "none",
+        "video_position": "cover",
+        "background_image_position": "cover",
+        "border": "none",
+        "border_width": 1,
+        "border_opacity": 100,
+        "border_radius": 0,
+        "toggle_overlay": false,
+        "overlay_color": "#00000026",
+        "overlay_style": "solid",
+        "gradient_direction": "to top",
+        "padding-block-start": 0,
+        "padding-block-end": 0
+      }
+    },
+    "section_hVLVDx": {
+      "type": "section",
+      "blocks": {
+        "image_mTTfBn": {
+          "type": "image",
+          "settings": {
+            "image": "shopify://shop_images/Screenshot_2026-05-20_at_2.02.01_PM.png",
+            "link": "",
+            "image_ratio": "square",
+            "width": "fill",
+            "custom_width": 100,
+            "width_mobile": "fill",
+            "custom_width_mobile": 100,
+            "height": "fit",
+            "border": "none",
+            "border_width": 1,
+            "border_opacity": 100,
+            "border_radius": 0,
+            "padding-block-start": 0,
+            "padding-block-end": 0,
+            "padding-inline-start": 0,
+            "padding-inline-end": 0
+          },
+          "blocks": {}
+        },
+        "group_ba8fRB": {
+          "type": "group",
+          "settings": {
+            "content_direction": "column",
+            "vertical_on_mobile": true,
+            "horizontal_alignment": "flex-start",
+            "vertical_alignment": "center",
+            "align_baseline": false,
+            "horizontal_alignment_flex_direction_column": "flex-start",
+            "vertical_alignment_flex_direction_column": "center",
+            "gap": 12,
+            "width": "custom",
+            "custom_width": 100,
+            "width_mobile": "fill",
+            "custom_width_mobile": 100,
+            "height": "fit",
+            "custom_height": 100,
+            "inherit_color_scheme": true,
+            "color_scheme": "",
+            "background_media": "none",
+            "video_position": "cover",
+            "background_image_position": "cover",
+            "border": "none",
+            "border_width": 1,
+            "border_opacity": 100,
+            "border_radius": 0,
+            "toggle_overlay": false,
+            "overlay_color": "#00000026",
+            "overlay_style": "solid",
+            "gradient_direction": "to top",
+            "link": "",
+            "open_in_new_tab": false,
+            "placeholder": "",
+            "padding-block-start": 0,
+            "padding-block-end": 0,
+            "padding-inline-start": 0,
+            "padding-inline-end": 0
+          },
+          "blocks": {
+            "text_zG7Pxy": {
+              "type": "text",
+              "name": "t:names.heading",
+              "settings": {
+                "text": "<h2><strong>Every Product Tells Your Story</strong></h2>",
+                "width": "100%",
+                "max_width": "none",
+                "alignment": "left",
+                "type_preset": "custom",
+                "font": "var(--font-heading--family)",
+                "font_size": "3.5rem",
+                "line_height": "normal",
+                "letter_spacing": "normal",
+                "case": "none",
+                "wrap": "pretty",
+                "color": "var(--color-foreground)",
+                "background": false,
+                "background_color": "#00000026",
+                "corner_radius": 0,
+                "padding-block-start": 0,
+                "padding-block-end": 0,
+                "padding-inline-start": 0,
+                "padding-inline-end": 0
+              },
+              "blocks": {}
+            },
+            "text_cRgLr3": {
+              "type": "text",
+              "settings": {
+                "text": "<p>At APOPOFJOY, we don't just make products — we make<em>your</em>product. Choose your style, add your personal touch, and let us bring your vision to life. Because the best things in life are the ones made just for you.</p>",
+                "width": "100%",
+                "max_width": "none",
+                "alignment": "left",
+                "type_preset": "custom",
+                "font": "var(--font-body--family)",
+                "font_size": "1rem",
+                "line_height": "normal",
+                "letter_spacing": "normal",
+                "case": "none",
+                "wrap": "pretty",
+                "color": "var(--color-foreground)",
+                "background": false,
+                "background_color": "#00000026",
+                "corner_radius": 0,
+                "padding-block-start": 0,
+                "padding-block-end": 10,
+                "padding-inline-start": 0,
+                "padding-inline-end": 0
+              },
+              "blocks": {}
+            },
+            "button_mRJJnK": {
+              "type": "button",
+              "settings": {
+                "label": "Shop now",
+                "link": "shopify://collections/all",
+                "open_in_new_tab": false,
+                "style_class": "button",
+                "width": "custom",
+                "custom_width": 32,
+                "width_mobile": "fit-content",
+                "custom_width_mobile": 100
+              },
+              "blocks": {}
+            }
+          },
+          "block_order": [
+            "text_zG7Pxy",
+            "text_cRgLr3",
+            "button_mRJJnK"
+          ]
+        }
+      },
+      "block_order": [
+        "image_mTTfBn",
+        "group_ba8fRB"
+      ],
+      "disabled": true,
+      "custom_css": [
+        "img.image-block__image.border-style {border-radius: 10px;}",
+        "h3 {font-weight: 600;}"
+      ],
+      "name": "t:names.image_with_text",
+      "settings": {
+        "content_direction": "row",
+        "vertical_on_mobile": true,
+        "horizontal_alignment": "flex-start",
+        "vertical_alignment": "center",
+        "align_baseline": false,
+        "horizontal_alignment_flex_direction_column": "flex-start",
+        "vertical_alignment_flex_direction_column": "center",
+        "gap": 32,
+        "section_width": "page-width",
+        "section_height": "",
+        "section_height_custom": 50,
+        "color_scheme": "",
+        "background_media": "none",
+        "video_position": "cover",
+        "background_image_position": "cover",
+        "border": "none",
+        "border_width": 1,
+        "border_opacity": 100,
+        "border_radius": 0,
+        "toggle_overlay": false,
+        "overlay_color": "#00000026",
+        "overlay_style": "solid",
+        "gradient_direction": "to top",
+        "padding-block-start": 40,
+        "padding-block-end": 40
+      }
+    },
+    "how_it_works_GzAVx7": {
+      "type": "how-it-works",
+      "blocks": {
+        "card_mnKUG6": {
+          "type": "card",
+          "settings": {
+            "icon_emoji": "🎉",
+            "title": "Celebrate",
+            "description": "Every moment is worth marking"
+          }
+        },
+        "card_ycy7j6": {
+          "type": "card",
+          "settings": {
+            "icon_emoji": "🎨",
+            "title": "Customise",
+            "description": "Every moment is worth marking"
+          }
+        },
+        "card_hdMMxy": {
+          "type": "card",
+          "settings": {
+            "icon_emoji": "🚀",
+            "title": "Joy",
+            "description": "The feeling in everything we make"
+          }
+        }
+      },
+      "block_order": [
+        "card_mnKUG6",
+        "card_ycy7j6",
+        "card_hdMMxy"
+      ],
+      "disabled": true,
+      "name": "how it works Section",
+      "settings": {
+        "section_width": "medium",
+        "layout": "centered",
+        "padding_top": 60,
+        "padding_bottom": 60,
+        "section_bg_color": "#f5f6f7",
+        "badge": "Simple & Easy",
+        "badge_size": 12,
+        "badge_weight": "700",
+        "badge_color": "#a97b2f",
+        "heading": "<p>Why Choose APOPOFJOY?</p>",
+        "heading_size": 44,
+        "heading_weight": "800",
+        "heading_color": "#0f172a",
+        "heading_highlight_color": "#a97b2f",
+        "header_align": "center",
+        "subtext": "Creating your perfect custom product is easy — just follow these simple steps and get something made uniquely for you.",
+        "subtext_size": 16,
+        "subtext_weight": "400",
+        "subtext_color": "#475569",
+        "header_bottom_gap": 48,
+        "columns_desktop": "3",
+        "columns_tablet": "2",
+        "card_gap": 24,
+        "cards_top_gap": 48,
+        "card_bg": "#ffffff",
+        "card_border_color": "#e8eaed",
+        "card_radius": 16,
+        "card_padding": 28,
+        "icon_size": 52,
+        "icon_radius": 12,
+        "icon_bg": "#fde8e8",
+        "card_title_size": 17,
+        "card_title_weight": "700",
+        "card_title_color": "#0f172a",
+        "card_desc_size": 14,
+        "card_desc_weight": "400",
+        "card_desc_color": "#64748b",
+        "text_column_width": 50,
+        "column_gap": 60,
+        "vertical_align": "center",
+        "media_position": "right",
+        "media_type": "image",
+        "video_url": "",
+        "video_autoplay": true,
+        "video_loop": true,
+        "video_muted": true,
+        "video_controls": false,
+        "media_radius": 16
+      }
+    },
+    "divider_MKJwdX": {
+      "type": "divider",
+      "name": "t:names.divider_section",
+      "settings": {
+        "color_scheme": "",
+        "section_width": "full-width",
+        "thickness": 1,
+        "corner_radius": "square",
+        "width_percent": 100,
+        "alignment_horizontal": "center",
+        "padding-block-start": 0,
+        "padding-block-end": 0
+      }
+    }
+  },
+  "order": [
+    "main",
+    "about_the_founder_UYR63M",
+    "about_us_hero_TY97zm",
+    "section_K9TtXC",
+    "section_rrJezm",
+    "section_BBNQ7J",
+    "section_efUrRy",
+    "section_H9VRbM",
+    "proccess_eYTALA",
+    "advanced_icon_text_iD793m",
+    "section_dmzdrT",
+    "section_Ctzg6J",
+    "section_hVLVDx",
+    "how_it_works_GzAVx7",
+    "divider_MKJwdX"
+  ]
+}
