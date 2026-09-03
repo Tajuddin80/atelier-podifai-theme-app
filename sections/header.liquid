@@ -1073,51 +1073,16 @@
 
 <script>
   (function() {
-    function refreshHeaderCartCount() {
-      fetch('/cart.js')
-        .then((res) => res.json())
-        .then((cart) => {
-          if (!cart || !cart.items) return;
-          
-          let mainItemCount = 0;
-          cart.items.forEach((it) => {
-            const t = (it.title || '').toLowerCase();
-            const h = (it.handle || '').toLowerCase();
-            const p = it.properties || {};
-            const isAddon = t.includes('addon') || t.includes('surcharge') || h.includes('addon') || p['Addon Type'] || p['_parent_item'];
-            if (!isAddon) {
-              mainItemCount += it.quantity;
-            }
-          });
-
-          // Target ONLY the single cart icon in the header
-          const headerCartSup = document.querySelector(
-            '#header-component a[href*="/cart"] sup, .header-actions__action--cart sup, header a[href*="/cart"] sup'
-          );
-
-          if (headerCartSup) {
-            if (mainItemCount > 0) {
-              headerCartSup.innerText = mainItemCount;
-              headerCartSup.removeAttribute('hidden');
-              headerCartSup.style.display = 'inline-block';
-            } else {
-              headerCartSup.setAttribute('hidden', '');
-              headerCartSup.style.display = 'none';
-            }
-          }
-        })
-        .catch(() => {});
+    function triggerSync() {
+      if (typeof window.syncCartEngine === 'function') {
+        window.syncCartEngine();
+      }
     }
-
     if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', refreshHeaderCartCount);
+      document.addEventListener('DOMContentLoaded', triggerSync);
     } else {
-      refreshHeaderCartCount();
+      triggerSync();
     }
-
-    document.addEventListener('cart:updated', () => setTimeout(refreshHeaderCartCount, 150));
-    document.addEventListener('cart:refresh', () => setTimeout(refreshHeaderCartCount, 150));
-    window.addEventListener('cart:updated', () => setTimeout(refreshHeaderCartCount, 150));
   })();
 </script>
 

@@ -18,9 +18,28 @@
   fetchpriority="low"
 ></script>
 
+{% liquid
+  assign main_item_count = 0
+  for item in cart.items
+    assign item_title_lower = item.product.title | downcase
+    assign item_handle = item.product.handle | downcase
+    assign addon_type = item.properties['Addon Type'] | default: item.properties._addon_type
+    assign parent_item = item.properties._parent_item | default: item.properties.parent_item
+
+    assign is_addon = false
+    if item_title_lower contains 'addon' or item_title_lower contains 'surcharge' or item_handle contains 'addon' or addon_type != blank or parent_item != blank or item_title_lower contains 'patch' or item_title_lower contains 'embroidery' or item_handle contains 'patch' or item_handle contains 'embroidery'
+      assign is_addon = true
+    endif
+
+    unless is_addon
+      assign main_item_count = main_item_count | plus: item.quantity
+    endunless
+  endfor
+%}
+
 {% capture cart_icon %}
   <cart-icon
-    class="header-actions__cart-icon{% if display_style == 'text' %} header-actions__cart-icon--text{% endif %}{% unless cart.empty? %} header-actions__cart-icon--has-cart{% endunless %}"
+    class="header-actions__cart-icon{% if display_style == 'text' %} header-actions__cart-icon--text{% endif %}{% if main_item_count > 0 %} header-actions__cart-icon--has-cart{% endif %}"
     data-testid="cart-icon"
   >
     <span class="{% if display_style == 'icon' %}hidden{% else %}mobile:hidden{% endif %}">
@@ -190,7 +209,7 @@
           data-hydration-key="cart-drawer-inner"
         >
           {% capture cart_items_children %}
-            {%- if cart.empty? -%}
+            {%- if cart.empty? or main_item_count == 0 -%}
               {{ empty_cart_drawer_content }}
             {%- else -%}
               <div

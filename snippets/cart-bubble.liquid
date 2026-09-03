@@ -5,11 +5,29 @@
   count will be displayed as "99+".
 {%- enddoc -%}
 
+{% liquid
+  assign main_item_count = 0
+  for item in cart.items
+    assign item_title_lower = item.product.title | downcase
+    assign item_handle = item.product.handle | downcase
+    assign addon_type = item.properties['Addon Type'] | default: item.properties._addon_type
+    assign parent_item = item.properties._parent_item | default: item.properties.parent_item
+
+    assign is_addon = false
+    if item_title_lower contains 'addon' or item_title_lower contains 'surcharge' or item_handle contains 'addon' or addon_type != blank or parent_item != blank or item_title_lower contains 'patch' or item_title_lower contains 'embroidery' or item_handle contains 'patch' or item_handle contains 'embroidery'
+      assign is_addon = true
+    endif
+
+    unless is_addon
+      assign main_item_count = main_item_count | plus: item.quantity
+    endunless
+  endfor
+%}
+
 <div
   ref="cartBubble"
-  class="cart-bubble{% if cart.empty? %} visually-hidden{% endif %}"
-  {% assign item_count = cart.item_count %}
-  {% if item_count <= 99 %}
+  class="cart-bubble{% if main_item_count == 0 %} visually-hidden{% endif %}"
+  {% if main_item_count <= 99 %}
     data-maintain-ratio
   {% endif %}
 >
@@ -20,13 +38,15 @@
     class="cart-bubble__text"
   >
     <span
-      class="cart-bubble__text-count{% if cart.empty? %} hidden{% endif %}"
+      class="cart-bubble__text-count{% if main_item_count == 0 %} hidden{% endif %}"
       ref="cartBubbleCount"
       aria-hidden="true"
       data-testid="cart-bubble"
     >
-      {%- if limit == blank or cart.item_count < limit %}
-        {{- cart.item_count -}}
+      {%- if limit == blank or main_item_count < limit -%}
+        {{- main_item_count -}}
+      {%- else -%}
+        99+
       {%- endif -%}
     </span>
   </span>

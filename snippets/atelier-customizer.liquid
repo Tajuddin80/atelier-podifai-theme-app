@@ -3308,10 +3308,21 @@
             detail: {
               resource: cartResponse,
               sourceId: form.id || 'product-form',
-              data: {},
+              data: {
+                source: 'product-form-component',
+                itemCount: qty,
+              },
             },
           });
           document.dispatchEvent(cartAddEvent);
+
+          // Immediately update header and drawer bubbles
+          const currentCountEl = document.querySelector('.cart-bubble__text-count');
+          const currentCount = parseInt(currentCountEl?.textContent?.trim() || '0', 10);
+          const newTotalCount = currentCount + qty;
+          if (typeof window.updateHeaderCountUI === 'function') {
+            window.updateHeaderCountUI(newTotalCount);
+          }
 
           const cartDrawer = document.querySelector('cart-drawer-component');
           if (cartDrawer && typeof cartDrawer.open === 'function') {
@@ -3322,16 +3333,9 @@
           window.dispatchEvent(new CustomEvent('cart:updated', { detail: { cart: cartResponse } }));
           document.dispatchEvent(new CustomEvent('cart:refresh'));
 
-          document
-            .querySelectorAll(
-              '#header-component sup, header sup, sup, [data-cart-count], .cart-bubble__text, .header__cart-count'
-            )
-            .forEach((el) => {
-              const cur = parseInt(el.innerText) || 0;
-              el.innerText = cur + qty;
-              el.removeAttribute('hidden');
-              el.style.display = 'inline-flex';
-            });
+          if (typeof window.syncCartEngine === 'function') {
+            window.syncCartEngine();
+          }
 
           // Reset Add to Bag button back to active state after 1.8 seconds
           setTimeout(() => {

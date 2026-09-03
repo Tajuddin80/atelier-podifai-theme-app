@@ -181,10 +181,12 @@
             const countEls = document.querySelectorAll(
               '#header-component sup, .header-actions sup, header a sup, .cart-bubble'
             );
-            const textEls = document.querySelectorAll('.cart-bubble__text-count, [ref="cartBubbleCount"]');
+            const textEls = document.querySelectorAll(
+              '.cart-bubble__text-count, [ref="cartBubbleCount"], [data-testid="cart-bubble"]'
+            );
             textEls.forEach((el) => {
               if (el) {
-                el.innerText = count;
+                el.textContent = count > 0 ? (count < 100 ? String(count) : '99+') : '';
                 if (count > 0) el.classList.remove('hidden');
                 else el.classList.add('hidden');
               }
@@ -198,24 +200,30 @@
                 el.style.setProperty('display', 'inline-flex', 'important');
                 el.style.setProperty('visibility', 'visible', 'important');
                 el.style.setProperty('opacity', '1', 'important');
-
-                // Add has-cart class to parent cart-icon if it exists
-                const cartIcon = el.closest('cart-icon');
-                if (cartIcon) {
-                  cartIcon.classList.add('header-actions__cart-icon--has-cart');
-                }
               } else {
                 el.setAttribute('hidden', '');
                 el.classList.add('visually-hidden');
                 el.style.setProperty('display', 'none', 'important');
-
-                // Remove has-cart class from parent cart-icon if it exists
-                const cartIcon = el.closest('cart-icon');
-                if (cartIcon) {
-                  cartIcon.classList.remove('header-actions__cart-icon--has-cart');
-                }
               }
             });
+
+            document.querySelectorAll('cart-icon').forEach((cartIcon) => {
+              if (count > 0) {
+                cartIcon.classList.add('header-actions__cart-icon--has-cart');
+              } else {
+                cartIcon.classList.remove('header-actions__cart-icon--has-cart');
+              }
+            });
+
+            try {
+              sessionStorage.setItem(
+                'cart-count',
+                JSON.stringify({
+                  value: String(count),
+                  timestamp: Date.now(),
+                })
+              );
+            } catch (_) {}
           } catch (e) {}
         }
 
@@ -533,6 +541,10 @@
             triggerSyncDebounced(250);
           }
         });
+
+        // Expose globally for other components to access
+        window.updateHeaderCountUI = updateHeaderCountUI;
+        window.syncCartEngine = syncCartEngine;
       })();
     </script>
 

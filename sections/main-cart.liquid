@@ -57,17 +57,6 @@
 {% render 'cart-items-component', children: cart_items_children, section_id: section.id %}
 
 {% stylesheet %}
-  /* Hide the cart count bubble next to 'Your Bag' */
-  .cart-title .cart-bubble,
-  .cart-title sup,
-  .cart-page__title .cart-bubble,
-  .cart-drawer .cart-bubble,
-  .cart-drawer__title .cart-bubble,
-  .cart-title span.cart-bubble,
-  .cart-items__wrapper span.visually-hidden + sup,
-  .cart-bubble {
-    display: none !important;
-  }
   .cart-page {
     display: grid;
     grid-template-columns: minmax(0, 1fr);
