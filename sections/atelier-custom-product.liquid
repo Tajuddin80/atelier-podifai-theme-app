@@ -18,52 +18,35 @@
 <div class="product-page-container">
   <!-- Left Side: Single Variant Image Media Gallery & Konva Canvas Overlay -->
   <div class="product-media-column">
-    <div class="product-images" id="product-media-gallery">
-      {% assign active_variant = product.selected_or_first_available_variant %}
-      {% assign active_img = active_variant.featured_media
-        | default: active_variant.featured_image
-        | default: product.featured_media
-        | default: product.featured_image
-        | default: product.images.first
-      %}
+    <div class="product-media-sticky-wrapper">
+      <div class="product-images" id="product-media-gallery">
+        {% assign active_variant = product.selected_or_first_available_variant %}
+        {% assign active_img = active_variant.featured_media
+          | default: active_variant.featured_image
+          | default: product.featured_media
+          | default: product.featured_image
+          | default: product.images.first
+        %}
 
-      {% assign found_active = false %}
-      {% for image in product.images %}
-        {% assign is_current = false %}
-        {% if active_img != blank and image.id == active_img.id and found_active == false %}
-          {% assign is_current = true %}
-          {% assign found_active = true %}
-        {% elsif forloop.first and active_img == blank and found_active == false %}
-          {% assign is_current = true %}
-          {% assign found_active = true %}
-        {% endif %}
+        {% assign found_active = false %}
+        {% for image in product.images %}
+          {% assign is_current = false %}
+          {% if active_img != blank and image.id == active_img.id and found_active == false %}
+            {% assign is_current = true %}
+            {% assign found_active = true %}
+          {% elsif forloop.first and active_img == blank and found_active == false %}
+            {% assign is_current = true %}
+            {% assign found_active = true %}
+          {% endif %}
 
-        <div
-          class="product-image-wrapper {% if is_current %}active{% else %}hidden{% endif %}"
-          data-image-id="{{ image.id }}"
-          data-alt="{{ image.alt | escape }}"
-        >
-          <img
-            src="{{ image | image_url: width: 1200 }}"
-            alt="{{ image.alt | default: product.title | escape }}"
-            class="product-main-image"
-            loading="eager"
-            width="1200"
-            height="1200"
-          >
-        </div>
-      {% endfor %}
-
-      {% if product.images.size == 0 and product.media.size > 0 %}
-        {% for media in product.media %}
           <div
-            class="product-image-wrapper {% if forloop.first %}active{% else %}hidden{% endif %}"
-            data-image-id="{{ media.id }}"
-            data-alt="{{ media.alt | escape }}"
+            class="product-image-wrapper {% if is_current %}active{% else %}hidden{% endif %}"
+            data-image-id="{{ image.id }}"
+            data-alt="{{ image.alt | escape }}"
           >
             <img
-              src="{{ media | image_url: width: 1200 }}"
-              alt="{{ media.alt | default: product.title | escape }}"
+              src="{{ image | image_url: width: 1200 }}"
+              alt="{{ image.alt | default: product.title | escape }}"
               class="product-main-image"
               loading="eager"
               width="1200"
@@ -71,19 +54,43 @@
             >
           </div>
         {% endfor %}
-      {% endif %}
 
-      {% if product.images.size == 0 and product.media.size == 0 %}
-        <div class="product-image-wrapper active">
-          <img
-            src="https://res.cloudinary.com/tifgkltm/image/upload/v1787389774/podifai_customizations/hl3mfkfyxjzk3o3s5576.png"
-            alt="{{ product.title }}"
-            height=""
-            width=""
-            class="product-main-image"
-          >
-        </div>
-      {% endif %}
+        {% if product.images.size == 0 and product.media.size > 0 %}
+          {% for media in product.media %}
+            <div
+              class="product-image-wrapper {% if forloop.first %}active{% else %}hidden{% endif %}"
+              data-image-id="{{ media.id }}"
+              data-alt="{{ media.alt | escape }}"
+            >
+              <img
+                src="{{ media | image_url: width: 1200 }}"
+                alt="{{ media.alt | default: product.title | escape }}"
+                class="product-main-image"
+                loading="eager"
+                width="1200"
+                height="1200"
+              >
+            </div>
+          {% endfor %}
+        {% endif %}
+
+        {% if product.images.size == 0 and product.media.size == 0 %}
+          <div class="product-image-wrapper active">
+            <img
+              src="https://res.cloudinary.com/tifgkltm/image/upload/v1787389774/podifai_customizations/hl3mfkfyxjzk3o3s5576.png"
+              alt="{{ product.title }}"
+              height=""
+              width=""
+              class="product-main-image"
+            >
+          </div>
+        {% endif %}
+      </div>
+
+      <!-- Preview Disclaimer -->
+      <div class="podifai-preview-disclaimer">
+        💛 The preview is a guide — colours and placement are approximate. Every piece is made by hand, so your final piece may vary a touch.
+      </div>
     </div>
   </div>
 
@@ -573,9 +580,15 @@
     width: 100%;
   }
 
-  .product-images {
+  .product-media-sticky-wrapper {
     position: sticky;
     top: 20px;
+    width: 100%;
+    z-index: 5;
+  }
+
+  .product-images {
+    position: relative;
     width: 100%;
     aspect-ratio: 1;
     min-height: 520px;
@@ -588,10 +601,33 @@
   }
 
   @media (max-width: 850px) {
-    .product-images {
-      min-height: 340px;
+    .product-media-sticky-wrapper {
       position: relative;
       top: 0;
+    }
+    .product-images {
+      min-height: 340px;
+    }
+  }
+
+  .podifai-preview-disclaimer {
+    margin-top: 16px;
+    padding: 14px 18px;
+    background-color: #fbf9f6;
+    border: 1px solid #eee8df;
+    border-radius: 8px;
+    color: #5c554b;
+    font-size: 13.5px;
+    line-height: 1.5;
+    text-align: center;
+    box-sizing: border-box;
+    letter-spacing: -0.01em;
+  }
+  @media (max-width: 850px) {
+    .podifai-preview-disclaimer {
+      margin-top: 12px;
+      padding: 12px 14px;
+      font-size: 12.5px;
     }
   }
 

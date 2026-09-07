@@ -82,6 +82,14 @@
   <!-- Canvas Overlay Teleport Anchor / Wrapper -->
   <div id="podifai-canvas-wrapper" class="podifai-canvas-wrapper">
     <div id="podifai-konva-container" class="podifai-konva-container"></div>
+    <div id="podifai-overlap-error-toast" class="podifai-overlap-error-toast" style="display: none;">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="10"></circle>
+        <line x1="12" y1="8" x2="12" y2="12"></line>
+        <line x1="12" y1="16" x2="12.01" y2="16"></line>
+      </svg>
+      <span>Patches cannot overlap. Move to free area.</span>
+    </div>
   </div>
 
   <div class="podifai-customizer__container">
@@ -1194,6 +1202,57 @@
     pointer-events: auto;
   }
 
+  /* Overlap Error Toast */
+  .podifai-overlap-error-toast {
+    position: absolute;
+    top: 18px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #dc2626;
+    color: #ffffff;
+    padding: 9px 18px;
+    border-radius: 9999px;
+    font-size: 13px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    box-shadow: 0 4px 14px rgba(220, 38, 38, 0.4);
+    z-index: 100;
+    pointer-events: none;
+    white-space: nowrap;
+    animation: podifaiToastFadeIn 0.2s ease-out;
+  }
+  @keyframes podifaiToastFadeIn {
+    from { opacity: 0; transform: translate(-50%, -8px); }
+    to { opacity: 1; transform: translate(-50%, 0); }
+  }
+  .podifai-overlap-error-toast svg {
+    flex-shrink: 0;
+  }
+
+  /* Left Column Preview Disclaimer */
+  .podifai-preview-disclaimer {
+    margin-top: 16px;
+    padding: 14px 18px;
+    background-color: #fbf9f6;
+    border: 1px solid #eee8df;
+    border-radius: 8px;
+    color: #5c554b;
+    font-size: 13.5px;
+    line-height: 1.5;
+    text-align: center;
+    box-sizing: border-box;
+    letter-spacing: -0.01em;
+  }
+  @media (max-width: 850px) {
+    .podifai-preview-disclaimer {
+      margin-top: 12px;
+      padding: 12px 14px;
+      font-size: 12.5px;
+    }
+  }
+
   /* Step Card Container */
   .podifai-step-card {
     border: 1.5px solid var(--podifai-card-border, #eae6e1);
@@ -1878,6 +1937,7 @@
     let layer = null;
     let transformer = null;
     let deleteBtnGroup = null;
+    let rotateBtnGroup = null;
     let mediaContainerEl = null;
 
     // Multi-Text Embroidery State
@@ -1889,9 +1949,9 @@
         color: '#FAF8F5',
         colorName: 'Ivory',
         node: null,
-        relX: 0.35,
-        relY: 0.65,
-        baseFontSize: 28,
+        relX: 0.5,
+        relY: 0.5,
+        baseFontSize: 44,
         baseScaleX: 1,
         baseScaleY: 1,
         rotation: 0,
@@ -2242,26 +2302,148 @@
     let lastCanvasH = 0;
     let resizeFrameId = null;
 
-    // Helper to position floating X (Delete) button on top-right of selected node
-    function updateDeleteButtonPosition() {
-      if (!stage || !layer || !deleteBtnGroup) return;
+    // Helper to disable / enable Add to Cart button when overlap occurs
+    function setAddToCartDisabled(disabled) {
+      const atcBtns = document.querySelectorAll(
+        '#add-to-cart-btn, .product-submit-row button[type="submit"], [name="add"], .product-submit-btn'
+      );
+      atcBtns.forEach((btn) => {
+        btn.disabled = disabled;
+        if (disabled) {
+          btn.classList.add('disabled');
+          btn.setAttribute('aria-disabled', 'true');
+          btn.style.opacity = '0.5';
+          btn.style.cursor = 'not-allowed';
+          btn.style.pointerEvents = 'none';
+        } else {
+          btn.classList.remove('disabled');
+          btn.removeAttribute('aria-disabled');
+          btn.style.opacity = '';
+          btn.style.cursor = '';
+          btn.style.pointerEvents = '';
+        }
+      });
+    }
+
+    // Helper to check for bounding box collisions between patches with minimized side radius
+    function checkPatchOverlaps() {
+      const toast = document.getElementById('podifai-overlap-error-toast');
+      if (!stage || !layer || selectedPatches.length < 2) {
+        if (toast) toast.style.display = 'none';
+        if (transformer) {
+          transformer.borderStroke('#1a1a1a');
+          transformer.borderStrokeWidth(1.5);
+        }
+        setAddToCartDisabled(false);
+        return false;
+      }
+
+      const activePatchNodes = selectedPatches
+        .map((p) => p.node)
+        .filter((n) => n && typeof n.getStage === 'function' && n.getStage());
+
+      if (activePatchNodes.length < 2) {
+        if (toast) toast.style.display = 'none';
+        if (transformer) {
+          transformer.borderStroke('#1a1a1a');
+          transformer.borderStrokeWidth(1.5);
+        }
+        setAddToCartDisabled(false);
+        return false;
+      }
+
+      let hasOverlap = false;
+
+      // Minimized side collision radius (~16% of width, ~20% of height) based on actual glyph cores
+      // This prevents false positives when two letters like 'B' and 'C' sit side-by-side
+      const patchData = activePatchNodes.map((node) => {
+        const sX = Math.abs(node.scaleX());
+        const sY = Math.abs(node.scaleY());
+        const w = node.width() * sX;
+        const h = node.height() * sY;
+        const rX = w * 0.16;
+        const rY = h * 0.20;
+        return {
+          x: node.x(),
+          y: node.y(),
+          rX: rX,
+          rY: rY,
+          node: node,
+        };
+      });
+
+      for (let i = 0; i < patchData.length; i++) {
+        for (let j = i + 1; j < patchData.length; j++) {
+          const p1 = patchData[i];
+          const p2 = patchData[j];
+
+          const dx = Math.abs(p1.x - p2.x);
+          const dy = Math.abs(p1.y - p2.y);
+          const sumRX = p1.rX + p2.rX;
+          const sumRY = p1.rY + p2.rY;
+
+          // Elliptical core collision test: only triggers when patches physically overlap on top of each other
+          if ((dx * dx) / (sumRX * sumRX) + (dy * dy) / (sumRY * sumRY) < 1) {
+            hasOverlap = true;
+            break;
+          }
+        }
+        if (hasOverlap) break;
+      }
+
+      if (hasOverlap) {
+        if (toast) toast.style.display = 'flex';
+        if (transformer) {
+          transformer.borderStroke('#dc2626');
+          transformer.borderStrokeWidth(2);
+        }
+        setAddToCartDisabled(true);
+      } else {
+        if (toast) toast.style.display = 'none';
+        if (transformer) {
+          transformer.borderStroke('#1a1a1a');
+          transformer.borderStrokeWidth(1.5);
+        }
+        setAddToCartDisabled(false);
+      }
+
+      return hasOverlap;
+    }
+
+    // Helper to position floating Delete (top-right) and Rotate (bottom-right) buttons
+    function updateTransformerButtonsPosition() {
+      if (!stage || !layer) return;
       const nodes = transformer ? transformer.nodes() : [];
       if (!nodes || nodes.length === 0) {
-        deleteBtnGroup.visible(false);
+        if (deleteBtnGroup) deleteBtnGroup.visible(false);
+        if (rotateBtnGroup) rotateBtnGroup.visible(false);
         layer.batchDraw();
         return;
       }
       const selectedNode = nodes[0];
       const box = selectedNode.getClientRect({ relativeTo: layer });
 
-      deleteBtnGroup.position({
-        x: box.x + box.width + 2,
-        y: box.y - 2,
-      });
-      deleteBtnGroup.visible(true);
-      deleteBtnGroup.moveToTop();
+      if (deleteBtnGroup) {
+        deleteBtnGroup.position({
+          x: box.x + box.width + 2,
+          y: box.y - 2,
+        });
+        deleteBtnGroup.visible(true);
+        deleteBtnGroup.moveToTop();
+      }
+
+      if (rotateBtnGroup) {
+        rotateBtnGroup.position({
+          x: box.x + box.width + 2,
+          y: box.y + box.height + 2,
+        });
+        rotateBtnGroup.visible(true);
+        rotateBtnGroup.moveToTop();
+      }
+
       layer.batchDraw();
     }
+    const updateDeleteButtonPosition = updateTransformerButtonsPosition;
 
     // Responsive Canvas Resize & Re-anchor Function
     function resizeAndRedrawCanvas() {
@@ -2298,26 +2480,44 @@
         }
       });
 
-      const maxEmbW = Math.min(220 * scaleFactor, newWidth * 0.42);
+      const baseEmbSize = 44 * scaleFactor;
+      const maxEmbW = Math.min(240 * scaleFactor, newWidth * 0.48);
+      const activeEmbLines = embroideryLines.filter((l) => (l.text || '').trim().length > 0);
+      const totalActive = activeEmbLines.length || 1;
+      const embSpacing = 42 * scaleFactor;
 
-      embroideryLines.forEach((line) => {
+      embroideryLines.forEach((line, idx) => {
         if (line.node) {
-          const baseSize = (line.baseFontSize || 30) * scaleFactor;
-          line.node.fontSize(baseSize);
+          line.node.fontSize(baseEmbSize);
           if (line.node.width() > maxEmbW) {
-            line.node.fontSize(baseSize * (maxEmbW / line.node.width()));
+            line.node.fontSize(baseEmbSize * (maxEmbW / line.node.width()));
           }
           line.node.offsetX(line.node.width() / 2);
           line.node.offsetY(line.node.height() / 2);
-          line.node.x(line.relX * newWidth);
-          line.node.y(line.relY * newHeight);
+
+          if (line.isCustomMoved && typeof line.relX === 'number' && typeof line.relY === 'number') {
+            line.node.x(line.relX * newWidth);
+            line.node.y(line.relY * newHeight);
+          } else {
+            const centerX = newWidth / 2;
+            const centerY = newHeight * 0.50 + (idx - (totalActive - 1) / 2) * embSpacing;
+            line.node.x(centerX);
+            line.node.y(centerY);
+            line.relX = 0.5;
+            line.relY = centerY / newHeight;
+          }
+          line.node._dragStartX = line.node.x();
+          line.node._dragStartY = line.node.y();
+          line.node._dragLockAxis = null;
+          line.node.draggable(true);
           if (typeof line.rotation === 'number') {
-            line.node.rotation(line.rotation);
+            line.node.rotation(0);
           }
         }
       });
 
-      updateDeleteButtonPosition();
+      updateTransformerButtonsPosition();
+      checkPatchOverlaps();
       layer.batchDraw();
     }
 
@@ -2333,6 +2533,22 @@
           mediaContainerEl.style.position = 'relative';
         }
         mediaContainerEl.appendChild(canvasWrapper);
+
+        // Ensure preview disclaimer is rendered below mediaContainerEl
+        const existingDisclaimer = mediaContainerEl.parentNode
+          ? mediaContainerEl.parentNode.querySelector('.podifai-preview-disclaimer')
+          : null;
+        if (!existingDisclaimer && mediaContainerEl.parentNode) {
+          const disc = document.createElement('div');
+          disc.className = 'podifai-preview-disclaimer';
+          disc.innerHTML =
+            '💛 The preview is a guide — colours and placement are approximate. Every piece is made by hand, so your final piece may vary a touch.';
+          if (mediaContainerEl.nextSibling) {
+            mediaContainerEl.parentNode.insertBefore(disc, mediaContainerEl.nextSibling);
+          } else {
+            mediaContainerEl.parentNode.appendChild(disc);
+          }
+        }
 
         const rect = mediaContainerEl.getBoundingClientRect();
         const width = rect.width || 500;
@@ -2350,10 +2566,9 @@
         layer = new Konva.Layer();
         stage.add(layer);
 
-        // Transformer: Allows 360° rotation and dragging while strictly locking size / preventing resizing
+        // Transformer: Allows rotation and dragging while strictly locking size / preventing resizing
         transformer = new Konva.Transformer({
-          rotateEnabled: true,
-          rotateAnchorOffset: 25,
+          rotateEnabled: false,
           resizeEnabled: false,
           enabledAnchors: [],
           borderStroke: '#1a1a1a',
@@ -2363,7 +2578,7 @@
         });
         layer.add(transformer);
 
-        // Floating Delete / Trash Bin Icon Button (X Icon)
+        // Floating Delete / Trash Bin Icon Button (Top-Right)
         deleteBtnGroup = new Konva.Group({
           name: 'deleteBtnGroup',
           visible: false,
@@ -2371,7 +2586,7 @@
         });
 
         const deleteBtnBg = new Konva.Circle({
-          radius: 11,
+          radius: 12,
           fill: '#ffffff',
           stroke: '#333333',
           strokeWidth: 1.5,
@@ -2383,12 +2598,15 @@
         });
 
         const deleteBtnIcon = new Konva.Path({
-          data: 'M -3.5 -3.5 L 3.5 3.5 M 3.5 -3.5 L -3.5 3.5',
+          data: 'm14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0',
           stroke: '#333333',
-          strokeWidth: 1.6,
+          strokeWidth: 1.0,
           lineCap: 'round',
           lineJoin: 'round',
           fill: 'none',
+          scale: { x: 0.55, y: 0.55 },
+          offsetX: 12,
+          offsetY: 12,
           cursor: 'pointer',
         });
 
@@ -2420,24 +2638,159 @@
             const patchObj = selectedPatches.find((p) => p.node === targetNode);
             if (patchObj) {
               removePatchById(patchObj.id);
-            } else {
-              const lineObj = embroideryLines.find((l) => l.node === targetNode);
-              if (lineObj) {
-                lineObj.text = '';
-                const idx = embroideryLines.indexOf(lineObj);
-                updateEmbroideryLineNode(lineObj, idx);
-                if (typeof renderEmbroideryLinesUI === 'function') renderEmbroideryLinesUI();
-              }
             }
             if (transformer) transformer.nodes([]);
-            updateDeleteButtonPosition();
+            updateTransformerButtonsPosition();
+            checkPatchOverlaps();
           }
+        });
+
+        // Floating Rotate Button (Bottom-Right)
+        rotateBtnGroup = new Konva.Group({
+          name: 'rotateBtnGroup',
+          visible: false,
+          listening: true,
+        });
+
+        const rotateBtnBg = new Konva.Circle({
+          radius: 12,
+          fill: '#ffffff',
+          stroke: '#333333',
+          strokeWidth: 1.5,
+          shadowColor: 'rgba(0, 0, 0, 0.15)',
+          shadowBlur: 3,
+          shadowOffset: { x: 0, y: 1 },
+          shadowOpacity: 0.2,
+          cursor: 'grab',
+        });
+
+        const rotateBtnIcon = new Konva.Path({
+          data: 'M19.5 12c0-1.232-.046-2.453-.138-3.662a4.006 4.006 0 0 0-3.7-3.7 48.678 48.678 0 0 0-7.324 0 4.006 4.006 0 0 0-3.7 3.7c-.017.22-.032.441-.046.662M19.5 12l3-3m-3 3-3-3m-12 3c0 1.232.046 2.453.138 3.662a4.006 4.006 0 0 0 3.7 3.7 48.656 48.656 0 0 0 7.324 0 4.006 4.006 0 0 0 3.7-3.7c.017-.22.032-.441.046-.662M4.5 12l3 3m-3-3-3 3',
+          stroke: '#333333',
+          strokeWidth: 1.0,
+          lineCap: 'round',
+          lineJoin: 'round',
+          fill: 'none',
+          scale: { x: 0.55, y: 0.55 },
+          offsetX: 12,
+          offsetY: 12,
+          cursor: 'grab',
+        });
+
+        rotateBtnGroup.add(rotateBtnBg);
+        rotateBtnGroup.add(rotateBtnIcon);
+        layer.add(rotateBtnGroup);
+
+        rotateBtnGroup.on('mouseenter', () => {
+          if (typeof document !== 'undefined') document.body.style.cursor = 'grab';
+          rotateBtnBg.fill('#f3f4f6');
+          layer.batchDraw();
+        });
+
+        rotateBtnGroup.on('mouseleave', () => {
+          if (typeof document !== 'undefined' && !isRotatingHandle) document.body.style.cursor = 'default';
+          rotateBtnBg.fill('#ffffff');
+          layer.batchDraw();
+        });
+
+        let isRotatingHandle = false;
+        let rotateStartAngle = 0;
+        let nodeStartRotation = 0;
+        let rotateHasMoved = false;
+
+        rotateBtnGroup.on('mousedown touchstart', (e) => {
+          e.cancelBubble = true;
+          const nodes = transformer ? transformer.nodes() : [];
+          if (!nodes || nodes.length === 0) return;
+          const selectedNode = nodes[0];
+          isRotatingHandle = true;
+          rotateHasMoved = false;
+
+          const nodeCenter = {
+            x: selectedNode.x(),
+            y: selectedNode.y(),
+          };
+
+          const pointerPos = stage.getPointerPosition();
+          if (pointerPos) {
+            rotateStartAngle = Math.atan2(pointerPos.y - nodeCenter.y, pointerPos.x - nodeCenter.x) * (180 / Math.PI);
+            nodeStartRotation = selectedNode.rotation() || 0;
+          }
+
+          if (typeof document !== 'undefined') {
+            document.body.style.cursor = 'grabbing';
+          }
+        });
+
+        const onPointerMoveRotate = () => {
+          if (!isRotatingHandle || !stage) return;
+          const nodes = transformer ? transformer.nodes() : [];
+          if (!nodes || nodes.length === 0) return;
+          const selectedNode = nodes[0];
+          const pointerPos = stage.getPointerPosition();
+          if (!pointerPos) return;
+
+          const nodeCenter = { x: selectedNode.x(), y: selectedNode.y() };
+          const curAngle = Math.atan2(pointerPos.y - nodeCenter.y, pointerPos.x - nodeCenter.x) * (180 / Math.PI);
+          const angleDiff = curAngle - rotateStartAngle;
+
+          if (Math.abs(angleDiff) > 2) {
+            rotateHasMoved = true;
+          }
+
+          let newRot = Math.round((nodeStartRotation + angleDiff) % 360);
+          if (newRot < 0) newRot += 360;
+          selectedNode.rotation(newRot);
+
+          const patchObj = selectedPatches.find((p) => p.node === selectedNode);
+          if (patchObj) {
+            patchObj.rotation = newRot;
+          }
+
+          updateTransformerButtonsPosition();
+          checkPatchOverlaps();
+          layer.batchDraw();
+        };
+
+        const onPointerUpRotate = () => {
+          if (!isRotatingHandle) return;
+          isRotatingHandle = false;
+          if (typeof document !== 'undefined') {
+            document.body.style.cursor = 'default';
+          }
+          checkPatchOverlaps();
+        };
+
+        window.addEventListener('mousemove', onPointerMoveRotate);
+        window.addEventListener('touchmove', onPointerMoveRotate, { passive: false });
+        window.addEventListener('mouseup', onPointerUpRotate);
+        window.addEventListener('touchend', onPointerUpRotate);
+
+        // Click / Tap on rotate button rotates by +45 degrees if not dragged
+        rotateBtnGroup.on('click tap', (e) => {
+          e.cancelBubble = true;
+          if (rotateHasMoved) return;
+          const nodes = transformer ? transformer.nodes() : [];
+          if (!nodes || nodes.length === 0) return;
+          const selectedNode = nodes[0];
+          let curRot = selectedNode.rotation() || 0;
+          let newRot = (curRot + 45) % 360;
+          selectedNode.rotation(newRot);
+
+          const patchObj = selectedPatches.find((p) => p.node === selectedNode);
+          if (patchObj) {
+            patchObj.rotation = newRot;
+          }
+
+          updateTransformerButtonsPosition();
+          checkPatchOverlaps();
+          layer.batchDraw();
         });
 
         stage.on('click tap', (e) => {
           if (e.target === stage) {
             transformer.nodes([]);
-            updateDeleteButtonPosition();
+            updateTransformerButtonsPosition();
           }
         });
 
@@ -2571,7 +2924,8 @@
         if (removed.node) {
           removed.node.destroy();
           transformer.nodes([]);
-          updateDeleteButtonPosition();
+          updateTransformerButtonsPosition();
+          checkPatchOverlaps();
         }
         updateUIBadges();
       }
@@ -2586,6 +2940,8 @@
         });
         selectedPatches = [];
         if (transformer) transformer.nodes([]);
+        updateTransformerButtonsPosition();
+        checkPatchOverlaps();
         if (layer) layer.draw();
         updateUIBadges();
       });
@@ -2688,19 +3044,22 @@
 
       node.on('dragmove dragend transform transformend', () => {
         syncNodeRelativeState();
-        updateDeleteButtonPosition();
+        updateTransformerButtonsPosition();
+        checkPatchOverlaps();
       });
 
       node.on('click tap', () => {
         transformer.nodes([node]);
-        updateDeleteButtonPosition();
+        updateTransformerButtonsPosition();
+        checkPatchOverlaps();
       });
 
       layer.add(node);
       transformer.nodes([node]);
-      updateDeleteButtonPosition();
+      updateTransformerButtonsPosition();
 
       selectedPatches.push(patchObj);
+      checkPatchOverlaps();
       updateUIBadges();
     }
 
@@ -2797,67 +3156,155 @@
       const currentW = stage.width();
       const currentH = stage.height();
       const scaleFactor = currentW / BASE_STAGE_REF;
-      const MAX_EMB_WIDTH = Math.min(220 * scaleFactor, currentW * 0.42);
-      const baseFontSize = 30;
+      const baseFontSize = 44;
+      const MAX_EMB_WIDTH = Math.min(240 * scaleFactor, currentW * 0.48);
+
+      const activeEmbLines = embroideryLines.filter((l) => (l.text || '').trim().length > 0);
+      const totalActive = activeEmbLines.length || 1;
+      const embSpacing = 42 * scaleFactor;
+      const defaultCenterX = currentW / 2;
+      const defaultCenterY = currentH * 0.50 + (lineIndex - (totalActive - 1) / 2) * embSpacing;
+
+      let targetX = defaultCenterX;
+      let targetY = defaultCenterY;
+
+      if (lineObj.isCustomMoved && typeof lineObj.relX === 'number' && typeof lineObj.relY === 'number') {
+        targetX = lineObj.relX * currentW;
+        targetY = lineObj.relY * currentH;
+      } else {
+        lineObj.relX = defaultCenterX / currentW;
+        lineObj.relY = defaultCenterY / currentH;
+      }
+      lineObj.baseFontSize = baseFontSize;
+
+      const dragBounds = function (pos) {
+        if (!stage) return pos;
+        const curW = stage.width();
+        const curH = stage.height();
+        const halfW = (this.width() * (this.scaleX() || 1)) / 2;
+        const halfH = (this.height() * (this.scaleY() || 1)) / 2;
+        // Pouch movement boundary: ~10% to 90% horizontal (left/right), ~18% to 82% vertical (top/bottom)
+        const minX = curW * 0.10 + halfW;
+        const maxX = curW * 0.90 - halfW;
+        const minY = curH * 0.18 + halfH;
+        const maxY = curH * 0.82 - halfH;
+
+        if (typeof this._dragStartX !== 'number') {
+          this._dragStartX = this.x();
+          this._dragStartY = this.y();
+          this._dragLockAxis = null;
+        }
+
+        const startX = this._dragStartX;
+        const startY = this._dragStartY;
+
+        const dx = pos.x - startX;
+        const dy = pos.y - startY;
+
+        // Strict 4-way orthogonal constraint:
+        // Text can ONLY move along the horizontal axis (left/right) OR vertical axis (top/bottom).
+        // Diagonal movements (top-left, top-right, bottom-left, bottom-right) are strictly locked.
+        if (!this._dragLockAxis) {
+          if (Math.abs(dx) >= 3 || Math.abs(dy) >= 3) {
+            this._dragLockAxis = Math.abs(dx) >= Math.abs(dy) ? 'horizontal' : 'vertical';
+          }
+        } else {
+          // If customer returns near origin point, unlock axis so they can switch direction smoothly
+          if (Math.abs(dx) < 4 && Math.abs(dy) < 4) {
+            this._dragLockAxis = null;
+          }
+        }
+
+        let nx = startX;
+        let ny = startY;
+
+        if (this._dragLockAxis === 'horizontal') {
+          nx = pos.x; // Moves left or right
+          ny = startY; // Strictly locked vertically (no diagonal movement)
+        } else if (this._dragLockAxis === 'vertical') {
+          nx = startX; // Strictly locked horizontally (no diagonal movement)
+          ny = pos.y; // Moves up or down
+        }
+
+        if (minX < maxX) {
+          nx = Math.max(minX, Math.min(maxX, nx));
+        } else {
+          nx = curW / 2;
+        }
+        if (minY < maxY) {
+          ny = Math.max(minY, Math.min(maxY, ny));
+        } else {
+          ny = curH / 2;
+        }
+        return { x: nx, y: ny };
+      };
 
       if (!lineObj.node) {
-        const centerX = currentW / 2;
-        const centerY = currentH * 0.58 + lineIndex * (38 * scaleFactor);
-
-        lineObj.relX = centerX / currentW;
-        lineObj.relY = centerY / currentH;
-        lineObj.baseFontSize = baseFontSize;
-
         const node = new Konva.Text({
-          x: centerX,
-          y: centerY,
+          x: targetX,
+          y: targetY,
           text: lineObj.text,
           fontSize: baseFontSize * scaleFactor,
           fontFamily: lineObj.font,
           fill: lineObj.color,
           align: 'center',
           draggable: true,
-          dragBoundFunc: function (pos) {
-            if (!stage) return pos;
-            const sw = stage.width();
-            const sh = stage.height();
-            const halfW = (this.width() * this.scaleX()) / 2;
-            const halfH = (this.height() * this.scaleY()) / 2;
-            const m = 6;
-            return {
-              x: Math.max(halfW + m, Math.min(pos.x, sw - halfW - m)),
-              y: Math.max(halfH + m, Math.min(pos.y, sh - halfH - m)),
-            };
-          },
+          dragBoundFunc: dragBounds,
         });
 
-        // Enforce 8cm max width constraint
+        node._dragStartX = targetX;
+        node._dragStartY = targetY;
+        node._dragLockAxis = null;
+
+        // Enforce ~8cm proportion constraint
         if (node.width() > MAX_EMB_WIDTH) {
           node.fontSize(baseFontSize * scaleFactor * (MAX_EMB_WIDTH / node.width()));
         }
         node.offsetX(node.width() / 2);
         node.offsetY(node.height() / 2);
 
-        function syncTextRelativeState() {
-          const w = stage.width();
-          const h = stage.height();
-          lineObj.relX = node.x() / w;
-          lineObj.relY = node.y() / h;
-          lineObj.rotation = node.rotation();
-        }
-
         node.on('dragstart', () => {
-          lineObj.isDragged = true;
+          node._dragStartX = node.x();
+          node._dragStartY = node.y();
+          node._dragLockAxis = null;
         });
 
-        node.on('dragmove dragend transform transformend', () => {
-          syncTextRelativeState();
-          updateDeleteButtonPosition();
+        node.on('dragmove', () => {
+          lineObj.isCustomMoved = true;
+          const curW = stage.width();
+          const curH = stage.height();
+          lineObj.relX = node.x() / curW;
+          lineObj.relY = node.y() / curH;
+          layer.batchDraw();
+        });
+
+        node.on('dragend', () => {
+          node._dragStartX = node.x();
+          node._dragStartY = node.y();
+          node._dragLockAxis = null;
+          lineObj.isCustomMoved = true;
+          const curW = stage.width();
+          const curH = stage.height();
+          lineObj.relX = node.x() / curW;
+          lineObj.relY = node.y() / curH;
+          layer.batchDraw();
+        });
+
+        node.on('mouseenter', () => {
+          if (stage && stage.container()) stage.container().style.cursor = 'move';
+        });
+
+        node.on('mouseleave', () => {
+          if (stage && stage.container()) stage.container().style.cursor = 'default';
         });
 
         node.on('click tap', () => {
-          transformer.nodes([node]);
-          updateDeleteButtonPosition();
+          if (transformer) {
+            transformer.nodes([]);
+            updateTransformerButtonsPosition();
+          }
+          const inputEl = document.querySelector(`.podifai-embroidery-card[data-line-id="${lineObj.id}"] .podifai-text-input`);
+          if (inputEl) inputEl.focus();
         });
 
         layer.add(node);
@@ -2868,25 +3315,23 @@
         lineObj.node.fill(lineObj.color);
         lineObj.node.fontSize(baseFontSize * scaleFactor);
 
-        // Enforce 8cm max width constraint
+        // Enforce ~8cm proportion constraint
         if (lineObj.node.width() > MAX_EMB_WIDTH) {
           lineObj.node.fontSize(baseFontSize * scaleFactor * (MAX_EMB_WIDTH / lineObj.node.width()));
         }
         lineObj.node.offsetX(lineObj.node.width() / 2);
         lineObj.node.offsetY(lineObj.node.height() / 2);
 
-        // Center placement unless manually dragged
-        if (!lineObj.isDragged) {
-          const centerX = currentW / 2;
-          const centerY = currentH * 0.58 + lineIndex * (38 * scaleFactor);
-          lineObj.node.x(centerX);
-          lineObj.node.y(centerY);
-          lineObj.relX = centerX / currentW;
-          lineObj.relY = centerY / currentH;
-        }
+        lineObj.node.x(targetX);
+        lineObj.node.y(targetY);
+        lineObj.node._dragStartX = targetX;
+        lineObj.node._dragStartY = targetY;
+        lineObj.node._dragLockAxis = null;
+        lineObj.node.draggable(true);
+        lineObj.node.dragBoundFunc(dragBounds);
       }
 
-      updateDeleteButtonPosition();
+      updateTransformerButtonsPosition();
       updateDynamicPrice();
     }
 
@@ -2896,10 +3341,8 @@
       if (fontStr.includes('Chancery')) return 'Chancery';
       if (fontStr.includes('DM Serif Display')) return 'DM Serif Display';
       if (fontStr.includes('Picturama Founder')) return 'Picturama Founder';
-      if (fontStr.includes('Gill Sans')) return 'Gill Sans Light';
       if (fontStr.includes('Georgia')) return 'DM Serif Display';
       if (fontStr.includes('Brush Script')) return 'Picturama Founder';
-      if (fontStr.includes('Inter')) return 'Gill Sans Light';
       return 'DM Serif Display';
     }
 
@@ -2909,6 +3352,12 @@
       embroideryLinesContainer.innerHTML = '';
 
       embroideryLines.forEach((line, index) => {
+        // Fallback removed Gill Sans / Inter font to DM Serif Display
+        if (line.font && (line.font.includes('Gill Sans') || line.font.includes('Inter'))) {
+          line.font = "'DM Serif Display', Georgia, serif";
+          if (line.node) line.node.fontFamily(line.font);
+        }
+
         const card = document.createElement('div');
         card.className = 'podifai-embroidery-card';
         card.dataset.lineId = line.id;
@@ -2935,11 +3384,6 @@
               <button type="button" class="podifai-font-btn ${
                 line.font.includes('Picturama Founder') || line.font.includes('Brush Script') ? 'active' : ''
               }" data-font="'Picturama Founder', 'Brush Script MT', cursive" style="font-family: 'Picturama Founder', 'Brush Script MT', cursive; font-style: italic;" title="Picturama Founder">
-                Aa
-              </button>
-              <button type="button" class="podifai-font-btn ${
-                line.font.includes('Gill Sans') || line.font.includes('Inter') ? 'active' : ''
-              }" data-font="'Gill Sans Light', 'Gill Sans', 'Inter', sans-serif" style="font-family: 'Gill Sans Light', 'Gill Sans', sans-serif; font-weight: 300;" title="Gill Sans Light">
                 Aa
               </button>
               <button type="button" class="podifai-font-btn ${
@@ -3106,9 +3550,12 @@
         }
       }
 
-      // 2. Temporarily detach transformer & hide delete button for clean export
+      // 2. Temporarily detach transformer & hide delete and rotate buttons for clean export
       if (deleteBtnGroup) {
         deleteBtnGroup.visible(false);
+      }
+      if (rotateBtnGroup) {
+        rotateBtnGroup.visible(false);
       }
       if (transformer) {
         transformer.detach();
@@ -3158,6 +3605,16 @@
 
     // Custom AJAX Add to Cart Handler
     async function handleCustomAddToCart(form) {
+      // Validate patch overlaps
+      if (checkPatchOverlaps()) {
+        const toast = document.getElementById('podifai-overlap-error-toast');
+        if (toast) {
+          toast.style.display = 'flex';
+          toast.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+        return false;
+      }
+
       const btn = form.querySelector('[type="submit"]') || document.getElementById('add-to-cart-btn');
       const originalBtnHTML = btn ? btn.innerHTML : 'Add to bag';
 
