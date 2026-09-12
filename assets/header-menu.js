@@ -256,9 +256,12 @@ class HeaderMenu extends Component {
     if (!(event.target instanceof Element)) return;
 
     const menu = findSubmenu(this.#state.activeItem);
-    const isMovingWithinMenu = event.relatedTarget instanceof Node && menu?.contains(document.activeElement);
-    const isMovingToSubmenu =
-      event.relatedTarget instanceof Node && event.type === 'blur' && menu?.contains(event.relatedTarget);
+    // Keep the menu open when the pointer/focus moves from its trigger into its
+    // submenu. Checking relatedTarget is reliable for both pointer and keyboard
+    // transitions; document.activeElement is not updated for pointer movement.
+    const isMovingWithinMenu =
+      event.relatedTarget instanceof Node && this.#state.activeItem?.parentElement?.contains(event.relatedTarget);
+    const isMovingToSubmenu = event.relatedTarget instanceof Node && menu?.contains(event.relatedTarget);
     const isMovingToOverflowMenu =
       event.relatedTarget instanceof Node && event.relatedTarget.parentElement?.matches('[slot="overflow"]');
 
@@ -379,7 +382,13 @@ function findMenuItem(element) {
     return findMenuItem(element.parentElement?.querySelector('[slot="overflow"]'));
   }
 
-  return element?.querySelector('[ref="menuitem"]');
+  if (element.matches('[ref="menuitem"]')) return /** @type {HTMLElement} */ (element);
+
+  // Events can originate from the link title span instead of the list item.
+  // Resolve from the closest list item so moving across SHOP ALL and its submenu
+  // never drops the active state because of the nested event target.
+  const listItem = element.closest('.menu-list__list-item');
+  return /** @type {HTMLElement | null} */ (listItem?.querySelector('[ref="menuitem"]'));
 }
 
 /**

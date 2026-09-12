@@ -57,6 +57,7 @@
             data-page="{{ paginate.current_page }}"
             data-product-id="{{ product.id }}"
             data-product-price="{{ product.price }}"
+            data-is-customizable="{% if product.metafields.custom.product_type.value == 'Customizable' or product.metafields.custom.product_type == 'Customizable' or product.template_suffix == 'joy-bag' or product.handle contains 'joy-bag' %}true{% else %}false{% endif %}"
             ref="cards[]"
           >
             {% # theme-check-disable %}
@@ -81,6 +82,18 @@
   document.addEventListener('DOMContentLoaded', () => {
     // Run periodically to catch dynamically loaded items (infinite scroll)
     setInterval(() => {
+      // Keep custom bag cards consistent with the server-rendered FROM price.
+      document.querySelectorAll('li.product-grid__item').forEach(card => {
+        const isCustomizable = card.getAttribute('data-is-customizable') === 'true' ||
+          Array.from(card.querySelectorAll('p')).some(p => /customi[sz]able/i.test(p.textContent));
+        if (isCustomizable) {
+          const priceSpans = card.querySelectorAll('.price');
+          priceSpans.forEach(el => {
+            if (!el.textContent.includes('FROM')) el.textContent = 'FROM RM65.00';
+          });
+        }
+      });
+
       document.querySelectorAll('li.product-grid__item:not(.custom-logic-applied)').forEach(card => {
         card.classList.add('custom-logic-applied');
         

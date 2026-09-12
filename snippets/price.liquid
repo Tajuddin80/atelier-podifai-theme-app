@@ -31,8 +31,20 @@
   # For product cards (collection/search pages), calculate min/max across all variants
   # For product pages, only use the selected variant's pricing
   assign is_product_card = false
-  if template.name != 'product'
+  if template.name != 'product' or product.id != product_resource.id
     assign is_product_card = true
+  endif
+
+  assign is_customizable_bag = false
+  assign custom_type = product_resource.metafields.custom.product_type.value | default: product_resource.metafields.custom.product_type | downcase
+  if custom_type contains 'custom' or product_resource.template_suffix == 'joy-bag' or product_resource.handle contains 'joy-bag' or product_resource.tags contains 'customizable' or product_resource.tags contains 'Customizable'
+    assign is_customizable_bag = true
+  endif
+
+  if is_product_card and is_customizable_bag
+    assign card_from_price_raw = product_resource.price_min | default: selected_variant.price | default: price
+    assign card_from_price_formatted = card_from_price_raw | money
+    assign custom_card_price = 'FROM ' | append: card_from_price_formatted
   endif
 
   if is_product_card
@@ -95,7 +107,13 @@
         {% endif %}
       "
     >
-      <span class="price">{{ price | default: '&nbsp;' }}</span>
+      <span class="price">
+        {%- if is_product_card and is_customizable_bag -%}
+          {{- custom_card_price -}}
+        {%- else -%}
+          {{- price | default: '&nbsp;' -}}
+        {%- endif -%}
+      </span>
     </div>
     <div
       class="
@@ -108,7 +126,13 @@
       {% if show_sale_price_first %}
         <span class="price-item__group">
           <span class="visually-hidden">{{ 'content.price_sale' | t }}&nbsp;</span>
-          <span class="price-item--sale price">{{ price | default: '&nbsp;' }}</span>
+          <span class="price-item--sale price">
+            {%- if is_product_card and is_customizable_bag -%}
+              {{- custom_card_price -}}
+            {%- else -%}
+              {{- price | default: '&nbsp;' -}}
+            {%- endif -%}
+          </span>
         </span>
         <span class="price-item__group">
           <span class="visually-hidden">{{ 'content.price_regular' | t }}&nbsp;</span>
@@ -121,7 +145,13 @@
         </span>
         <span class="price-item__group">
           <span class="visually-hidden">{{ 'content.price_sale' | t }}&nbsp;</span>
-          <span class="price-item--sale price">{{ price | default: '&nbsp;' }}</span>
+          <span class="price-item--sale price">
+            {%- if is_product_card and is_customizable_bag -%}
+              {{- custom_card_price -}}
+            {%- else -%}
+              {{- price | default: '&nbsp;' -}}
+            {%- endif -%}
+          </span>
         </span>
       {% endif %}
     </div>

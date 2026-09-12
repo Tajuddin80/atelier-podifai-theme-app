@@ -9,7 +9,7 @@
 {% endcomment %}
 
 <style id="podifai-critical-layout-style">
-  .product-images { position: relative; width: 100%; aspect-ratio: 1; min-height: 520px; overflow: hidden; }
+  .product-images { position: relative; width: 100%; aspect-ratio: 1; min-height: 520px; overflow: hidden; background: url('{{ 'customize_bg.png' | asset_url }}') center / cover no-repeat; }
   @media (max-width: 850px) { .product-images { min-height: 340px; } }
   .product-image-wrapper { position: absolute !important; inset: 0 !important; width: 100% !important; height: 100% !important; display: none !important; opacity: 0 !important; align-items: center; justify-content: center; }
   .product-image-wrapper.active { display: flex !important; opacity: 1 !important; visibility: visible !important; z-index: 1 !important; }
@@ -48,6 +48,7 @@
               src="{{ image | image_url: width: 1200 }}"
               alt="{{ image.alt | default: product.title | escape }}"
               class="product-main-image"
+              crossorigin="anonymous"
               loading="eager"
               width="1200"
               height="1200"
@@ -66,6 +67,7 @@
                 src="{{ media | image_url: width: 1200 }}"
                 alt="{{ media.alt | default: product.title | escape }}"
                 class="product-main-image"
+                crossorigin="anonymous"
                 loading="eager"
                 width="1200"
                 height="1200"
@@ -592,7 +594,7 @@
     width: 100%;
     aspect-ratio: 1;
     min-height: 520px;
-    background: transparent;
+    background: url('{{ 'customize_bg.png' | asset_url }}') center / cover no-repeat;
     border-radius: 0;
     overflow: hidden;
     display: flex;
@@ -659,9 +661,18 @@
   }
 
   .product-main-image {
-    max-width: 100%;
-    max-height: 100%;
+    /* The source image is tightly trimmed at runtime, so reserve deliberate
+       breathing room around every bag rather than letting it fill the preview. */
+    max-width: 76%;
+    max-height: 82%;
     object-fit: contain;
+  }
+
+  @media (max-width: 850px) {
+    .product-main-image {
+      max-width: 82%;
+      max-height: 82%;
+    }
   }
 
   /* Right Column Details */
@@ -1135,6 +1146,93 @@
     const priceContainer = document.getElementById('podifai-product-price');
     const addToCartBtn = document.getElementById('add-to-cart-btn');
 
+    /**
+     * Shopify's background remover preserves the image's original transparent
+     * canvas. Crop that invisible padding in-browser so object-fit centres the
+     * actual bag rather than the old square image frame.
+     */
+    function trimTransparentPadding(img) {
+      if (!img || img.dataset.transparentPaddingTrimmed === 'true') return;
+      if (!img.complete || !img.naturalWidth || !img.naturalHeight) return;
+
+      try {
+        const sourceWidth = img.naturalWidth;
+        const sourceHeight = img.naturalHeight;
+        const sourceCanvas = document.createElement('canvas');
+        sourceCanvas.width = sourceWidth;
+        sourceCanvas.height = sourceHeight;
+        const sourceContext = sourceCanvas.getContext('2d', { willReadFrequently: true });
+        sourceContext.drawImage(img, 0, 0, sourceWidth, sourceHeight);
+
+        const pixels = sourceContext.getImageData(0, 0, sourceWidth, sourceHeight).data;
+        let left = sourceWidth;
+        let top = sourceHeight;
+        let right = -1;
+        let bottom = -1;
+
+        for (let y = 0; y < sourceHeight; y += 1) {
+          for (let x = 0; x < sourceWidth; x += 1) {
+            if (pixels[(y * sourceWidth + x) * 4 + 3] > 8) {
+              left = Math.min(left, x);
+              top = Math.min(top, y);
+              right = Math.max(right, x);
+              bottom = Math.max(bottom, y);
+            }
+          }
+        }
+
+        // Leave opaque images, empty images, and already tightly cropped images untouched.
+        if (right < left || (left === 0 && top === 0 && right === sourceWidth - 1 && bottom === sourceHeight - 1)) {
+          img.dataset.transparentPaddingTrimmed = 'true';
+          return;
+        }
+
+        const padding = 2;
+        left = Math.max(0, left - padding);
+        top = Math.max(0, top - padding);
+        right = Math.min(sourceWidth - 1, right + padding);
+        bottom = Math.min(sourceHeight - 1, bottom + padding);
+
+        const croppedWidth = right - left + 1;
+        const croppedHeight = bottom - top + 1;
+        if (croppedWidth < 2 || croppedHeight < 2) return;
+
+        const croppedCanvas = document.createElement('canvas');
+        croppedCanvas.width = croppedWidth;
+        croppedCanvas.height = croppedHeight;
+        croppedCanvas.getContext('2d').drawImage(
+          sourceCanvas,
+          left,
+          top,
+          croppedWidth,
+          croppedHeight,
+          0,
+          0,
+          croppedWidth,
+          croppedHeight
+        );
+
+        img.dataset.originalSrc ||= img.currentSrc || img.src;
+        img.dataset.transparentPaddingTrimmed = 'true';
+        img.src = croppedCanvas.toDataURL('image/png');
+      } catch (error) {
+        // A remote image without CORS permission cannot be read; keep its
+        // original rendering instead of breaking the product image.
+        img.dataset.transparentPaddingTrimmed = 'true';
+      }
+    }
+
+    function trimImageWhenReady(img) {
+      if (!img) return;
+      if (img.complete) {
+        trimTransparentPadding(img);
+      } else {
+        img.addEventListener('load', () => trimTransparentPadding(img), { once: true });
+      }
+    }
+
+    imageWrappers.forEach((wrapper) => trimImageWhenReady(wrapper.querySelector('img')));
+
     // Dynamic Size Description Switcher
     function updateSizeDescription() {
       const checkedSize = document.querySelector(
@@ -1175,7 +1273,7 @@
         const cleanTarget = imageUrl.replace(/^https?:/, '').split('?')[0];
         imageWrappers.forEach((w) => {
           const img = w.querySelector('img');
-          const imgSrc = (img?.src || '').replace(/^https?:/, '').split('?')[0];
+          const imgSrc = (img?.dataset.originalSrc || img?.src || '').replace(/^https?:/, '').split('?')[0];
           if (imgSrc && (imgSrc.includes(cleanTarget) || cleanTarget.includes(imgSrc))) {
             w.classList.remove('hidden');
             w.classList.add('active');
@@ -1192,7 +1290,12 @@
             cur.classList.remove('hidden');
             cur.classList.add('active');
             const img = cur.querySelector('img');
-            if (img) img.src = imageUrl;
+            if (img) {
+              img.dataset.originalSrc = imageUrl;
+              delete img.dataset.transparentPaddingTrimmed;
+              img.src = imageUrl;
+              trimImageWhenReady(img);
+            }
           }
         }
       }
