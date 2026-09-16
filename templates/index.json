@@ -127,14 +127,17 @@
       "settings": {
         "media_type": "image",
         "image": "shopify://shop_images/Group_pouches.jpg",
+        "image_mobile": "shopify://shop_images/Group_pouches.png",
         "image_position": "center center",
+        "image_object_fit_mobile": "cover",
+        "image_position_mobile": "center center",
         "video_url": "",
         "bg_color": "#a97b2f",
         "overlay_color": "#000000",
-        "overlay_opacity": 15,
+        "overlay_opacity": 25,
         "heading_size_desktop": 56,
         "heading_size_mobile": 36,
-        "desc_size_desktop": 14,
+        "desc_size_desktop": 16,
         "desc_size_mobile": 14,
         "badge_text": "",
         "badge_dot_color": "#b84a26",
@@ -190,14 +193,14 @@
             "width": "fit-content",
             "max_width": "normal",
             "alignment": "left",
-            "type_preset": "rte",
+            "type_preset": "h1",
             "font": "var(--font-body--family)",
             "font_size": "1rem",
             "line_height": "normal",
             "letter_spacing": "normal",
             "case": "none",
             "wrap": "pretty",
-            "color": "var(--color-foreground)",
+            "color": "var(--color-foreground-heading)",
             "background": false,
             "background_color": "#00000026",
             "corner_radius": 0,
@@ -868,7 +871,7 @@
         "featured_product": "everyday-joy-bag-1",
         "show_variant_select": true,
         "button_link": "shopify://products/everyday-joy-bag-1",
-        "card_subheading": "Fully Customisable",
+        "card_subheading": "Fully Customizable",
         "custom_title": "",
         "custom_description": "",
         "btn_label": "Start Customizing",
@@ -1020,7 +1023,7 @@
                 "width": "fit-content",
                 "max_width": "normal",
                 "alignment": "left",
-                "type_preset": "custom",
+                "type_preset": "h1",
                 "font": "var(--font-heading--family)",
                 "font_size": "3.5rem",
                 "line_height": "normal",
@@ -2210,7 +2213,9 @@
       ],
       "name": "Insta Gallery Slider",
       "settings": {
-        "sub_heading": "",
+        "sub_heading": "@apopofjoy.co",
+        "sub_heading_link": "https://www.instagram.com/apopofjoy.co",
+        "subheading_font_size": 18,
         "main_heading": "Inside Our Socials",
         "insta_link": "https://www.instagram.com/apopofjoy.co",
         "bg_color": "#f3eed6",
@@ -2240,6 +2245,7 @@
       "block_order": [
         "button_aMUcEC"
       ],
+      "disabled": true,
       "custom_css": [
         "a.size-style.link.link--AYzRVRFhGVW9leTdie__button_aMUcEC {margin-top: -60px; font-size: 16px; border-bottom: 1px solid #666666; margin-bottom: 20px;}"
       ],
@@ -2278,75 +2284,45 @@
         "media_block_866VV7": {
           "type": "media_block",
           "settings": {
-            "instagram_embed_code": "https://www.instagram.com/p/DYKZU_MEtZt/?utm_source=ig_web_copy_link&igsh=MzRlODBiNWFlZA==",
             "media_type": "image",
-            "video_url": "",
-            "profile_name": "",
-            "caption_text": "View",
-            "likes_count": "",
-            "post_date": ""
+            "video_url": ""
           }
         },
         "media_block_4YU4UV": {
           "type": "media_block",
           "settings": {
-            "instagram_embed_code": "https://www.instagram.com/p/DWsT64JEiRU/?utm_source=ig_web_copy_link&igsh=MzRlODBiNWFlZA==",
             "media_type": "image",
-            "video_url": "",
-            "profile_name": "",
-            "caption_text": "",
-            "likes_count": "",
-            "post_date": ""
+            "video_url": ""
           }
         },
         "media_block_d9d4Mp": {
           "type": "media_block",
           "settings": {
-            "instagram_embed_code": "https://www.instagram.com/p/DWys8q-Elv4/?utm_source=ig_web_copy_link&igsh=MzRlODBiNWFlZA==",
             "media_type": "image",
-            "video_url": "",
-            "profile_name": "",
-            "caption_text": "",
-            "likes_count": "",
-            "post_date": ""
+            "video_url": ""
           }
         },
         "media_block_H9EiNw": {
           "type": "media_block",
           "settings": {
-            "instagram_embed_code": "https://www.instagram.com/p/DWu36ghEthn/?utm_source=ig_web_copy_link&igsh=MzRlODBiNWFlZA==",
             "media_type": "image",
-            "video_url": "",
-            "profile_name": "",
-            "caption_text": "",
-            "likes_count": "",
-            "post_date": ""
+            "video_url": ""
           }
         },
         "media_block_R6nmRx": {
           "type": "media_block",
           "disabled": true,
           "settings": {
-            "instagram_embed_code": "",
             "media_type": "image",
-            "video_url": "",
-            "profile_name": "",
-            "caption_text": "",
-            "likes_count": "",
-            "post_date": ""
+            "video_url": ""
           }
         },
         "media_block_jGQTTV": {
           "type": "media_block",
           "disabled": true,
           "settings": {
-            "instagram_embed_code": "",
             "media_type": "image",
-            "video_url": "",
-            "profile_name": "",
-            "caption_text": "",
-            "likes_count": "",
-            "post_date": ""
+            "video_url": ""
           }
         }
       },
@@ -2365,6 +2341,9 @@
         "heading": "Inside Our Socials",
         "heading_size": 56,
         "heading_color": "#121212",
+        "text_alignment": "center",
+        "description": "",
+        "description_color": "#555555",
         "max_width": 1600,
         "columns_desktop": 4,
         "gap_desktop": 20,

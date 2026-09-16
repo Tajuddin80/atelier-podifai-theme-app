@@ -9,541 +9,13 @@
 {% endcomment %}
 
 <style id="podifai-critical-layout-style">
-  .product-images { position: relative; width: 100%; aspect-ratio: 1; min-height: 520px; overflow: hidden; background: url('{{ 'customize_bg.png' | asset_url }}') center / cover no-repeat; }
-  @media (max-width: 850px) { .product-images { min-height: 340px; } }
-  .product-image-wrapper { position: absolute !important; inset: 0 !important; width: 100% !important; height: 100% !important; display: none !important; opacity: 0 !important; align-items: center; justify-content: center; }
-  .product-image-wrapper.active { display: flex !important; opacity: 1 !important; visibility: visible !important; z-index: 1 !important; }
-</style>
-
-<div class="product-page-container">
-  <!-- Left Side: Single Variant Image Media Gallery & Konva Canvas Overlay -->
-  <div class="product-media-column">
-    <div class="product-media-sticky-wrapper">
-      <div class="product-images" id="product-media-gallery">
-        {% assign active_variant = product.selected_or_first_available_variant %}
-        {% assign active_img = active_variant.featured_media
-          | default: active_variant.featured_image
-          | default: product.featured_media
-          | default: product.featured_image
-          | default: product.images.first
-        %}
-
-        {% assign found_active = false %}
-        {% for image in product.images %}
-          {% assign is_current = false %}
-          {% if active_img != blank and image.id == active_img.id and found_active == false %}
-            {% assign is_current = true %}
-            {% assign found_active = true %}
-          {% elsif forloop.first and active_img == blank and found_active == false %}
-            {% assign is_current = true %}
-            {% assign found_active = true %}
-          {% endif %}
-
-          <div
-            class="product-image-wrapper {% if is_current %}active{% else %}hidden{% endif %}"
-            data-image-id="{{ image.id }}"
-            data-alt="{{ image.alt | escape }}"
-          >
-            <img
-              src="{{ image | image_url: width: 1200 }}"
-              alt="{{ image.alt | default: product.title | escape }}"
-              class="product-main-image"
-              crossorigin="anonymous"
-              loading="eager"
-              width="1200"
-              height="1200"
-            >
-          </div>
-        {% endfor %}
-
-        {% if product.images.size == 0 and product.media.size > 0 %}
-          {% for media in product.media %}
-            <div
-              class="product-image-wrapper {% if forloop.first %}active{% else %}hidden{% endif %}"
-              data-image-id="{{ media.id }}"
-              data-alt="{{ media.alt | escape }}"
-            >
-              <img
-                src="{{ media | image_url: width: 1200 }}"
-                alt="{{ media.alt | default: product.title | escape }}"
-                class="product-main-image"
-                crossorigin="anonymous"
-                loading="eager"
-                width="1200"
-                height="1200"
-              >
-            </div>
-          {% endfor %}
-        {% endif %}
-
-        {% if product.images.size == 0 and product.media.size == 0 %}
-          <div class="product-image-wrapper active">
-            <img
-              src="https://res.cloudinary.com/tifgkltm/image/upload/v1787389774/podifai_customizations/hl3mfkfyxjzk3o3s5576.png"
-              alt="{{ product.title }}"
-              height=""
-              width=""
-              class="product-main-image"
-            >
-          </div>
-        {% endif %}
-      </div>
-
-      <!-- Preview Disclaimer -->
-      <div class="podifai-preview-disclaimer">
-        💛 The preview is a guide — colours and placement are approximate. Every piece is made by hand, so your final piece may vary a touch.
-      </div>
-    </div>
-  </div>
-
-  <!-- Right Side: Product Details & Customization Panel -->
-  <div class="product-info-column">
-    <!-- Title & Price -->
-    <div class="product-header">
-      <h1 class="product-title">{{ product.title }}</h1>
-      <div
-        class="product-price"
-        id="podifai-product-price"
-        data-base-price="{{ product.selected_or_first_available_variant.price | default: product.price }}"
-      >
-        <span class="product-price-current" id="podifai-price-display">
-          {{- product.selected_or_first_available_variant.price | default: product.price | money -}}
-        </span>
-      </div>
-    </div>
-
-    {%- assign product_form_id = 'product-form-' | append: section.id -%}
-    <product-form-component
-      data-section-id="{{ section.id }}"
-      data-product-id="{{ product.id }}"
-      data-product-url="{{ product.url }}"
-      on:submit="/handleSubmit"
-    >
-      <div
-        class="visually-hidden"
-        aria-live="assertive"
-        role="status"
-        aria-atomic="true"
-        ref="liveRegion"
-        style="display: none;"
-      ></div>
-      <span class="product-form-text__error hidden" ref="addToCartTextError"></span>
-
-      {% form 'product', product, class: 'product-main-form', id: product_form_id, data-type: 'add-to-cart-form' %}
-        <input type="hidden" name="properties[Customization Preview]" class="podifai-preview-input" value="">
-        <input type="hidden" name="properties[_Customization Data]" class="podifai-data-input" value="">
-
-        {% assign current_variant = product.selected_or_first_available_variant %}
-        <input type="hidden" name="id" id="selected-variant-id" ref="variantId" value="{{ current_variant.id }}">
-
-        <!-- Dynamic Variant Options (Only Rendered If Product Actually Has Variants) -->
-        {% unless product.has_only_default_variant %}
-          {% comment %} 1. Render Size First (Step 1) {% endcomment %}
-          {% for option in product.options_with_values %}
-            {% assign downcase_name = option.name | downcase %}
-            {% assign opt_idx = forloop.index0 %}
-            {% if downcase_name == 'size' %}
-              <div
-                class="variant-option-group variant-option-group--size"
-                data-option-index="{{ opt_idx }}"
-                data-option-name="{{ option.name | escape }}"
-              >
-                <div class="variant-option-header">
-                  <span class="variant-option-label">
-                    <span class="step-badge">1</span> Pick your {{ option.name | downcase }}:
-                    <strong class="selected-option-value">
-                      {{- option.selected_value | default: option.values.first -}}
-                    </strong>
-                  </span>
-                  <div class="size-guide-wrapper">
-                    <button type="button" class="size-guide-link" onclick="openSizeGuideModal('{{ section.id }}')">
-                      Size guide
-                    </button>
-                  </div>
-                </div>
-                <div class="size-pill-swatches">
-                  {% for value in option.values %}
-                    {% assign matched_v = null %}
-                    {% for v in product.variants %}
-                      {% if v.options[opt_idx] == value %}
-                        {% assign matched_v = v %}
-                        {% break %}
-                      {% endif %}
-                    {% endfor %}
-                    {% assign img_url = matched_v.featured_media
-                      | default: matched_v.featured_image
-                      | default: product.featured_image
-                    %}
-                    {% assign val_down = value | downcase %}
-                    {% assign size_desc = '' %}
-                    {% if val_down contains 'small' %}
-                      {% assign size_desc = section.settings.size_small_desc
-                        | default: '20.5cm (W) x 7cm (D) x 7cm (H)'
-                      %}
-                    {% elsif val_down contains 'medium' %}
-                      {% assign size_desc = section.settings.size_medium_desc
-                        | default: '24cm (W) x 5cm (D) x 12.5cm (H)'
-                      %}
-                    {% elsif val_down contains 'large' %}
-                      {% assign size_desc = section.settings.size_large_desc
-                        | default: '26cm (W) x 8.5cm (D) x 12.5cm (H)'
-                      %}
-                    {% else %}
-                      {% assign size_desc = section.settings.size_general_desc | default: '' %}
-                    {% endif %}
-                    <label class="size-pill-label {% if option.selected_value == value or forloop.first %}active{% endif %}">
-                      <input
-                        type="radio"
-                        name="option-{{ option.name | handleize }}"
-                        value="{{ value | escape }}"
-                        class="size-pill-input"
-                        data-option-index="{{ opt_idx }}"
-                        data-size-desc="{{ size_desc | escape }}"
-                        data-image-id="{{ img_url.id }}"
-                        data-image-url="{{ img_url | image_url: width: 1200 }}"
-                        {% if option.selected_value == value or forloop.first %}
-                          checked
-                        {% endif %}
-                      >
-                      {% assign v_price_str = matched_v.price | money %}
-                      <span class="size-pill-text">{{ value }}{% if v_price_str != blank %} ({{ v_price_str }}){% endif %}</span>
-                    </label>
-                  {% endfor %}
-                </div>
-                <div class="size-description-container">
-                  <p class="size-description-text" id="size-description-text">
-                    {% assign first_val = option.selected_value | default: option.values.first | downcase %}
-                    {% if first_val contains 'small' %}
-                      {{
-                        section.settings.size_small_desc
-                        | default: '8" × 4" × 3" · Compact and lightweight for everyday essentials.'
-                      }}
-                    {% elsif first_val contains 'medium' %}
-                      {{
-                        section.settings.size_medium_desc
-                        | default: '10" × 4" × 4" · Fits your water bottle, wallet, keys, and daily essentials.'
-                      }}
-                    {% elsif first_val contains 'large' %}
-                      {{
-                        section.settings.size_large_desc
-                        | default: '10.5" × 4" × 5" · A proper carry-all — add a power bank, mini umbrella or snacks.'
-                      }}
-                    {% else %}
-                      {{ section.settings.size_general_desc }}
-                    {% endif %}
-                  </p>
-                </div>
-              </div>
-            {% endif %}
-          {% endfor %}
-
-          {% comment %} 2. Render Color / Colour Second (Step 2) {% endcomment %}
-          {% for option in product.options_with_values %}
-            {% assign downcase_name = option.name | downcase %}
-            {% assign opt_idx = forloop.index0 %}
-            {% if downcase_name == 'color' or downcase_name == 'colour' %}
-              <div
-                class="variant-option-group variant-option-group--colour"
-                data-option-index="{{ opt_idx }}"
-                data-option-name="{{ option.name | escape }}"
-              >
-                <div class="variant-option-header">
-                  <span class="variant-option-label">
-                    <span class="step-badge">2</span> Pick your colour:
-                    <strong class="selected-option-value">
-                      {{- option.selected_value | default: option.values.first -}}
-                    </strong>
-                  </span>
-                </div>
-                <div class="color-circle-swatches">
-                  {% for value in option.values %}
-                    {% assign matched_v = null %}
-                    {% for v in product.variants %}
-                      {% if v.options[opt_idx] == value %}
-                        {% assign matched_v = v %}
-                        {% break %}
-                      {% endif %}
-                    {% endfor %}
-                    {% assign img_url = matched_v.featured_media
-                      | default: matched_v.featured_image
-                      | default: product.featured_image
-                    %}
-
-                    {% assign val_down = value | downcase %}
-                    {% assign bg_color = value.swatch.color %}
-                    {% if bg_color == blank %}
-                      {% if val_down contains 'butter' or val_down contains 'cream' %}
-                        {% assign bg_color = '#F5F2DC' %}
-                      {% elsif val_down contains 'bubblegum' or val_down contains 'bubble' %}
-                        {% assign bg_color = '#FF69B4' %}
-                      {% elsif val_down contains 'jet' or val_down contains 'black' %}
-                        {% assign bg_color = '#1A1A1A' %}
-                      {% elsif val_down contains 'electric' or val_down contains 'orange' %}
-                        {% assign bg_color = '#FF5722' %}
-                      {% elsif val_down contains 'sky' or val_down contains 'blue' %}
-                        {% assign bg_color = '#87CEEB' %}
-                      {% elsif val_down contains 'lavender'
-                        or val_down contains 'purple'
-                        or val_down contains 'lilac'
-                      %}
-                        {% assign bg_color = '#A388A8' %}
-                      {% elsif val_down contains 'pink' %}
-                        {% assign bg_color = '#FFB6C1' %}
-                      {% elsif val_down contains 'white' %}
-                        {% assign bg_color = '#FFFFFF' %}
-                      {% elsif val_down contains 'green' %}
-                        {% assign bg_color = '#4CAF50' %}
-                      {% elsif val_down contains 'yellow' %}
-                        {% assign bg_color = '#FFEB3B' %}
-                      {% elsif val_down contains 'red' %}
-                        {% assign bg_color = '#E53935' %}
-                      {% elsif val_down contains 'sand' or val_down contains 'beige' %}
-                        {% assign bg_color = '#D1C2A5' %}
-                      {% elsif val_down contains 'grey' or val_down contains 'gray' %}
-                        {% assign bg_color = '#9E9E9E' %}
-                      {% else %}
-                        {% assign bg_color = val_down | split: ' ' | last %}
-                      {% endif %}
-                    {% endif %}
-
-                    <button
-                      type="button"
-                      class="color-swatch-btn {% if option.selected_value == value or forloop.first %}active{% endif %}"
-                      data-option-index="{{ opt_idx }}"
-                      data-option-value="{{ value | escape }}"
-                      data-variant-id="{{ matched_v.id }}"
-                      data-image-id="{{ img_url.id }}"
-                      data-image-url="{{ img_url | image_url: width: 1200 }}"
-                      style="background-color: {{ bg_color }}; {% if value.swatch.image %}background-image: url('{{ value.swatch.image | image_url: width: 64 }}'); background-size: cover;{% endif %}"
-                      title="{{ value }}"
-                      aria-label="{{ value }}"
-                    ></button>
-                  {% endfor %}
-                </div>
-              </div>
-            {% endif %}
-          {% endfor %}
-
-          {% comment %} 3. Render Other Remaining Options {% endcomment %}
-          {% for option in product.options_with_values %}
-            {% assign downcase_name = option.name | downcase %}
-            {% assign opt_idx = forloop.index0 %}
-            {% unless downcase_name == 'size' or downcase_name == 'color' or downcase_name == 'colour' %}
-              <div
-                class="variant-option-group"
-                data-option-index="{{ opt_idx }}"
-                data-option-name="{{ option.name | escape }}"
-              >
-                <div class="variant-option-header">
-                  <span class="variant-option-label">
-                    Pick your {{ option.name | downcase }}:
-                    <strong class="selected-option-value">
-                      {{- option.selected_value | default: option.values.first -}}
-                    </strong>
-                  </span>
-                </div>
-                <div class="size-pill-swatches">
-                  {% for value in option.values %}
-                    {% assign matched_v = null %}
-                    {% for v in product.variants %}
-                      {% if v.options[opt_idx] == value %}
-                        {% assign matched_v = v %}
-                        {% break %}
-                      {% endif %}
-                    {% endfor %}
-                    {% assign img_url = matched_v.featured_media
-                      | default: matched_v.featured_image
-                      | default: product.featured_image
-                    %}
-                    <label class="size-pill-label {% if option.selected_value == value or forloop.first %}active{% endif %}">
-                      <input
-                        type="radio"
-                        name="option-{{ option.name | handleize }}"
-                        value="{{ value | escape }}"
-                        class="size-pill-input"
-                        data-option-index="{{ opt_idx }}"
-                        data-image-id="{{ img_url.id }}"
-                        data-image-url="{{ img_url | image_url: width: 1200 }}"
-                        {% if option.selected_value == value or forloop.first %}
-                          checked
-                        {% endif %}
-                      >
-                      <span class="size-pill-text">{{ value }}</span>
-                    </label>
-                  {% endfor %}
-                </div>
-              </div>
-            {% endunless %}
-          {% endfor %}
-        {% endunless %}
-
-        <!-- Steps 3 & 4: Customizer Block (Patches & Embroidery) -->
-        {% assign customizer_block = section.blocks
-          | where: 'type', 'atelier-customizer'
-          | first
-          | default: section.blocks
-          | where: 'type', 'podifai-customizer'
-          | first
-        %}
-        {% render 'atelier-customizer', block: customizer_block, section_settings: section.settings %}
-
-        <!-- Quantity Selector & Add to Cart CTA -->
-        <div class="product-submit-row">
-          {% if section.settings.show_quantity_selector %}
-            <div class="product-quantity-wrapper">
-              <button
-                type="button"
-                class="quantity-btn quantity-btn-minus"
-                id="qty-minus-btn"
-                aria-label="Decrease quantity"
-              >
-                −
-              </button>
-              <input
-                type="number"
-                name="quantity"
-                id="product-quantity-input"
-                class="quantity-input"
-                value="1"
-                min="1"
-                max="99"
-                readonly
-              >
-              <button
-                type="button"
-                class="quantity-btn quantity-btn-plus"
-                id="qty-plus-btn"
-                aria-label="Increase quantity"
-              >
-                +
-              </button>
-            </div>
-          {% else %}
-            <input
-              type="hidden"
-              name="quantity"
-              id="product-quantity-input"
-              class="quantity-input"
-              value="1"
-            >
-          {% endif %}
-
-          <add-to-cart-component style="flex: 1; width: 100%;">
-            <button type="submit" name="add" class="product-add-to-cart-btn" id="add-to-cart-btn" ref="addToCartButton">
-              <span id="add-to-cart-text"
-                >Add to bag ·
-                <span id="podifai-btn-price-display">
-                  {{- product.selected_or_first_available_variant.price | default: product.price | money -}}
-                </span></span
-              >
-            </button>
-          </add-to-cart-component>
-        </div>
-      {% endform %}
-    </product-form-component>
-
-    <!-- Collapsible Accordions: Description, Care, Design -->
-    <div class="product-accordions">
-      <details class="product-accordion-item" open>
-        <summary class="product-accordion-summary">
-          <span>DESCRIPTION</span>
-          <span class="accordion-chevron">⌵</span>
-        </summary>
-        <div class="product-accordion-body">
-          <p>
-            {{
-              product.description
-              | default: 'Our signature Joy Bag designed for daily versatility. Personalize with character patches, alphabet letters, and custom embroidery.'
-            }}
-          </p>
-        </div>
-      </details>
-
-      <details class="product-accordion-item">
-        <summary class="product-accordion-summary">
-          <span>CARE</span>
-          <span class="accordion-chevron">⌵</span>
-        </summary>
-        <div class="product-accordion-body">
-          <p>Spot clean with a damp cloth. Do not machine wash or dry clean. Keep custom patches dry.</p>
-        </div>
-      </details>
-
-      <details class="product-accordion-item">
-        <summary class="product-accordion-summary">
-          <span>DESIGN</span>
-          <summary class="accordion-chevron">⌵</summary>
-        </summary>
-        <div class="product-accordion-body">
-          <p>
-            Made from durable premium nylon fabric with reinforced stitching, water-resistant lining, and custom metal
-            hardware.
-          </p>
-        </div>
-      </details>
-    </div>
-  </div>
-</div>
-
-{% comment %} Size Guide Popup Modal {% endcomment %}
-<div
-  id="SizeGuideModal-{{ section.id }}"
-  class="size-guide-modal"
-  role="dialog"
-  aria-modal="true"
-  aria-hidden="true"
-  style="display: none;"
->
-  <div class="size-guide-modal__backdrop" onclick="closeSizeGuideModal('{{ section.id }}')"></div>
-  <div class="size-guide-modal__content">
-    <button
-      type="button"
-      class="size-guide-modal__close"
-      aria-label="Close"
-      onclick="closeSizeGuideModal('{{ section.id }}')"
-    >
-      <svg
-        width="18"
-        height="18"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        stroke-width="2.5"
-        stroke-linecap="round"
-        stroke-linejoin="round"
-      >
-        <line x1="18" y1="6" x2="6" y2="18"></line>
-        <line x1="6" y1="6" x2="18" y2="18"></line>
-      </svg>
-    </button>
-    <div class="size-guide-modal__body">
-      {% if section.settings.size_guide_image != blank %}
-        <img
-          src="{{ section.settings.size_guide_image | image_url: width: 1400 }}"
-          alt="{{ section.settings.size_guide_image.alt | default: 'Size Guide Chart' | escape }}"
-          class="size-guide-modal__img"
-          loading="lazy"
-          width="{{ section.settings.size_guide_image.width }}"
-          height="{{ section.settings.size_guide_image.height }}"
-        >
-      {% else %}
-        <div class="size-guide-modal__empty">
-          <p><strong>Size Guide</strong></p>
-          <p>Please upload a Size Guide image in the Theme Customizer under this section's settings.</p>
-        </div>
-      {% endif %}
-    </div>
-  </div>
-</div>
-
-<style>
   :root {
-    --podifai-primary-btn-bg: {{ section.settings.primary_button_color | default: section.settings.accent_color | default: '#E85A37' }};
+    --podifai-primary-btn-bg: {{ section.settings.primary_button_color | default: section.settings.accent_color | default: '#a97b2f' }};
     --podifai-primary-btn-text: {{ section.settings.primary_button_text_color | default: '#FFFFFF' }};
-    --podifai-atc-btn-bg: {{ section.settings.atc_button_color | default: '#5C314C' }};
+    --podifai-atc-btn-bg: {{ section.settings.atc_button_color | default: '#a97b2f' }};
     --podifai-atc-btn-text: {{ section.settings.atc_button_text_color | default: '#FFFFFF' }};
-    --podifai-accent-color: {{ section.settings.accent_color | default: section.settings.primary_button_color | default: '#E85A37' }};
-    --podifai-green: {{ section.settings.accent_color | default: section.settings.primary_button_color | default: '#E85A37' }};
+    --podifai-accent-color: {{ section.settings.accent_color | default: section.settings.primary_button_color | default: '#a97b2f' }};
+    --podifai-green: {{ section.settings.accent_color | default: section.settings.primary_button_color | default: '#a97b2f' }};
     --podifai-heading-color: {{ section.settings.heading_color | default: '#1a1a1a' }};
     --podifai-price-color: {{ section.settings.price_color | default: '#1a1a1a' }};
     --podifai-body-color: {{ section.settings.body_text_color | default: '#666666' }};
@@ -634,13 +106,13 @@
   }
 
   .product-image-wrapper {
-    position: absolute;
-    inset: 0;
-    width: 100%;
-    height: 100%;
-    opacity: 0;
-    visibility: hidden;
-    display: none;
+    position: absolute !important;
+    inset: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    opacity: 0 !important;
+    visibility: hidden !important;
+    display: none !important;
     transition: opacity 0.25s ease;
     align-items: center;
     justify-content: center;
@@ -651,7 +123,7 @@
     display: flex !important;
     opacity: 1 !important;
     visibility: visible !important;
-    z-index: 1;
+    z-index: 1 !important;
   }
 
   .product-image-wrapper.hidden {
@@ -661,8 +133,6 @@
   }
 
   .product-main-image {
-    /* The source image is tightly trimmed at runtime, so reserve deliberate
-       breathing room around every bag rather than letting it fill the preview. */
     max-width: 76%;
     max-height: 82%;
     object-fit: contain;
@@ -784,7 +254,7 @@
     color: #1a1a1a;
   }
 
-  /* Size Radio Pills */
+  /* Size Radio Pills - Instant Critical Styling */
   .size-pill-swatches {
     display: flex;
     gap: 10px;
@@ -795,21 +265,26 @@
     flex: 1;
     min-width: 90px;
     text-align: center;
-    border: 1.5px solid #E2E2E2;
-    border-radius: 8px;
-    padding: 10px 14px;
+    border: 1.5px solid #EAE6E1 !important;
+    border-radius: 8px !important;
+    padding: 10px 14px !important;
     cursor: pointer;
     user-select: none;
-    background: #ffffff;
+    background: #ffffff !important;
+    box-sizing: border-box !important;
     transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    outline: none !important;
   }
 
   .size-pill-label:hover {
-    border-color: var(--podifai-primary-btn-bg);
+    border-color: var(--podifai-primary-btn-bg) !important;
   }
 
   .size-pill-input {
-    display: none;
+    display: none !important;
   }
 
   .size-pill-text {
@@ -820,12 +295,12 @@
   }
 
   .size-pill-label.active {
-    border-color: var(--podifai-primary-btn-bg);
-    background-color: var(--podifai-primary-btn-bg);
+    border-color: var(--podifai-primary-btn-bg) !important;
+    background-color: var(--podifai-primary-btn-bg) !important;
   }
 
   .size-pill-label.active .size-pill-text {
-    color: var(--podifai-primary-btn-text);
+    color: var(--podifai-primary-btn-text) !important;
   }
 
   /* Size Dynamic Description */
@@ -1096,6 +571,595 @@
     line-height: 1.5;
   }
 </style>
+
+<div class="product-page-container">
+  <!-- Left Side: Single Variant Image Media Gallery & Konva Canvas Overlay -->
+  <div class="product-media-column">
+    <div class="product-media-sticky-wrapper">
+      <div class="product-images" id="product-media-gallery">
+        {% assign default_medium_orange_variant = null %}
+        {% for v in product.variants %}
+          {% assign v_title_down = v.title | downcase %}
+          {% if v_title_down contains 'medium' and v_title_down contains 'orange' %}
+            {% assign default_medium_orange_variant = v %}
+            {% break %}
+          {% endif %}
+        {% endfor %}
+        {% if default_medium_orange_variant == null %}
+          {% for v in product.variants %}
+            {% assign v_title_down = v.title | downcase %}
+            {% if v_title_down contains 'medium' %}
+              {% assign default_medium_orange_variant = v %}
+              {% break %}
+            {% endif %}
+          {% endfor %}
+        {% endif %}
+        {% if default_medium_orange_variant == null %}
+          {% assign default_medium_orange_variant = product.selected_or_first_available_variant %}
+        {% endif %}
+
+        {% assign active_variant = default_medium_orange_variant %}
+        {% assign active_img = active_variant.featured_media
+          | default: active_variant.featured_image
+          | default: product.featured_media
+          | default: product.featured_image
+          | default: product.images.first
+        %}
+
+        {% assign found_active = false %}
+        {% for image in product.images %}
+          {% assign is_current = false %}
+          {% if active_img != blank and image.id == active_img.id and found_active == false %}
+            {% assign is_current = true %}
+            {% assign found_active = true %}
+          {% elsif forloop.first and active_img == blank and found_active == false %}
+            {% assign is_current = true %}
+            {% assign found_active = true %}
+          {% endif %}
+
+          <div
+            class="product-image-wrapper {% if is_current %}active{% else %}hidden{% endif %}"
+            data-image-id="{{ image.id }}"
+            data-alt="{{ image.alt | escape }}"
+          >
+            <img
+              src="{{ image | image_url: width: 1200 }}"
+              alt="{{ image.alt | default: product.title | escape }}"
+              class="product-main-image"
+              crossorigin="anonymous"
+              loading="eager"
+              width="1200"
+              height="1200"
+            >
+          </div>
+        {% endfor %}
+
+        {% if product.images.size == 0 and product.media.size > 0 %}
+          {% for media in product.media %}
+            <div
+              class="product-image-wrapper {% if forloop.first %}active{% else %}hidden{% endif %}"
+              data-image-id="{{ media.id }}"
+              data-alt="{{ media.alt | escape }}"
+            >
+              <img
+                src="{{ media | image_url: width: 1200 }}"
+                alt="{{ media.alt | default: product.title | escape }}"
+                class="product-main-image"
+                crossorigin="anonymous"
+                loading="eager"
+                width="1200"
+                height="1200"
+              >
+            </div>
+          {% endfor %}
+        {% endif %}
+
+        {% if product.images.size == 0 and product.media.size == 0 %}
+          <div class="product-image-wrapper active">
+            <img
+              src="https://res.cloudinary.com/tifgkltm/image/upload/v1787389774/podifai_customizations/hl3mfkfyxjzk3o3s5576.png"
+              alt="{{ product.title }}"
+              height=""
+              width=""
+              class="product-main-image"
+            >
+          </div>
+        {% endif %}
+      </div>
+
+      <!-- Preview Disclaimer -->
+      <div class="podifai-preview-disclaimer">
+        💛 The preview is a guide — colours and placement are approximate. Every piece is made by hand, so your final piece may vary a touch.
+      </div>
+    </div>
+  </div>
+
+  <!-- Right Side: Product Details & Customization Panel -->
+  <div class="product-info-column">
+    <!-- Title & Price -->
+    <div class="product-header">
+      <h1 class="product-title">{{ product.title }}</h1>
+      <div
+        class="product-price"
+        id="podifai-product-price"
+        data-base-price="{{ default_medium_orange_variant.price | default: product.price }}"
+      >
+        <span class="product-price-current" id="podifai-price-display">
+          {{- default_medium_orange_variant.price | default: product.price | money -}}
+        </span>
+      </div>
+    </div>
+
+    {%- assign product_form_id = 'product-form-' | append: section.id -%}
+    <product-form-component
+      data-section-id="{{ section.id }}"
+      data-product-id="{{ product.id }}"
+      data-product-url="{{ product.url }}"
+      on:submit="/handleSubmit"
+    >
+      <div
+        class="visually-hidden"
+        aria-live="assertive"
+        role="status"
+        aria-atomic="true"
+        ref="liveRegion"
+        style="display: none;"
+      ></div>
+      <span class="product-form-text__error hidden" ref="addToCartTextError"></span>
+
+      {% form 'product', product, class: 'product-main-form', id: product_form_id, data-type: 'add-to-cart-form' %}
+        <input type="hidden" name="properties[Customization Preview]" class="podifai-preview-input" value="">
+        <input type="hidden" name="properties[_Customization Data]" class="podifai-data-input" value="">
+
+        {% assign current_variant = default_medium_orange_variant %}
+        <input type="hidden" name="id" id="selected-variant-id" ref="variantId" value="{{ current_variant.id }}">
+
+        <!-- Dynamic Variant Options (Only Rendered If Product Actually Has Variants) -->
+        {% unless product.has_only_default_variant %}
+          {% comment %} 1. Render Size First (Step 1) {% endcomment %}
+          {% for option in product.options_with_values %}
+            {% assign downcase_name = option.name | downcase %}
+            {% assign opt_idx = forloop.index0 %}
+            {% if downcase_name == 'size' %}
+              {% assign default_size_label = 'Medium' %}
+              {% for v_val in option.values %}
+                {% assign vvd = v_val | downcase %}
+                {% if vvd contains 'medium' %}
+                  {% assign default_size_label = v_val %}
+                  {% break %}
+                {% endif %}
+              {% endfor %}
+              <div
+                class="variant-option-group variant-option-group--size"
+                data-option-index="{{ opt_idx }}"
+                data-option-name="{{ option.name | escape }}"
+              >
+                <div class="variant-option-header">
+                  <span class="variant-option-label">
+                    <span class="step-badge">1</span> Pick your {{ option.name | downcase }}:
+                    <strong class="selected-option-value">
+                      {{- default_size_label -}}
+                    </strong>
+                  </span>
+                  <div class="size-guide-wrapper">
+                    <button type="button" class="size-guide-link" onclick="openSizeGuideModal('{{ section.id }}')">
+                      Size guide
+                    </button>
+                  </div>
+                </div>
+                <div class="size-pill-swatches">
+                  {% assign has_medium = false %}
+                  {% for v_val in option.values %}
+                    {% assign vvd = v_val | downcase %}
+                    {% if vvd contains 'medium' %}
+                      {% assign has_medium = true %}
+                      {% break %}
+                    {% endif %}
+                  {% endfor %}
+
+                  {% for value in option.values %}
+                    {% assign matched_v = null %}
+                    {% for v in product.variants %}
+                      {% if v.options[opt_idx] == value %}
+                        {% assign matched_v = v %}
+                        {% break %}
+                      {% endif %}
+                    {% endfor %}
+                    {% assign img_url = matched_v.featured_media
+                      | default: matched_v.featured_image
+                      | default: product.featured_image
+                    %}
+                    {% assign val_down = value | downcase %}
+                    {% assign size_desc = '' %}
+                    {% if val_down contains 'small' %}
+                      {% assign size_desc = section.settings.size_small_desc
+                        | default: '20.5cm (W) x 7cm (D) x 7cm (H)'
+                      %}
+                    {% elsif val_down contains 'medium' %}
+                      {% assign size_desc = section.settings.size_medium_desc
+                        | default: '24cm (W) x 5cm (D) x 12.5cm (H)'
+                      %}
+                    {% elsif val_down contains 'large' %}
+                      {% assign size_desc = section.settings.size_large_desc
+                        | default: '26cm (W) x 8.5cm (D) x 12.5cm (H)'
+                      %}
+                    {% else %}
+                      {% assign size_desc = section.settings.size_general_desc | default: '' %}
+                    {% endif %}
+
+                    {% assign is_default_size = false %}
+                    {% if has_medium and val_down contains 'medium' %}
+                      {% assign is_default_size = true %}
+                    {% elsif has_medium == false and forloop.first %}
+                      {% assign is_default_size = true %}
+                    {% endif %}
+
+                    <label class="size-pill-label {% if is_default_size %}active{% endif %}">
+                      <input
+                        type="radio"
+                        name="option-{{ option.name | handleize }}"
+                        value="{{ value | escape }}"
+                        class="size-pill-input"
+                        data-option-index="{{ opt_idx }}"
+                        data-size-desc="{{ size_desc | escape }}"
+                        data-image-id="{{ img_url.id }}"
+                        data-image-url="{{ img_url | image_url: width: 1200 }}"
+                        {% if is_default_size %}
+                          checked
+                        {% endif %}
+                      >
+                      {% assign v_price_str = matched_v.price | money %}
+                      <span class="size-pill-text">{{ value }}{% if v_price_str != blank %} ({{ v_price_str }}){% endif %}</span>
+                    </label>
+                  {% endfor %}
+                </div>
+                <div class="size-description-container">
+                  <p class="size-description-text" id="size-description-text">
+                    {% assign default_size_val = default_size_label %}
+                    {% assign first_val = default_size_val | downcase %}
+                    {% if first_val contains 'small' %}
+                      {{
+                        section.settings.size_small_desc
+                        | default: '8" × 4" × 3" · Compact and lightweight for everyday essentials.'
+                      }}
+                    {% elsif first_val contains 'medium' %}
+                      {{
+                        section.settings.size_medium_desc
+                        | default: '10" × 4" × 4" · Fits your water bottle, wallet, keys, and daily essentials.'
+                      }}
+                    {% elsif first_val contains 'large' %}
+                      {{
+                        section.settings.size_large_desc
+                        | default: '10.5" × 4" × 5" · A proper carry-all — add a power bank, mini umbrella or snacks.'
+                      }}
+                    {% else %}
+                      {{ section.settings.size_general_desc }}
+                    {% endif %}
+                  </p>
+                </div>
+              </div>
+            {% endif %}
+          {% endfor %}
+
+          {% comment %} 2. Render Color / Colour Second (Step 2) {% endcomment %}
+          {% for option in product.options_with_values %}
+            {% assign downcase_name = option.name | downcase %}
+            {% assign opt_idx = forloop.index0 %}
+            {% if downcase_name == 'color' or downcase_name == 'colour' %}
+              {% assign default_color_label = 'Electric Orange' %}
+              {% assign has_orange = false %}
+              {% for v_val in option.values %}
+                {% assign vvd = v_val | downcase %}
+                {% if vvd contains 'electric orange' or vvd contains 'orange' %}
+                  {% assign default_color_label = v_val %}
+                  {% assign has_orange = true %}
+                  {% break %}
+                {% endif %}
+              {% endfor %}
+              {% if has_orange == false %}
+                {% assign default_color_label = option.values.first %}
+              {% endif %}
+
+              <div
+                class="variant-option-group variant-option-group--colour"
+                data-option-index="{{ opt_idx }}"
+                data-option-name="{{ option.name | escape }}"
+              >
+                <div class="variant-option-header">
+                  <span class="variant-option-label">
+                    <span class="step-badge">2</span> Pick your colour:
+                    <strong class="selected-option-value">
+                      {{- default_color_label -}}
+                    </strong>
+                  </span>
+                </div>
+                <div class="color-circle-swatches">
+                  {% for value in option.values %}
+                    {% assign matched_v = null %}
+                    {% for v in product.variants %}
+                      {% if v.options[opt_idx] == value %}
+                        {% assign matched_v = v %}
+                        {% break %}
+                      {% endif %}
+                    {% endfor %}
+                    {% assign img_url = matched_v.featured_media
+                      | default: matched_v.featured_image
+                      | default: product.featured_image
+                    %}
+
+                    {% assign val_down = value | downcase %}
+                    {% assign bg_color = value.swatch.color %}
+                    {% if bg_color == blank %}
+                      {% if val_down contains 'butter' or val_down contains 'cream' %}
+                        {% assign bg_color = '#F5F2DC' %}
+                      {% elsif val_down contains 'bubblegum' or val_down contains 'bubble' %}
+                        {% assign bg_color = '#FF69B4' %}
+                      {% elsif val_down contains 'jet' or val_down contains 'black' %}
+                        {% assign bg_color = '#1A1A1A' %}
+                      {% elsif val_down contains 'electric' or val_down contains 'orange' %}
+                        {% assign bg_color = '#FF5722' %}
+                      {% elsif val_down contains 'sky' or val_down contains 'blue' %}
+                        {% assign bg_color = '#87CEEB' %}
+                      {% elsif val_down contains 'lavender'
+                        or val_down contains 'purple'
+                        or val_down contains 'lilac'
+                      %}
+                        {% assign bg_color = '#A388A8' %}
+                      {% elsif val_down contains 'pink' %}
+                        {% assign bg_color = '#FFB6C1' %}
+                      {% elsif val_down contains 'white' %}
+                        {% assign bg_color = '#FFFFFF' %}
+                      {% elsif val_down contains 'green' %}
+                        {% assign bg_color = '#4CAF50' %}
+                      {% elsif val_down contains 'yellow' %}
+                        {% assign bg_color = '#FFEB3B' %}
+                      {% elsif val_down contains 'red' %}
+                        {% assign bg_color = '#E53935' %}
+                      {% elsif val_down contains 'sand' or val_down contains 'beige' %}
+                        {% assign bg_color = '#D1C2A5' %}
+                      {% elsif val_down contains 'grey' or val_down contains 'gray' %}
+                        {% assign bg_color = '#9E9E9E' %}
+                      {% else %}
+                        {% assign bg_color = val_down | split: ' ' | last %}
+                      {% endif %}
+                    {% endif %}
+
+                    {% assign is_default_color = false %}
+                    {% if has_orange and val_down contains 'orange' %}
+                      {% assign is_default_color = true %}
+                    {% elsif has_orange == false and forloop.first %}
+                      {% assign is_default_color = true %}
+                    {% endif %}
+
+                    <button
+                      type="button"
+                      class="color-swatch-btn {% if is_default_color %}active{% endif %}"
+                      data-option-index="{{ opt_idx }}"
+                      data-option-value="{{ value | escape }}"
+                      data-variant-id="{{ matched_v.id }}"
+                      data-image-id="{{ img_url.id }}"
+                      data-image-url="{{ img_url | image_url: width: 1200 }}"
+                      style="background-color: {{ bg_color }}; {% if value.swatch.image %}background-image: url('{{ value.swatch.image | image_url: width: 64 }}'); background-size: cover;{% endif %}"
+                      title="{{ value }}"
+                      aria-label="{{ value }}"
+                    ></button>
+                  {% endfor %}
+                </div>
+              </div>
+            {% endif %}
+          {% endfor %}
+
+          {% comment %} 3. Render Other Remaining Options {% endcomment %}
+          {% for option in product.options_with_values %}
+            {% assign downcase_name = option.name | downcase %}
+            {% assign opt_idx = forloop.index0 %}
+            {% unless downcase_name == 'size' or downcase_name == 'color' or downcase_name == 'colour' %}
+              <div
+                class="variant-option-group"
+                data-option-index="{{ opt_idx }}"
+                data-option-name="{{ option.name | escape }}"
+              >
+                <div class="variant-option-header">
+                  <span class="variant-option-label">
+                    Pick your {{ option.name | downcase }}:
+                    <strong class="selected-option-value">
+                      {{- option.selected_value | default: option.values.first -}}
+                    </strong>
+                  </span>
+                </div>
+                <div class="size-pill-swatches">
+                  {% for value in option.values %}
+                    {% assign matched_v = null %}
+                    {% for v in product.variants %}
+                      {% if v.options[opt_idx] == value %}
+                        {% assign matched_v = v %}
+                        {% break %}
+                      {% endif %}
+                    {% endfor %}
+                    {% assign img_url = matched_v.featured_media
+                      | default: matched_v.featured_image
+                      | default: product.featured_image
+                    %}
+                    <label class="size-pill-label {% if option.selected_value == value or forloop.first %}active{% endif %}">
+                      <input
+                        type="radio"
+                        name="option-{{ option.name | handleize }}"
+                        value="{{ value | escape }}"
+                        class="size-pill-input"
+                        data-option-index="{{ opt_idx }}"
+                        data-image-id="{{ img_url.id }}"
+                        data-image-url="{{ img_url | image_url: width: 1200 }}"
+                        {% if option.selected_value == value or forloop.first %}
+                          checked
+                        {% endif %}
+                      >
+                      <span class="size-pill-text">{{ value }}</span>
+                    </label>
+                  {% endfor %}
+                </div>
+              </div>
+            {% endunless %}
+          {% endfor %}
+        {% endunless %}
+
+        <!-- Steps 3 & 4: Customizer Block (Patches & Embroidery) -->
+        {% assign customizer_block = section.blocks
+          | where: 'type', 'atelier-customizer'
+          | first
+          | default: section.blocks
+          | where: 'type', 'podifai-customizer'
+          | first
+        %}
+        {% render 'atelier-customizer', block: customizer_block, section_settings: section.settings %}
+
+        <!-- Quantity Selector & Add to Cart CTA -->
+        <div class="product-submit-row">
+          {% if section.settings.show_quantity_selector %}
+            <div class="product-quantity-wrapper">
+              <button
+                type="button"
+                class="quantity-btn quantity-btn-minus"
+                id="qty-minus-btn"
+                aria-label="Decrease quantity"
+              >
+                −
+              </button>
+              <input
+                type="number"
+                name="quantity"
+                id="product-quantity-input"
+                class="quantity-input"
+                value="1"
+                min="1"
+                max="99"
+                readonly
+              >
+              <button
+                type="button"
+                class="quantity-btn quantity-btn-plus"
+                id="qty-plus-btn"
+                aria-label="Increase quantity"
+              >
+                +
+              </button>
+            </div>
+          {% else %}
+            <input
+              type="hidden"
+              name="quantity"
+              id="product-quantity-input"
+              class="quantity-input"
+              value="1"
+            >
+          {% endif %}
+
+          <add-to-cart-component style="flex: 1; width: 100%;">
+            <button type="submit" name="add" class="product-add-to-cart-btn" id="add-to-cart-btn" ref="addToCartButton">
+              <span id="add-to-cart-text"
+                >Add to bag ·
+                <span id="podifai-btn-price-display">
+                  {{- product.selected_or_first_available_variant.price | default: product.price | money -}}
+                </span></span
+              >
+            </button>
+          </add-to-cart-component>
+        </div>
+      {% endform %}
+    </product-form-component>
+
+    <!-- Collapsible Accordions: Description, Care, Design -->
+    <div class="product-accordions">
+      <details class="product-accordion-item" open>
+        <summary class="product-accordion-summary">
+          <span>DESCRIPTION</span>
+          <span class="accordion-chevron">⌵</span>
+        </summary>
+        <div class="product-accordion-body">
+          <p>
+            {{
+              product.description
+              | default: 'Our signature Joy Bag designed for daily versatility. Personalize with character patches, alphabet letters, and custom embroidery.'
+            }}
+          </p>
+        </div>
+      </details>
+
+      <details class="product-accordion-item">
+        <summary class="product-accordion-summary">
+          <span>CARE</span>
+          <span class="accordion-chevron">⌵</span>
+        </summary>
+        <div class="product-accordion-body">
+          <p>Spot clean with a damp cloth. Do not machine wash or dry clean. Keep custom patches dry.</p>
+        </div>
+      </details>
+
+      <details class="product-accordion-item">
+        <summary class="product-accordion-summary">
+          <span>DESIGN</span>
+          <summary class="accordion-chevron">⌵</summary>
+        </summary>
+        <div class="product-accordion-body">
+          <p>
+            Made from durable premium nylon fabric with reinforced stitching, water-resistant lining, and custom metal
+            hardware.
+          </p>
+        </div>
+      </details>
+    </div>
+  </div>
+</div>
+
+{% comment %} Size Guide Popup Modal {% endcomment %}
+<div
+  id="SizeGuideModal-{{ section.id }}"
+  class="size-guide-modal"
+  role="dialog"
+  aria-modal="true"
+  aria-hidden="true"
+  style="display: none;"
+>
+  <div class="size-guide-modal__backdrop" onclick="closeSizeGuideModal('{{ section.id }}')"></div>
+  <div class="size-guide-modal__content">
+    <button
+      type="button"
+      class="size-guide-modal__close"
+      aria-label="Close"
+      onclick="closeSizeGuideModal('{{ section.id }}')"
+    >
+      <svg
+        width="18"
+        height="18"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2.5"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      >
+        <line x1="18" y1="6" x2="6" y2="18"></line>
+        <line x1="6" y1="6" x2="18" y2="18"></line>
+      </svg>
+    </button>
+    <div class="size-guide-modal__body">
+      {% if section.settings.size_guide_image != blank %}
+        <img
+          src="{{ section.settings.size_guide_image | image_url: width: 1400 }}"
+          alt="{{ section.settings.size_guide_image.alt | default: 'Size Guide Chart' | escape }}"
+          class="size-guide-modal__img"
+          loading="lazy"
+          width="{{ section.settings.size_guide_image.width }}"
+          height="{{ section.settings.size_guide_image.height }}"
+        >
+      {% else %}
+        <div class="size-guide-modal__empty">
+          <p><strong>Size Guide</strong></p>
+          <p>Please upload a Size Guide image in the Theme Customizer under this section's settings.</p>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
 
 <script id="podifai-product-variants-json" type="application/json">
   {{ product.variants | json }}
@@ -1496,6 +1560,33 @@
         resolveSelectedVariant();
       });
     });
+
+    // Always default to Medium size and Electric Orange color
+    const sizeGroup = document.querySelector('.variant-option-group--size, [data-option-name*="size" i]');
+    if (sizeGroup) {
+      const mediumInput = Array.from(sizeGroup.querySelectorAll('.size-pill-input')).find(
+        (inp) => (inp.value || '').toLowerCase().includes('medium')
+      );
+      if (mediumInput) {
+        sizeGroup.querySelectorAll('.size-pill-label').forEach((p) => p.classList.remove('active'));
+        const lbl = mediumInput.closest('.size-pill-label');
+        if (lbl) lbl.classList.add('active');
+        mediumInput.checked = true;
+      }
+    }
+
+    const colorGroup = document.querySelector('.variant-option-group--colour, [data-option-name*="colo" i]');
+    if (colorGroup) {
+      const orangeBtn = Array.from(colorGroup.querySelectorAll('.color-swatch-btn')).find(
+        (btn) =>
+          (btn.dataset.optionValue || '').toLowerCase().includes('electric orange') ||
+          (btn.dataset.optionValue || '').toLowerCase().includes('orange')
+      );
+      if (orangeBtn) {
+        colorGroup.querySelectorAll('.color-swatch-btn').forEach((b) => b.classList.remove('active'));
+        orangeBtn.classList.add('active');
+      }
+    }
 
     // Initial variant resolution & swatch filtering on page load
     updateAvailableSwatches();

@@ -82,7 +82,7 @@
   document.addEventListener('DOMContentLoaded', () => {
     // Run periodically to catch dynamically loaded items (infinite scroll)
     setInterval(() => {
-      // Keep custom bag cards consistent with the server-rendered FROM price.
+      // Keep custom bag cards consistent with the server-rendered FROM price and Customisable spelling
       document.querySelectorAll('li.product-grid__item').forEach(card => {
         const isCustomizable = card.getAttribute('data-is-customizable') === 'true' ||
           Array.from(card.querySelectorAll('p')).some(p => /customi[sz]able/i.test(p.textContent));
@@ -92,6 +92,11 @@
             if (!el.textContent.includes('FROM')) el.textContent = 'FROM RM65.00';
           });
         }
+        card.querySelectorAll('p, span, div').forEach(el => {
+          if (el.children.length === 0 && el.textContent && /customizable/i.test(el.textContent)) {
+            el.textContent = el.textContent.replace(/customizable/gi, match => match[0] === 'C' ? 'Customisable' : 'customisable');
+          }
+        });
       });
 
       document.querySelectorAll('li.product-grid__item:not(.custom-logic-applied)').forEach(card => {

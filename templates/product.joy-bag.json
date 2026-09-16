@@ -140,22 +140,13 @@
             "metafield_key": "custom.yellow_capital_letters"
           }
         },
-        "alphabet_category_FWCGMD": {
+        "alphabet_category_7EQPrz": {
           "type": "alphabet_category",
           "settings": {
-            "title": "Mix colour letters",
-            "size": "2cm x 2cm",
+            "title": "Blue small letters",
+            "size": "2x2",
             "use_metafield": true,
-            "metafield_key": "custom.mix_color_letters"
-          }
-        },
-        "alphabet_category_UYAg4W": {
-          "type": "alphabet_category",
-          "settings": {
-            "title": "Mix colour capital letters",
-            "size": "2cm x 2cm",
-            "use_metafield": true,
-            "metafield_key": "custom.mix_colours_capital_letters"
+            "metafield_key": "custom.blue_small_letters"
           }
         },
         "alphabet_category_mbAhmY": {
@@ -174,15 +165,6 @@
             "size": "2cm x 2cm",
             "use_metafield": true,
             "metafield_key": "custom.white_small_letters"
-          }
-        },
-        "alphabet_category_7EQPrz": {
-          "type": "alphabet_category",
-          "settings": {
-            "title": "Blue small letters",
-            "size": "2x2",
-            "use_metafield": true,
-            "metafield_key": "custom.blue_small_letters"
           }
         },
         "alphabet_category_gwqBpe": {
@@ -221,11 +203,57 @@
             "metafield_key": "custom.yellow_glitter"
           }
         },
-        "thread_color_gjNrBh": {
+        "alphabet_category_FWCGMD": {
+          "type": "alphabet_category",
+          "settings": {
+            "title": "Mix colour letters",
+            "size": "2cm x 2cm",
+            "use_metafield": true,
+            "metafield_key": "custom.mix_color_letters"
+          }
+        },
+        "alphabet_category_UYAg4W": {
+          "type": "alphabet_category",
+          "settings": {
+            "title": "Mix colour capital letters",
+            "size": "2cm x 2cm",
+            "use_metafield": true,
+            "metafield_key": "custom.mix_colours_capital_letters"
+          }
+        },
+        "thread_color_y4e3t7": {
           "type": "thread_color",
           "settings": {
-            "color_name": "Fuschia",
-            "color": "#a71b74"
+            "color_name": "Dark Purple",
+            "color": "#413583"
+          }
+        },
+        "thread_color_tdfxXn": {
+          "type": "thread_color",
+          "settings": {
+            "color_name": "Light purple",
+            "color": "#9379b3"
+          }
+        },
+        "thread_color_nHPPTB": {
+          "type": "thread_color",
+          "settings": {
+            "color_name": "Dark Green",
+            "color": "#20643a"
+          }
+        },
+        "thread_color_QgLYm8": {
+          "type": "thread_color",
+          "settings": {
+            "color_name": "Light Green",
+            "color": "#cbe151"
+          }
+        },
+        "thread_color_tjDdqT": {
+          "type": "thread_color",
+          "settings": {
+            "color_name": "Lime Green",
+            "color": "#aeb81a"
           }
         },
         "thread_color_GzVY4k": {
@@ -233,6 +261,27 @@
           "settings": {
             "color_name": "Blood Red",
             "color": "#890c1f"
+          }
+        },
+        "thread_color_gjNrBh": {
+          "type": "thread_color",
+          "settings": {
+            "color_name": "Fuschia",
+            "color": "#a71b74"
+          }
+        },
+        "thread_color_CPMUqW": {
+          "type": "thread_color",
+          "settings": {
+            "color_name": "Dark Yellow",
+            "color": "#C7B601"
+          }
+        },
+        "thread_color_Th3TCe": {
+          "type": "thread_color",
+          "settings": {
+            "color_name": "Yellow",
+            "color": "#e7db72"
           }
         },
         "thread_color_XJyCGH": {
@@ -263,32 +312,18 @@
             "color": "#b39346"
           }
         },
+        "thread_color_rFerHP": {
+          "type": "thread_color",
+          "settings": {
+            "color_name": "Light brown",
+            "color": "#ddaf26"
+          }
+        },
         "thread_color_9JCiMU": {
           "type": "thread_color",
           "settings": {
             "color_name": "Turquoise",
-            "color": "#107869"
-          }
-        },
-        "thread_color_tjDdqT": {
-          "type": "thread_color",
-          "settings": {
-            "color_name": "Lime Green",
-            "color": "#aeb81a"
-          }
-        },
-        "thread_color_QgLYm8": {
-          "type": "thread_color",
-          "settings": {
-            "color_name": "Light Green",
-            "color": "#cbe151"
-          }
-        },
-        "thread_color_nHPPTB": {
-          "type": "thread_color",
-          "settings": {
-            "color_name": "Dark Green",
-            "color": "#15784b"
+            "color": "#59c4b8"
           }
         },
         "thread_color_Dkbtpn": {
@@ -319,93 +354,20 @@
             "color": "#000000"
           }
         },
-        "thread_color_Th3TCe": {
+        "thread_color_fmyHPR": {
           "type": "thread_color",
           "settings": {
-            "color_name": "Yellow",
-            "color": "#e7db72"
+            "color_name": "Teal",
+            "color": "#2c5462"
           }
         },
-        "thread_color_kKiMDD": {
-          "type": "thread_color",
-          "settings": {
-            "color_name": "Light brown",
-            "color": "#ddaf26"
-          }
-        },
-        "thread_color_rFerHP": {
-          "type": "thread_color",
-          "settings": {
-            "color_name": "Light brown",
-            "color": "#ddaf26"
-          }
-        },
-        "thread_color_tdfxXn": {
-          "type": "thread_color",
-          "settings": {
-            "color_name": "Light purple",
-            "color": "#9379b3"
-          }
-        },
-        "thread_color_y4e3t7": {
-          "type": "thread_color",
-          "settings": {
-            "color_name": "Dark Purple",
-            "color": "#413583"
-          }
-        },
-        "character_category_83Rpfe": {
+        "character_category_f643pc": {
           "type": "character_category",
           "settings": {
-            "title": "Cartoons",
-            "size": "3.5cm x 3.5cm",
+            "title": "Animals",
+            "size": "5cm x 4cm ​",
             "use_metafield": true,
-            "metafield_key": "category_1_patches"
-          }
-        },
-        "character_category_GYbnjj": {
-          "type": "character_category",
-          "settings": {
-            "title": "Sanrio",
-            "size": "5cm x 5cm",
-            "use_metafield": true,
-            "metafield_key": "custom.category_2_patches"
-          }
-        },
-        "character_category_e7DmDD": {
-          "type": "character_category",
-          "settings": {
-            "title": "Transport",
-            "size": "6cm x 4cm",
-            "use_metafield": true,
-            "metafield_key": "custom.category_3_patches"
-          }
-        },
-        "character_category_C9C3Ja": {
-          "type": "character_category",
-          "settings": {
-            "title": "Sports",
-            "size": "2cm x 2cm",
-            "use_metafield": true,
-            "metafield_key": "custom.category_10_patches"
-          }
-        },
-        "character_category_tGmFAf": {
-          "type": "character_category",
-          "settings": {
-            "title": "Mini Zoo",
-            "size": "2cm x 2cm",
-            "use_metafield": true,
-            "metafield_key": "custom.category_11_patches"
-          }
-        },
-        "character_category_3qUktF": {
-          "type": "character_category",
-          "settings": {
-            "title": "Cuties",
-            "size": "4cm x 4cm",
-            "use_metafield": true,
-            "metafield_key": "custom.category_4_patches"
+            "metafield_key": "custom.category_7_patches"
           }
         },
         "character_category_wBYxrN": {
@@ -417,6 +379,24 @@
             "metafield_key": "custom.category_5_patches"
           }
         },
+        "character_category_83Rpfe": {
+          "type": "character_category",
+          "settings": {
+            "title": "Cartoons",
+            "size": "3.5cm x 3.5cm",
+            "use_metafield": true,
+            "metafield_key": "category_1_patches"
+          }
+        },
+        "character_category_3qUktF": {
+          "type": "character_category",
+          "settings": {
+            "title": "Cuties",
+            "size": "4cm x 4cm",
+            "use_metafield": true,
+            "metafield_key": "custom.category_4_patches"
+          }
+        },
         "character_category_Uxqfdf": {
           "type": "character_category",
           "settings": {
@@ -426,13 +406,31 @@
             "metafield_key": "custom.category_6_patches"
           }
         },
-        "character_category_f643pc": {
+        "character_category_tGmFAf": {
           "type": "character_category",
           "settings": {
-            "title": "Animals",
-            "size": "5cm x 4cm ​",
+            "title": "Mini Zoo",
+            "size": "2cm x 2cm",
             "use_metafield": true,
-            "metafield_key": "custom.category_7_patches"
+            "metafield_key": "custom.category_11_patches"
+          }
+        },
+        "character_category_GYbnjj": {
+          "type": "character_category",
+          "settings": {
+            "title": "Sanrio",
+            "size": "5cm x 5cm",
+            "use_metafield": true,
+            "metafield_key": "custom.category_2_patches"
+          }
+        },
+        "character_category_C9C3Ja": {
+          "type": "character_category",
+          "settings": {
+            "title": "Sports",
+            "size": "2cm x 2cm",
+            "use_metafield": true,
+            "metafield_key": "custom.category_10_patches"
           }
         },
         "character_category_wdTpjK": {
@@ -453,10 +451,19 @@
             "metafield_key": "custom.category_9_patches"
           }
         },
+        "character_category_e7DmDD": {
+          "type": "character_category",
+          "settings": {
+            "title": "Transport",
+            "size": "6cm x 4cm",
+            "use_metafield": true,
+            "metafield_key": "custom.category_3_patches"
+          }
+        },
         "atelier_customizer_block": {
           "type": "atelier-customizer",
           "settings": {
-            "cloudinary_cloud_name": "tifgkltm",
+            "cloudinary_cloud_name": "djgkiteys",
             "cloudinary_upload_preset": "shopify_preset_podifai",
             "enable_addon_surcharges": true,
             "patch_addon_product": "patch-addon",
@@ -477,45 +484,46 @@
         "alphabet_category_q9jg83",
         "alphabet_category_tPep7R",
         "alphabet_category_NLwVNe",
-        "alphabet_category_FWCGMD",
-        "alphabet_category_UYAg4W",
+        "alphabet_category_7EQPrz",
         "alphabet_category_mbAhmY",
         "alphabet_category_KWDtJU",
-        "alphabet_category_7EQPrz",
         "alphabet_category_gwqBpe",
         "alphabet_category_MKaUXU",
         "alphabet_category_FYWKYc",
         "alphabet_category_87rAVL",
-        "thread_color_gjNrBh",
+        "alphabet_category_FWCGMD",
+        "alphabet_category_UYAg4W",
+        "thread_color_y4e3t7",
+        "thread_color_tdfxXn",
+        "thread_color_nHPPTB",
+        "thread_color_QgLYm8",
+        "thread_color_tjDdqT",
         "thread_color_GzVY4k",
+        "thread_color_gjNrBh",
+        "thread_color_CPMUqW",
+        "thread_color_Th3TCe",
         "thread_color_XJyCGH",
         "thread_color_XUQyjr",
         "thread_color_YdTbCM",
         "thread_color_xxyCiq",
+        "thread_color_rFerHP",
         "thread_color_9JCiMU",
-        "thread_color_tjDdqT",
-        "thread_color_QgLYm8",
-        "thread_color_nHPPTB",
         "thread_color_Dkbtpn",
         "thread_color_pc9MeB",
         "thread_color_EDEXQR",
         "thread_color_pAwTeU",
-        "thread_color_Th3TCe",
-        "thread_color_kKiMDD",
-        "thread_color_rFerHP",
-        "thread_color_tdfxXn",
-        "thread_color_y4e3t7",
-        "character_category_83Rpfe",
-        "character_category_GYbnjj",
-        "character_category_e7DmDD",
-        "character_category_C9C3Ja",
-        "character_category_tGmFAf",
-        "character_category_3qUktF",
-        "character_category_wBYxrN",
-        "character_category_Uxqfdf",
+        "thread_color_fmyHPR",
         "character_category_f643pc",
+        "character_category_wBYxrN",
+        "character_category_83Rpfe",
+        "character_category_3qUktF",
+        "character_category_Uxqfdf",
+        "character_category_tGmFAf",
+        "character_category_GYbnjj",
+        "character_category_C9C3Ja",
         "character_category_wdTpjK",
         "character_category_VMHQE3",
+        "character_category_e7DmDD",
         "atelier_customizer_block"
       ],
       "settings": {

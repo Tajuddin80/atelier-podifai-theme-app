@@ -277,12 +277,13 @@
   }
 
   .menu-list__link {
-    font-family: var(--menu-top-level-font-family);
+    font-family: 'Red Hat Text', var(--menu-top-level-font-family, sans-serif) !important;
     font-style: var(--menu-top-level-font-style);
-    font-weight: var(--menu-top-level-font-weight);
-    font-size: var(--menu-top-level-font-size);
-    line-height: var(--menu-top-level-font-line-height);
-    text-transform: var(--menu-top-level-font-case);
+    font-weight: 500 !important;
+    font-size: 13px !important;
+    line-height: normal;
+    text-transform: uppercase !important;
+    letter-spacing: 0.04em !important;
     color: var(--menu-top-level-font-color);
     text-decoration: none;
     display: flex;
@@ -312,7 +313,7 @@
     }
 
     @media screen and (min-width: 750px) {
-      font-size: var(--menu-top-level-font-size-desktop);
+      font-size: 13px !important;
     }
   }
 
@@ -410,16 +411,43 @@
     }
   }
 
-  /* Show the submenus on hover */
-  .menu-list__list-item:has([aria-expanded='true']) > .menu-list__submenu,
-  /* Show the overflow menu when a menu item is hovered */
-  .overflow-menu:has([slot="overflow"] [aria-expanded='true'])::part(overflow-list),
-  /* Keep the submenus open when they are hovered */
-  .menu-list__submenu:is(:hover),
-  .overflow-menu::part(overflow):hover {
+  /* Show the submenus on hover when overflow is NOT expanded */
+  header-menu:not([data-overflow-expanded='true']) .menu-list__list-item:has([aria-expanded='true']) > .menu-list__submenu,
+  header-menu:not([data-overflow-expanded='true']) .menu-list__list-item:hover > .menu-list__submenu,
+  header-menu:not([data-overflow-expanded='true']) .menu-list__submenu:is(:hover) {
     --submenu-content-opacity: 1;
 
     visibility: visible;
+  }
+
+  /* Completely isolate the overflow menu: it MUST ONLY be active/visible when data-overflow-expanded="true" */
+  header-menu:not([data-overflow-expanded='true']) .overflow-menu::part(overflow),
+  header-menu:not([data-overflow-expanded='true']) .overflow-menu::part(overflow-list),
+  header-menu:not([data-overflow-expanded='true']) .menu-list__list-item:is([slot='overflow']) {
+    display: none !important;
+    visibility: hidden !important;
+    pointer-events: none !important;
+    opacity: 0 !important;
+  }
+
+  /* When overflow menu is expanded */
+  header-menu[data-overflow-expanded='true'] .overflow-menu::part(overflow),
+  header-menu[data-overflow-expanded='true'] .overflow-menu::part(overflow-list),
+  header-menu[data-overflow-expanded='true'] .overflow-menu:has([slot="overflow"] [aria-expanded='true'])::part(overflow),
+  header-menu[data-overflow-expanded='true'] .overflow-menu:has([slot="overflow"] [aria-expanded='true'])::part(overflow-list) {
+    --submenu-content-opacity: 1;
+
+    visibility: visible !important;
+    pointer-events: auto !important;
+    display: grid !important;
+  }
+
+  /* Hide regular submenus when overflow menu is open */
+  header-menu[data-overflow-expanded='true'] .menu-list__list-item:where(:not([slot='overflow'])) > .menu-list__submenu {
+    display: none !important;
+    visibility: hidden !important;
+    pointer-events: none !important;
+    opacity: 0 !important;
   }
 
   .overflow-menu::part(overflow) {
@@ -450,7 +478,13 @@
       grid-area: left;
       grid-row: auto;
       height: min-content;
-      font-size: var(--font-size--xl);
+      font-size: 13px;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--color-foreground) !important;
+      opacity: 1 !important;
+      visibility: visible !important;
       transition: var(--submenu-content-animation);
     }
 
@@ -480,7 +514,7 @@
   .menu-list__submenu-inner {
     position: relative;
     display: flex;
-    justify-content: space-between;
+    justify-content: flex-start;
     flex-wrap: wrap;
   }
 
@@ -502,12 +536,13 @@
   }
 
   .mega-menu__link {
-    font-family: var(--menu-child-font-family);
-    font-style: var(--menu-child-font-style);
-    font-weight: var(--menu-child-font-weight);
-    font-size: var(--menu-child-font-size);
-    line-height: var(--menu-child-font-line-height);
-    text-transform: var(--menu-child-font-case);
+    font-family: 'Red Hat Text', var(--menu-child-font-family, sans-serif) !important;
+    font-style: normal;
+    font-weight: 500 !important;
+    font-size: 13px !important;
+    line-height: 1.4 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.04em !important;
     color: var(--menu-child-font-color);
     white-space: normal;
     text-decoration: none;
@@ -520,12 +555,13 @@
   }
 
   .mega-menu__link--parent {
-    font-family: var(--menu-parent-font-family);
-    font-style: var(--menu-parent-font-style);
-    font-weight: var(--menu-parent-font-weight);
-    font-size: var(--menu-parent-font-size);
-    line-height: var(--menu-parent-font-line-height);
-    text-transform: var(--menu-parent-font-case);
+    font-family: 'Red Hat Text', var(--menu-parent-font-family, sans-serif) !important;
+    font-style: normal;
+    font-weight: 500 !important;
+    font-size: 13px !important;
+    line-height: 1.4 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.04em !important;
     color: var(--menu-parent-font-color);
 
     &:hover {
@@ -583,18 +619,18 @@
   }
 
   .mega-menu__grid {
-    display: grid;
-    grid-template-columns: repeat(var(--menu-columns-tablet), minmax(0, 1fr));
-    gap: var(--menu-vertical-gap) var(--menu-horizontal-gap);
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-start;
+    align-items: flex-start;
+    gap: var(--menu-vertical-gap) calc(var(--gap-xl) * 2);
     width: 100%;
-
-    @media screen and (min-width: 990px) {
-      grid-template-columns: repeat(var(--menu-columns-desktop), minmax(0, 1fr));
-    }
   }
 
   .mega-menu__column {
-    grid-column: span 1;
+    grid-column: unset;
+    text-align: start;
+    min-width: max-content;
   }
 
   .mega-menu__column--span-2 {
@@ -644,14 +680,14 @@
   }
 
   .mega-menu__list {
-    display: grid;
-    grid-template-columns: subgrid;
-    grid-column: span var(--menu-columns-tablet);
-    gap: var(--menu-vertical-gap) var(--menu-horizontal-gap);
-
-    @media screen and (min-width: 990px) {
-      grid-column: span var(--menu-columns-desktop);
-    }
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-start;
+    align-items: flex-start;
+    gap: var(--menu-vertical-gap) calc(var(--gap-xl) * 2.5);
+    width: auto;
+    margin: 0;
+    padding: 0;
   }
 
   .mega-menu__content {

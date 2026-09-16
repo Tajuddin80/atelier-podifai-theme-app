@@ -113,9 +113,10 @@ export class QuickAddComponent extends Component {
       const freshContent = /** @type {Element} */ (productGrid.cloneNode(true));
       await this.updateQuickAddModal(freshContent);
       this.#updateVariantPicker(productGrid);
+      this.#openQuickAddModal();
+    } else if (currentUrl) {
+      window.location.href = currentUrl;
     }
-
-    this.#openQuickAddModal();
   };
 
   #resetScroll() {

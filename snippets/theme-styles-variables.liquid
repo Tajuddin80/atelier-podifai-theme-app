@@ -168,6 +168,17 @@
     --font-accent--style: {{ settings.type_accent_font.style }};
     --font-accent--weight: {{ settings.type_accent_font.weight }};
 
+    /* Primary, Secondary, Tertiary Aliases for Theme Components */
+    --font-primary--family: var(--font-body--family);
+    --font-primary--style: var(--font-body--style);
+    --font-primary--weight: var(--font-body--weight);
+    --font-secondary--family: var(--font-subheading--family);
+    --font-secondary--style: var(--font-subheading--style);
+    --font-secondary--weight: var(--font-subheading--weight);
+    --font-tertiary--family: var(--font-heading--family);
+    --font-tertiary--style: var(--font-heading--style);
+    --font-tertiary--weight: var(--font-heading--weight);
+
     /* Margin sizes */
     --font-heading--spacing: 0.25em;
     --font-h1--spacing: var(--font-heading--spacing);
@@ -357,6 +368,8 @@
     --font-size--2xs: 0.75rem;
     --font-size--xs: 0.8125rem;
     --font-size--sm: 0.875rem;
+    --font-size--body-xs: 0.8125rem;
+    --font-size--body-sm: 0.875rem;
     --font-size--md: 1rem;
     --font-size--lg: 1.125rem;
     --font-size--xl: 1.25rem;

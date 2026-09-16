@@ -89,7 +89,7 @@
   </div>
 {% elsif plain_text != blank %}
   <{{ element }} {{ attributes | strip_newlines | strip }}>
-    {{ block.settings.text }}
+    {{ block.settings.text | replace: 'Customizable', 'Customisable' | replace: 'customizable', 'customisable' }}
   </{{ element }}>
 {% endif %}
 

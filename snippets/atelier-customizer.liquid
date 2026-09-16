@@ -63,13 +63,34 @@
   {% assign show_default_alpha = true %}
 {% endif %}
 
+{% assign default_medium_orange_variant = null %}
+{% for v in product.variants %}
+  {% assign v_title_down = v.title | downcase %}
+  {% if v_title_down contains 'medium' and v_title_down contains 'orange' %}
+    {% assign default_medium_orange_variant = v %}
+    {% break %}
+  {% endif %}
+{% endfor %}
+{% if default_medium_orange_variant == null %}
+  {% for v in product.variants %}
+    {% assign v_title_down = v.title | downcase %}
+    {% if v_title_down contains 'medium' %}
+      {% assign default_medium_orange_variant = v %}
+      {% break %}
+    {% endif %}
+  {% endfor %}
+{% endif %}
+{% if default_medium_orange_variant == null %}
+  {% assign default_medium_orange_variant = product.selected_or_first_available_variant %}
+{% endif %}
+
 <div class="podifai-customizer">
   <!-- Config Bridge for JavaScript -->
   <div
     id="podifai-customizer-config"
     data-enable-addon="{{ custom_settings.enable_addon_surcharges }}"
     data-currency-symbol="{{ currency_symbol }}"
-    data-base-price="{{ product.selected_or_first_available_variant.price | default: product.price | money_without_currency | remove: ',' }}"
+    data-base-price="{{ default_medium_orange_variant.price | default: product.price | money_without_currency | remove: ',' }}"
     data-patch-price="{{ patch_unit_price }}"
     data-patch-addon-variant="{{ patch_addon_variant_id }}"
     data-embroidery-price="{{ embroidery_unit_price }}"
@@ -1062,14 +1083,14 @@
       <div class="podifai-summary-row" id="podifai-summary-base-row">
         <span class="podifai-summary-row-label" id="podifai-summary-product-name">
           {{- product.title -}}
-          {%- assign init_v = product.selected_or_first_available_variant -%}
+          {%- assign init_v = default_medium_orange_variant -%}
           {%- if init_v and init_v.title != 'Default Title' -%}
             {%- assign init_size = init_v.option1 | default: init_v.title -%}
             {%- if init_size != blank %} ({{ init_size }}){% endif -%}
           {%- endif -%}
         </span>
         <span class="podifai-summary-row-price" id="podifai-summary-base-price">
-          {{- product.selected_or_first_available_variant.price | default: product.price | money -}}
+          {{- default_medium_orange_variant.price | default: product.price | money -}}
         </span>
       </div>
       <div class="podifai-summary-row" id="podifai-summary-patches-row" style="display: none;">
@@ -1090,7 +1111,7 @@
       <div class="podifai-summary-row podifai-summary-total-row">
         <span class="podifai-summary-total-label">Your total</span>
         <span class="podifai-summary-total-price" id="podifai-summary-grand-total">
-          {{- product.selected_or_first_available_variant.price | default: product.price | money -}}
+          {{- default_medium_orange_variant.price | default: product.price | money -}}
         </span>
       </div>
     </div>
@@ -3665,9 +3686,61 @@
       }
 
       const mainProductTitle = document.querySelector('.product-title')?.innerText || 'Customized Product';
-      let previewImageUrl = await uploadPreviewToCloudinary(fullMergedSnapshot);
 
-      const mainItemProperties = {};
+      const activeEmbLines = embroideryLines.filter((l) => l.text && l.text.trim() !== '');
+
+      // Deterministic signature based on variant, selected patches, and embroidery
+      function computeCustomizationSignature(variantId, patches, embLines) {
+        const patchParts = (patches || [])
+          .map((p) =>
+            `${p.id || ''}:${p.category || ''}:${p.letterChar || ''}:${Math.round((parseFloat(p.relX) || 0) * 100)}:${Math.round(
+              (parseFloat(p.relY) || 0) * 100
+            )}:${Math.round(parseFloat(p.rotation) || 0)}`
+          )
+          .sort()
+          .join('|');
+
+        const embParts = (embLines || [])
+          .map((l) =>
+            `${l.text.trim()}:${(l.font || '').split(',')[0].replace(/['"]/g, '').trim()}:${(l.colorName || l.color || '').trim()}:${Math.round(
+              (parseFloat(l.relX) || 0) * 100
+            )}:${Math.round((parseFloat(l.relY) || 0) * 100)}`
+          )
+          .join('|');
+
+        const raw = `${variantId}__P_${patchParts}__E_${embParts}`;
+        let hash = 0x811c9dc5;
+        for (let i = 0; i < raw.length; i++) {
+          hash ^= raw.charCodeAt(i);
+          hash = Math.imul(hash, 0x01000193);
+        }
+        return (hash >>> 0).toString(36);
+      }
+
+      const customSig = computeCustomizationSignature(mainVariantId, selectedPatches, activeEmbLines);
+      const bundleId = 'bundle_' + mainVariantId + '_' + customSig;
+
+      // Cache preview image URL by signature so identical customizations share the same exact URL & properties
+      let previewImageUrl = null;
+      try {
+        const cacheKey = 'podifai_prev_' + mainVariantId + '_' + customSig;
+        const cachedUrl = sessionStorage.getItem(cacheKey);
+        if (cachedUrl && cachedUrl.startsWith('http')) {
+          previewImageUrl = cachedUrl;
+        } else {
+          previewImageUrl = await uploadPreviewToCloudinary(fullMergedSnapshot);
+          if (previewImageUrl && previewImageUrl.startsWith('http')) {
+            sessionStorage.setItem(cacheKey, previewImageUrl);
+          }
+        }
+      } catch (_) {
+        previewImageUrl = await uploadPreviewToCloudinary(fullMergedSnapshot);
+      }
+
+      const mainItemProperties = {
+        _bundle_id: bundleId,
+        _customization_signature: customSig,
+      };
 
       if (priceInfo.patchCount > 0 || priceInfo.activeEmbroideryCount > 0) {
         mainItemProperties['Customisation'] = `${priceInfo.patchCount || 0} Patches, ${
@@ -3675,9 +3748,8 @@
         } Embroidery`;
       }
 
-      const activeEmbLines = embroideryLines.filter((l) => l.text && l.text.trim() !== '');
       activeEmbLines.forEach((line, idx) => {
-        const embKey = activeEmbLines.length > 1 ? `Embroidery ${idx + 1}` : 'Embroidery';
+        const embKey = activeEmbLines.length > 1 ? `_Embroidery ${idx + 1}` : '_Embroidery';
         mainItemProperties[embKey] = `${line.text} (${line.font.split(',')[0].replace(/'/g, '')}, ${
           line.colorName || line.color
         })`;
@@ -3693,9 +3765,9 @@
       mainItemProperties['_Base Product Price'] = `${CURRENCY_SYMBOL}${(priceInfo.basePrice || 0).toFixed(2)}`;
 
       if (previewImageUrl) {
-        mainItemProperties['Preview'] = previewImageUrl;
+        mainItemProperties['_Preview'] = previewImageUrl;
       } else {
-        mainItemProperties['Preview'] = fullMergedSnapshot;
+        mainItemProperties['_Preview'] = fullMergedSnapshot;
       }
 
       if (selectedPatches.length > 0) {
@@ -3703,6 +3775,7 @@
       }
 
       mainItemProperties['_Customization Data'] = JSON.stringify({
+        signature: customSig,
         pricing: priceInfo,
         patches: selectedPatches.map((p, idx) => ({
           order: idx + 1,
@@ -3714,22 +3787,49 @@
           relY: p.relY,
           rotation: p.rotation || 0,
         })),
-        embroidery: embroideryLines
-          .filter((line) => line.text && line.text.trim() !== '')
-          .map((line, idx) => ({
-            line: idx + 1,
-            text: line.text,
-            font: line.font,
-            color: line.color,
-            colorName: line.colorName,
-            relX: line.relX,
-            relY: line.relY,
-            rotation: line.rotation || 0,
-          })),
+        embroidery: activeEmbLines.map((line, idx) => ({
+          line: idx + 1,
+          text: line.text,
+          font: line.font,
+          color: line.color,
+          colorName: line.colorName,
+          relX: line.relX,
+          relY: line.relY,
+          rotation: line.rotation || 0,
+        })),
       });
 
       mainItemProperties['_patches_per_bag'] = String(priceInfo.patchCount);
       mainItemProperties['_embroidery_per_bag'] = String(priceInfo.activeEmbroideryCount);
+
+      const resolvedProductTitle =
+        {{ product.title | json }} ||
+        document.querySelector('.product-title')?.innerText?.trim() ||
+        mainProductTitle ||
+        'Customized Bag';
+
+      // Check cart to see if there are other custom bags so we can disambiguate (e.g., Bag #2) if needed
+      let parentLabel = resolvedProductTitle;
+      try {
+        const cartCheckRes = await fetch('/cart.js', { headers: { Accept: 'application/json' } });
+        if (cartCheckRes.ok) {
+          const cartCheckData = await cartCheckRes.json();
+          const otherBags = (cartCheckData.items || []).filter((it) => {
+            const p = it.properties || {};
+            const isAddon =
+              p['_addon_type'] ||
+              p['_is_companion'] ||
+              (it.handle || '').includes('addon') ||
+              (it.handle || '').includes('add-on');
+            if (isAddon) return false;
+            // It's a custom bag with a different bundle ID
+            return p['_bundle_id'] && p['_bundle_id'] !== bundleId;
+          });
+          if (otherBags.length > 0) {
+            parentLabel = `${resolvedProductTitle} #${otherBags.length + 1}`;
+          }
+        }
+      } catch (_) {}
 
       const itemsPayload = [
         {
@@ -3744,11 +3844,12 @@
           id: parseInt(PATCH_ADDON_VARIANT),
           quantity: priceInfo.patchCount * qty,
           properties: {
+            _bundle_id: bundleId,
             _parent_item: mainProductTitle,
+            'Add-on For': parentLabel,
             _patches_per_bag: String(priceInfo.patchCount),
-            'Addon Type': `Patches Surcharge (${priceInfo.patchCount}x @ ${CURRENCY_SYMBOL}${PATCH_UNIT_PRICE.toFixed(
-              2
-            )})`,
+            _addon_type: 'Patch Add on',
+            _is_companion: 'true',
           },
         });
       }
@@ -3758,11 +3859,12 @@
           id: parseInt(EMBROIDERY_ADDON_VARIANT),
           quantity: priceInfo.activeEmbroideryCount * qty,
           properties: {
+            _bundle_id: bundleId,
             _parent_item: mainProductTitle,
+            'Add-on For': parentLabel,
             _embroidery_per_bag: String(priceInfo.activeEmbroideryCount),
-            'Addon Type': `Embroidery Surcharge (${
-              priceInfo.activeEmbroideryCount
-            }x @ ${CURRENCY_SYMBOL}${EMBROIDERY_UNIT_PRICE.toFixed(2)})`,
+            _addon_type: 'Embroidery Add on',
+            _is_companion: 'true',
           },
         });
       }
@@ -3820,6 +3922,36 @@
           if (typeof window.syncCartEngine === 'function') {
             window.syncCartEngine();
           }
+
+          // Asynchronously append design preview to Cart / Order Notes for store owner visibility
+          (async function syncOrderNote() {
+            try {
+              const curRes = await fetch('/cart.js', { headers: { 'x-cart-sync': '1' } });
+              const curCart = await curRes.json();
+              const existingNote = curCart.note || '';
+              const embSummary = activeEmbLines
+                .map((l) => `${l.text} (${l.font.split(',')[0].replace(/'/g, '')}, ${l.colorName || l.color})`)
+                .join('; ');
+              const patchSummary = selectedPatches
+                .map((p) => {
+                  const cat = p.category ? `${p.category}: ` : '';
+                  return `${cat}${p.letterChar || 'Patch'}`;
+                })
+                .join(', ');
+              const noteEntry = `[${mainProductTitle}] Patches: ${patchSummary || 'None'} | Embroidery: ${
+                embSummary || 'None'
+              } | Preview: ${previewImageUrl || ''}`;
+
+              if (!existingNote.includes(previewImageUrl || '---')) {
+                const updatedNote = existingNote ? `${existingNote}\n\n${noteEntry}` : noteEntry;
+                await fetch('/cart/update.js', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json', Accept: 'application/json', 'x-cart-sync': '1' },
+                  body: JSON.stringify({ note: updatedNote }),
+                });
+              }
+            } catch (e) {}
+          })();
 
           // Reset Add to Bag button back to active state after 1.8 seconds
           setTimeout(() => {

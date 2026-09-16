@@ -5,19 +5,17 @@
   @param {string} menu_type - The menu type: 'drawer' or 'mega_menu'.
 {%- enddoc -%}
 
---menu-top-level-font-family: var(--font-{{ settings.type_font_primary_link }}--family);
---menu-top-level-font-size-desktop: {{ settings.type_font_primary_size }}; --menu-top-level-font-style: var(--font-
-{{- settings.type_font_primary_link -}}
---style); --menu-top-level-font-weight: var(--font-
-{{- settings.type_font_primary_link -}}
---weight); --menu-top-level-font-case:
-{%- if settings.type_case_primary_link == 'uppercase' %}uppercase{% else %}none{% endif -%}
-;
+--menu-top-level-font-family: 'Red Hat Text', var(--font-{{ settings.type_font_primary_link }}--family, sans-serif);
+--menu-top-level-font-size-desktop: {{ settings.type_font_primary_size | default: '13px' }};
+--menu-top-level-font-style: normal;
+--menu-top-level-font-weight: 500;
+--menu-top-level-font-case: uppercase;
 {% if menu_type == 'drawer' %}
-  --menu-top-level-font-size: var(--menu-font-2xl--size); --menu-top-level-font-line-height:
-  var(--menu-font-2xl--line-height);
+  --menu-top-level-font-size: var(--menu-font-2xl--size);
+  --menu-top-level-font-line-height: var(--menu-font-2xl--line-height);
 {% else %}
-  --menu-top-level-font-size: var(--menu-font-sm--size); --menu-top-level-font-line-height:
-  var(--menu-font-sm--line-height);
+  --menu-top-level-font-size: 13px;
+  --menu-top-level-font-line-height: 1;
 {% endif %}
---menu-top-level-font-color: var(--color-foreground); --menu-top-level-font-color-rgb: var(--color-foreground-rgb);
+--menu-top-level-font-color: var(--color-foreground);
+--menu-top-level-font-color-rgb: var(--color-foreground-rgb);

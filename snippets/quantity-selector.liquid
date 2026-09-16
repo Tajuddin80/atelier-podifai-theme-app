@@ -9,6 +9,8 @@
   @param {string} [class] - custom class for the quantity selector, optional
   @param {boolean} [can_update_quantity] - whether the quantity can be updated, defaults to true
   @param {number} [min] - override the minimum quantity (e.g., 0 for quick order list)
+  @param {string} [line_item_key] - the unique key of the cart line item
+  @param {string} [line_bundle_id] - the bundle ID of the custom line item
   @param {block} [block] - The block object, used for Shopify editor attributes.
 {%- enddoc -%}
 
@@ -37,6 +39,13 @@
   <{{ component_name }}
     class="quantity-selector{% if class %} {{ class }}{% endif %}"
     data-variant-id="{{ variant.id }}"
+    {% if line_item_key %}
+      data-line-key="{{ line_item_key }}"
+      data-key="{{ line_item_key }}"
+    {% endif %}
+    {% if line_bundle_id %}
+      data-bundle-id="{{ line_bundle_id }}"
+    {% endif %}
     {% if line_index == null %}
       {{- block.shopify_attributes -}}
       ref="quantitySelector"
@@ -63,7 +72,14 @@
       type="number"
       name="{% if line_index %}updates[]{% else %}quantity{% endif %}"
       value="{{ in_cart_quantity | default: variant.quantity_rule.min | default: 1 }}"
-      data-cart-quantity="{{ cart | item_count_for_variant: variant.id }}"
+      data-cart-quantity="{% if line_index %}{{ in_cart_quantity | default: 1 }}{% else %}{{ cart | item_count_for_variant: variant.id }}{% endif %}"
+      {% if line_item_key %}
+        data-line-key="{{ line_item_key }}"
+        data-key="{{ line_item_key }}"
+      {% endif %}
+      {% if line_bundle_id %}
+        data-bundle-id="{{ line_bundle_id }}"
+      {% endif %}
       min="{{ min_quantity }}"
       data-min="{{ variant.quantity_rule.min | default: 1 }}"
       on:blur="/setQuantity"

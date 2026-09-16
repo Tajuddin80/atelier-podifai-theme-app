@@ -36,6 +36,10 @@
 
   # Logic to determine which variant URL to use (matching swatch selection logic)
   assign variant_to_link = product.selected_or_first_available_variant
+  assign card_link_href = variant_to_link.url
+  if product.template_suffix == 'joy-bag' or product.template_suffix == 'custom-product' or product.handle contains 'joy-bag'
+    assign card_link_href = product.url
+  endif
 
   if settings.transition_to_main_product
     assign featured_image = variant_to_link.featured_image
@@ -72,7 +76,7 @@
   <a
     id="{{ product_card_id | md5 }}"
     {% unless onboarding %}
-      href="{{ variant_to_link.url }}"
+      href="{{ card_link_href }}"
     {% endunless %}
     class="product-card__link"
     ref="productCardLink"
