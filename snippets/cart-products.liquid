@@ -20,7 +20,7 @@
     assign item_title_lower = item.product.title | downcase
     assign item_handle = item.product.handle | downcase
     assign addon_type = item.properties['Add on Type'] | default: item.properties['Addon Type'] | default: item.properties._addon_type | default: item.properties._Add_on_Type
-    assign parent_item = item.properties._parent_item | default: item.properties.parent_item | default: item.properties['Add-on For']
+    assign parent_item = item.properties._parent_item | default: item.properties.parent_item | default: item.properties['Add-on For'] | default: item.properties['Add-on for']
 
     assign is_customized_item = false
     if item.properties.Preview != blank or item.properties._Preview != blank or item.properties.Customisation != blank or item.properties.Customization != blank
@@ -29,7 +29,7 @@
 
     assign is_addon_companion = false
     if is_customized_item == false
-      if item_title_lower contains 'addon' or item_title_lower contains 'add on' or item_title_lower contains 'surcharge' or item_handle contains 'addon' or item_handle contains 'add-on' or addon_type != blank or parent_item != blank or item.properties._is_companion != blank or item.properties['Add-on For'] != blank
+      if item_title_lower contains 'addon' or item_title_lower contains 'add on' or item_title_lower contains 'surcharge' or item_handle contains 'addon' or item_handle contains 'add-on' or addon_type != blank or parent_item != blank or item.properties._is_companion != blank or item.properties['Add-on For'] != blank or item.properties['Add-on for'] != blank
         assign is_addon_companion = true
       endif
     endif
@@ -165,7 +165,7 @@
               {% assign row_item_title_lower = item.product.title | downcase %}
               {% assign row_item_handle = item.product.handle | downcase %}
               {% assign row_addon_type = item.properties['Add on Type'] | default: item.properties['Addon Type'] | default: item.properties._addon_type | default: item.properties._Add_on_Type %}
-              {% assign row_parent_item = item.properties._parent_item | default: item.properties.parent_item | default: item.properties['Add-on For'] %}
+              {% assign row_parent_item = item.properties._parent_item | default: item.properties.parent_item | default: item.properties['Add-on For'] | default: item.properties['Add-on for'] %}
 
               {% if is_row_customized == false %}
                 {% if row_item_title_lower contains 'addon'
@@ -177,6 +177,7 @@
                   or row_parent_item != blank
                   or item.properties._is_companion != blank
                   or item.properties['Add-on For'] != blank
+                  or item.properties['Add-on for'] != blank
                 %}
                   {% continue %}
                 {% endif %}

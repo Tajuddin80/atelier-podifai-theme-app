@@ -23,6 +23,88 @@
     --podifai-card-bg: #FAF8F5;
   }
 
+  /* Critical Anti-FOUC & Fast Layout Rules for Customizer */
+  .podifai-accordion__content {
+    display: none;
+  }
+  .podifai-accordion.active .podifai-accordion__content {
+    display: block !important;
+  }
+  .podifai-patch-item.hidden,
+  .podifai-letter-item.hidden {
+    display: none !important;
+  }
+  .podifai-patch-img,
+  .podifai-letter-img {
+    max-width: 70% !important;
+    max-height: 70% !important;
+    width: auto !important;
+    height: auto !important;
+    object-fit: contain !important;
+    display: block !important;
+  }
+  .podifai-patch-grid,
+  .podifai-alphabet-grid {
+    display: grid !important;
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+    gap: 10px !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+  }
+  @media (max-width: 768px) {
+    .podifai-patch-grid,
+    .podifai-alphabet-grid {
+      grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+      gap: 8px !important;
+    }
+  }
+  @media (max-width: 420px) {
+    .podifai-patch-grid,
+    .podifai-alphabet-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+      gap: 8px !important;
+    }
+  }
+  .podifai-patch-item,
+  .podifai-letter-item {
+    position: relative !important;
+    width: 100% !important;
+    aspect-ratio: 1 !important;
+    border: 1.5px solid #eae6e1 !important;
+    border-radius: 10px !important;
+    background: #ffffff !important;
+    box-sizing: border-box !important;
+    overflow: hidden !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    padding: 6px 4px 4px !important;
+  }
+  .podifai-pill-filters {
+    display: flex !important;
+    gap: 8px !important;
+    flex-wrap: wrap !important;
+    margin-bottom: 12px !important;
+  }
+  .podifai-pill-btn {
+    white-space: nowrap !important;
+    padding: 6px 14px !important;
+    border-radius: 20px !important;
+    border: 1px solid #ddd7cf !important;
+    background: #ffffff !important;
+    color: #444444 !important;
+    font-size: 0.82rem !important;
+    font-weight: 500 !important;
+    cursor: pointer !important;
+    transition: all 0.2s ease !important;
+  }
+  .podifai-pill-btn.active {
+    background: var(--podifai-primary-btn-bg, #a97b2f) !important;
+    color: #ffffff !important;
+    border-color: var(--podifai-primary-btn-bg, #a97b2f) !important;
+  }
+
   .product-page-container {
     display: grid;
     grid-template-columns: 1.3fr 1fr;

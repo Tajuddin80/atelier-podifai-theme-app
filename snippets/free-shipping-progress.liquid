@@ -1,5 +1,5 @@
 {%- liquid
-  assign threshold = 10000
+  assign threshold = 20000
   assign current_value = cart.total_price
   assign percentage = current_value | times: 100.0 | divided_by: threshold
   if percentage > 100

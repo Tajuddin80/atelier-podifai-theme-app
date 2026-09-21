@@ -243,7 +243,7 @@
               "name": "t:names.text",
               "disabled": true,
               "settings": {
-                "text": "<h5><strong>Anything above RM100 delivery is free !</strong></h5>",
+                "text": "<h5><strong>Anything above RM200 delivery is free !</strong></h5>",
                 "width": "fit-content",
                 "max_width": "normal",
                 "alignment": "left",

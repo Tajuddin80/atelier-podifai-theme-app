@@ -19,7 +19,7 @@
           "settings": {
             "custom_svg": "",
             "icon_size": "medium",
-            "text": "Free shipping above RM100",
+            "text": "Free shipping above RM200",
             "text_size": 18,
             "text_link": ""
           }
@@ -48,7 +48,7 @@
           "type": "_announcement",
           "name": "t:names.announcement",
           "settings": {
-            "text": "Free shipping above RM100",
+            "text": "Free shipping above RM200",
             "link": "",
             "font": "var(--font-subheading--family)",
             "font_size": "0.75rem",
