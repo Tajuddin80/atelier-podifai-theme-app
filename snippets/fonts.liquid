@@ -40,3 +40,22 @@
   >
 {%- endunless -%}
 {% # theme-check-enable %}
+
+{{ 'apple-chancery.ttf' | asset_url | preload_tag: as: 'font', type: 'font/ttf', crossorigin: 'anonymous' }}
+
+<style>
+  @font-face {
+    font-family: 'Apple Chancery';
+    src: url('{{ "apple-chancery.ttf" | asset_url }}') format('truetype');
+    font-weight: normal;
+    font-style: normal;
+    font-display: swap;
+  }
+  @font-face {
+    font-family: 'Apple Chancery';
+    src: url('{{ "apple-chancery.ttf" | asset_url }}') format('truetype');
+    font-weight: normal;
+    font-style: italic;
+    font-display: swap;
+  }
+</style>

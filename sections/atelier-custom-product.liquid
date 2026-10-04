@@ -553,6 +553,21 @@
     line-height: 1.6;
   }
 
+  .product-accordion-body p {
+    margin: 0 0 10px 0;
+    line-height: 1.6;
+  }
+
+  .product-accordion-body p:last-child {
+    margin-bottom: 0;
+  }
+
+  .product-accordion-body ul,
+  .product-accordion-body ol {
+    margin: 0 0 10px 0;
+    padding-left: 20px;
+  }
+
   /* Size Guide Modal Popup */
   .size-guide-modal {
     position: fixed;
@@ -750,9 +765,15 @@
       </div>
 
       <!-- Preview Disclaimer -->
-      <div class="podifai-preview-disclaimer">
-        💛 The preview is a guide — colours and placement are approximate. Every piece is made by hand, so your final piece may vary a touch.
-      </div>
+      {% assign disclaimer_text = section.settings.preview_disclaimer_text %}
+      {% if disclaimer_text == nil and section.settings.preview_disclaimer_text == blank %}
+        {% assign disclaimer_text = '💛 The preview is a guide — colours and placement are approximate. Every piece is made by hand, so your final piece may vary a touch.' %}
+      {% endif %}
+      {% if disclaimer_text != blank %}
+        <div class="podifai-preview-disclaimer">
+          {{ disclaimer_text }}
+        </div>
+      {% endif %}
     </div>
   </div>
 
@@ -1149,46 +1170,85 @@
       {% endform %}
     </product-form-component>
 
-    <!-- Collapsible Accordions: Description, Care, Design -->
-    <div class="product-accordions">
-      <details class="product-accordion-item" open>
-        <summary class="product-accordion-summary">
-          <span>DESCRIPTION</span>
-          <span class="accordion-chevron">⌵</span>
-        </summary>
-        <div class="product-accordion-body">
-          <p>
-            {{
-              product.description
-              | default: 'Our signature Joy Bag designed for daily versatility. Personalize with character patches, alphabet letters, and custom embroidery.'
-            }}
-          </p>
-        </div>
-      </details>
+    <!-- Collapsible Accordions: Description, Care, Design (Configurable via Blocks) -->
+    {% assign accordion_blocks = section.blocks | where: 'type', 'accordion_tab' %}
+    {% if accordion_blocks.size > 0 %}
+      <div class="product-accordions">
+        {% for a_block in accordion_blocks %}
+          <details class="product-accordion-item" {% if a_block.settings.default_open %}open{% endif %} {{ a_block.shopify_attributes }}>
+            <summary class="product-accordion-summary">
+              <span>{{ a_block.settings.heading | default: 'DETAILS' }}</span>
+              <span class="accordion-chevron">⌵</span>
+            </summary>
+            <div class="product-accordion-body">
+              {% if a_block.settings.use_product_description %}
+                <div class="product-accordion-richtext">
+                  {{
+                    product.description
+                    | default: 'Our signature Joy Bag designed for daily versatility. Personalize with character patches, alphabet letters, and custom embroidery.'
+                  }}
+                </div>
+              {% elsif a_block.settings.page != blank %}
+                <div class="product-accordion-richtext">
+                  {{ a_block.settings.page.content }}
+                </div>
+              {% elsif a_block.settings.content != blank %}
+                <div class="product-accordion-richtext">
+                  {{ a_block.settings.content }}
+                </div>
+              {% elsif a_block.settings.heading == 'DESCRIPTION' or a_block.settings.heading == 'Description' %}
+                <div class="product-accordion-richtext">
+                  {{
+                    product.description
+                    | default: 'Our signature Joy Bag designed for daily versatility. Personalize with character patches, alphabet letters, and custom embroidery.'
+                  }}
+                </div>
+              {% endif %}
+            </div>
+          </details>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="product-accordions">
+        <details class="product-accordion-item" open>
+          <summary class="product-accordion-summary">
+            <span>DESCRIPTION</span>
+            <span class="accordion-chevron">⌵</span>
+          </summary>
+          <div class="product-accordion-body">
+            <p>
+              {{
+                product.description
+                | default: 'Our signature Joy Bag designed for daily versatility. Personalize with character patches, alphabet letters, and custom embroidery.'
+              }}
+            </p>
+          </div>
+        </details>
 
-      <details class="product-accordion-item">
-        <summary class="product-accordion-summary">
-          <span>CARE</span>
-          <span class="accordion-chevron">⌵</span>
-        </summary>
-        <div class="product-accordion-body">
-          <p>Spot clean with a damp cloth. Do not machine wash or dry clean. Keep custom patches dry.</p>
-        </div>
-      </details>
+        <details class="product-accordion-item">
+          <summary class="product-accordion-summary">
+            <span>CARE</span>
+            <span class="accordion-chevron">⌵</span>
+          </summary>
+          <div class="product-accordion-body">
+            <p>Spot clean with a damp cloth. Do not machine wash or dry clean. Keep custom patches dry.</p>
+          </div>
+        </details>
 
-      <details class="product-accordion-item">
-        <summary class="product-accordion-summary">
-          <span>DESIGN</span>
-          <summary class="accordion-chevron">⌵</summary>
-        </summary>
-        <div class="product-accordion-body">
-          <p>
-            Made from durable premium nylon fabric with reinforced stitching, water-resistant lining, and custom metal
-            hardware.
-          </p>
-        </div>
-      </details>
-    </div>
+        <details class="product-accordion-item">
+          <summary class="product-accordion-summary">
+            <span>DESIGN</span>
+            <span class="accordion-chevron">⌵</span>
+          </summary>
+          <div class="product-accordion-body">
+            <p>
+              Made from durable premium nylon fabric with reinforced stitching, water-resistant lining, and custom metal
+              hardware.
+            </p>
+          </div>
+        </details>
+      </div>
+    {% endif %}
   </div>
 </div>
 
@@ -1825,6 +1885,51 @@
       "label": "Enable Visual Size Difference for Alphabet Patches",
       "default": true,
       "info": "When enabled, alphabet letter sizes (e.g. 2cm, 3.5cm, 5cm) render with visual size differences on canvas. If disabled, all alphabet letters render at uniform size."
+    },
+    {
+      "type": "header",
+      "content": "Product Information Notices & Disclaimers"
+    },
+    {
+      "type": "text",
+      "id": "preview_disclaimer_text",
+      "label": "Preview Disclaimer Text (Under Image)",
+      "default": "💛 The preview is a guide — colours and placement are approximate. Every piece is made by hand, so your final piece may vary a touch.",
+      "info": "Text displayed below the live customizer preview."
+    },
+    {
+      "type": "text",
+      "id": "notice_1_icon",
+      "label": "Notice 1 Icon / Emoji",
+      "default": "🧵"
+    },
+    {
+      "type": "inline_richtext",
+      "id": "notice_1_text",
+      "label": "Notice 1 Text",
+      "default": "**Made to order** — ready to ship in 5–7 working days."
+    },
+    {
+      "type": "text",
+      "id": "notice_2_icon",
+      "label": "Notice 2 Icon / Emoji",
+      "default": "💛"
+    },
+    {
+      "type": "inline_richtext",
+      "id": "notice_2_text",
+      "label": "Notice 2 Text",
+      "default": "Because it's personalised just for you, custom pieces can't be returned or exchanged."
+    },
+    {
+      "type": "text",
+      "id": "notice_3_icon",
+      "label": "Notice 3 Icon / Emoji (Optional)"
+    },
+    {
+      "type": "inline_richtext",
+      "id": "notice_3_text",
+      "label": "Notice 3 Text (Optional)"
     }
   ],
   "blocks": [
@@ -1921,6 +2026,30 @@
           "id": "text_input_label_text",
           "label": "Text Field Label",
           "default": "Enter Text (Up to 10 characters):"
+        },
+        {
+          "type": "header",
+          "content": "Microcopy Notices (Block Override)"
+        },
+        {
+          "type": "text",
+          "id": "notice_1_icon",
+          "label": "Notice 1 Icon / Emoji"
+        },
+        {
+          "type": "inline_richtext",
+          "id": "notice_1_text",
+          "label": "Notice 1 Text"
+        },
+        {
+          "type": "text",
+          "id": "notice_2_icon",
+          "label": "Notice 2 Icon / Emoji"
+        },
+        {
+          "type": "inline_richtext",
+          "id": "notice_2_text",
+          "label": "Notice 2 Text"
         }
       ]
     },
@@ -2267,6 +2396,43 @@
           "default": "#FFFFFF"
         }
       ]
+    },
+    {
+      "type": "accordion_tab",
+      "name": "Accordion Tab / Details",
+      "settings": [
+        {
+          "type": "text",
+          "id": "heading",
+          "label": "Heading / Title",
+          "default": "DESCRIPTION"
+        },
+        {
+          "type": "checkbox",
+          "id": "use_product_description",
+          "label": "Use Product Description",
+          "default": false,
+          "info": "When enabled, loads the product's default Shopify description."
+        },
+        {
+          "type": "richtext",
+          "id": "content",
+          "label": "Custom Content",
+          "default": "<p>Thoughtfully designed for daily use, the Everyday Joy Bag keeps your essentials in one place — without compromising on style.</p><p>Soft to the touch and easy to carry, it fits seamlessly into your routine, whether you're heading out for the day or keeping things organised at home.</p><p>Make it personal with custom embroidery and patches, and create something that feels uniquely yours.</p>"
+        },
+        {
+          "type": "page",
+          "id": "page",
+          "label": "Content from Page (Optional)",
+          "info": "Select an existing Shopify page to display its content here."
+        },
+        {
+          "type": "checkbox",
+          "id": "default_open",
+          "label": "Open by Default",
+          "default": false
+        }
+      ]
     }
   ],
   "presets": [
@@ -2275,6 +2441,30 @@
       "blocks": [
         {
           "type": "atelier-customizer"
+        },
+        {
+          "type": "accordion_tab",
+          "settings": {
+            "heading": "DESCRIPTION",
+            "use_product_description": true,
+            "default_open": true
+          }
+        },
+        {
+          "type": "accordion_tab",
+          "settings": {
+            "heading": "CARE",
+            "content": "<p>Spot clean with a damp cloth. Do not machine wash or dry clean. Keep custom patches dry.</p>",
+            "default_open": false
+          }
+        },
+        {
+          "type": "accordion_tab",
+          "settings": {
+            "heading": "DESIGN",
+            "content": "<p>Made from durable premium nylon fabric with reinforced stitching, water-resistant lining, and custom metal hardware.</p>",
+            "default_open": false
+          }
         },
         {
           "type": "character_category",

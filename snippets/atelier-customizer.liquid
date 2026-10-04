@@ -1,4 +1,4 @@
- {% comment %}
+{% comment %}
   Podifai / Atelier Product Customizer Snippet
   Supports:
   1. Step 3 (Add Patches) & Step 4 (Add Embroidery) Card Architecture.
@@ -104,7 +104,16 @@
   <div id="podifai-canvas-wrapper" class="podifai-canvas-wrapper">
     <div id="podifai-konva-container" class="podifai-konva-container"></div>
     <div id="podifai-overlap-error-toast" class="podifai-overlap-error-toast" style="display: none;">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+      <svg
+        width="18"
+        height="18"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2.2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      >
         <circle cx="12" cy="12" r="10"></circle>
         <line x1="12" y1="8" x2="12" y2="12"></line>
         <line x1="12" y1="16" x2="12.01" y2="16"></line>
@@ -264,7 +273,9 @@
                     <button
                       type="button"
                       class="podifai-patch-item{% unless is_first_char_cat %} hidden{% endunless %}"
-                      {% unless is_first_char_cat %}style="display: none;"{% endunless %}
+                      {% unless is_first_char_cat %}
+                        style="display: none;"
+                      {% endunless %}
                       data-char-category="{{ cat_id }}"
                       data-size="{{ cb.settings.size | default: '8cm x 8cm' | escape }}"
                       data-patch-id="char-mf-{{ cb.id }}-{{ forloop.index }}"
@@ -299,7 +310,9 @@
                       <button
                         type="button"
                         class="podifai-patch-item{% unless is_first_char_cat %} hidden{% endunless %}"
-                        {% unless is_first_char_cat %}style="display: none;"{% endunless %}
+                        {% unless is_first_char_cat %}
+                          style="display: none;"
+                        {% endunless %}
                         data-char-category="{{ cat_id }}"
                         data-size="{{ cb.settings.size | default: '8cm x 8cm' | escape }}"
                         data-patch-id="char-{{ cb.id }}-{{ i }}"
@@ -976,7 +989,9 @@
                     <button
                       type="button"
                       class="podifai-letter-item{% unless is_first_alpha_cat %} hidden{% endunless %}"
-                      {% unless is_first_alpha_cat %}style="display: none;"{% endunless %}
+                      {% unless is_first_alpha_cat %}
+                        style="display: none;"
+                      {% endunless %}
                       data-letter-category="{{ cat_id }}"
                       data-letter-cat-label="{{ ablock.settings.title | escape }}"
                       data-size="{{ ablock.settings.size | default: '8cm x 8cm' | escape }}"
@@ -1008,7 +1023,9 @@
                     <button
                       type="button"
                       class="podifai-letter-item{% unless is_first_alpha_cat %} hidden{% endunless %}"
-                      {% unless is_first_alpha_cat %}style="display: none;"{% endunless %}
+                      {% unless is_first_alpha_cat %}
+                        style="display: none;"
+                      {% endunless %}
                       data-letter-category="{{ cat_id }}"
                       data-letter-cat-label="{{ ablock.settings.title | escape }}"
                       data-size="{{ ablock.settings.size | default: '8cm x 8cm' | escape }}"
@@ -1084,7 +1101,10 @@
           </span>
         </div>
       </div>
-      <p class="podifai-embroidery-subtitle">Colour, font size and placement may vary slightly. These small differences are inherent to personalisation, not a defect.​</p>
+      <p class="podifai-embroidery-subtitle">
+        Colour, font size and placement may vary slightly. These small differences are inherent to personalisation, not
+        a defect.​
+      </p>
 
       <div class="podifai-embroidery">
         <!-- Dynamic Multi-Text Embroidery Lines Container -->
@@ -1136,15 +1156,74 @@
     </div>
 
     <!-- Microcopy Notes -->
+    {% assign n1_icon = block.settings.notice_1_icon
+      | default: section_settings.notice_1_icon
+      | default: section.settings.notice_1_icon
+      | default: '🧵'
+    %}
+    {% assign n1_text = block.settings.notice_1_text
+      | default: section_settings.notice_1_text
+      | default: section.settings.notice_1_text
+    %}
+    {% if n1_text == blank
+      and block.settings.notice_1_text == null
+      and section_settings.notice_1_text == null
+      and section.settings.notice_1_text == null
+    %}
+      {% assign n1_text = '<strong>Made to order</strong> — ready to ship in 5–7 working days.' %}
+    {% endif %}
+
+    {% assign n2_icon = block.settings.notice_2_icon
+      | default: section_settings.notice_2_icon
+      | default: section.settings.notice_2_icon
+      | default: '💛'
+    %}
+    {% assign n2_text = block.settings.notice_2_text
+      | default: section_settings.notice_2_text
+      | default: section.settings.notice_2_text
+    %}
+    {% if n2_text == blank
+      and block.settings.notice_2_text == null
+      and section_settings.notice_2_text == null
+      and section.settings.notice_2_text == null
+    %}
+      {% assign n2_text = "Because it's personalised just for you, custom pieces can't be returned or exchanged." %}
+    {% endif %}
+
+    {% assign n3_icon = block.settings.notice_3_icon
+      | default: section_settings.notice_3_icon
+      | default: section.settings.notice_3_icon
+    %}
+    {% assign n3_text = block.settings.notice_3_text
+      | default: section_settings.notice_3_text
+      | default: section.settings.notice_3_text
+    %}
+
     <div class="podifai-microcopy-list">
-      <div class="podifai-microcopy-item">
-        <span class="podifai-microcopy-icon">🧵</span>
-        <span><strong>Made to order</strong> — ready to ship in 5–7 working days.</span>
-      </div>
-      <div class="podifai-microcopy-item">
-        <span class="podifai-microcopy-icon">💛</span>
-        <span>Because it's personalised just for you, custom pieces can't be returned or exchanged.</span>
-      </div>
+      {% if n1_text != blank %}
+        <div class="podifai-microcopy-item">
+          {% if n1_icon != blank -%}
+            <span class="podifai-microcopy-icon">{{ n1_icon }}</span>
+          {%- endif %}
+          <span>{{ n1_text }}</span>
+        </div>
+      {% endif %}
+      {% if n2_text != blank %}
+        <div class="podifai-microcopy-item">
+          {% if n2_icon != blank -%}
+            <span class="podifai-microcopy-icon">{{ n2_icon }}</span>
+          {%- endif %}
+          <span>{{ n2_text }}</span>
+        </div>
+      {% endif %}
+      {% if n3_text != blank %}
+        <div class="podifai-microcopy-item">
+          {% if n3_icon != blank -%}
+            <span class="podifai-microcopy-icon">{{ n3_icon }}</span>
+          {%- endif %}
+          <span>{{ n3_text }}</span>
+        </div>
+      {% endif %}
     </div>
   </div>
 </div>
@@ -1861,8 +1940,11 @@
         if (!existingDisclaimer && mediaContainerEl.parentNode) {
           const disc = document.createElement('div');
           disc.className = 'podifai-preview-disclaimer';
-          disc.innerHTML =
-            '💛 The preview is a guide — colours and placement are approximate. Every piece is made by hand, so your final piece may vary a touch.';
+          {% assign js_disc_text = block.settings.preview_disclaimer_text | default: section_settings.preview_disclaimer_text | default: section.settings.preview_disclaimer_text %}
+          {% if js_disc_text == blank and block.settings.preview_disclaimer_text == nil and section_settings.preview_disclaimer_text == nil and section.settings.preview_disclaimer_text == nil %}
+            {% assign js_disc_text = '💛 The preview is a guide — colours and placement are approximate. Every piece is made by hand, so your final piece may vary a touch.' %}
+          {% endif %}
+          disc.innerHTML = {{ js_disc_text | json }};
           if (mediaContainerEl.nextSibling) {
             mediaContainerEl.parentNode.insertBefore(disc, mediaContainerEl.nextSibling);
           } else {
@@ -2658,6 +2740,11 @@
       lineObj.relY = defaultCenterY / currentH;
       lineObj.baseFontSize = baseFontSize;
 
+      const isItalic =
+        lineObj.font.includes('Chancery') ||
+        lineObj.font.includes('Picturama') ||
+        lineObj.font.includes('Brush Script');
+
       if (!lineObj.node) {
         const node = new Konva.Text({
           x: targetX,
@@ -2665,6 +2752,7 @@
           text: lineObj.text,
           fontSize: baseFontSize * scaleFactor,
           fontFamily: lineObj.font,
+          fontStyle: isItalic ? 'italic' : 'normal',
           fill: lineObj.color,
           align: 'center',
           draggable: false,
@@ -2695,6 +2783,7 @@
       } else {
         lineObj.node.text(lineObj.text);
         lineObj.node.fontFamily(lineObj.font);
+        lineObj.node.fontStyle(isItalic ? 'italic' : 'normal');
         lineObj.node.fill(lineObj.color);
         lineObj.node.fontSize(baseFontSize * scaleFactor);
 
@@ -3090,7 +3179,7 @@
 
       activeEmbLines.forEach((line, idx) => {
         const embKey = activeEmbLines.length > 1 ? `_Embroidery ${idx + 1}` : '_Embroidery';
-        mainItemProperties[embKey] = `${line.text} (${line.font.split(',')[0].replace(/'/g, '')}, ${
+        mainItemProperties[embKey] = `${line.text} (${getFontDisplayName(line.font)}, ${
           line.colorName || line.color
         })`;
       });
@@ -3405,5 +3494,18 @@
       updateActiveHeaderLabels();
       updateDynamicPrice();
     }
+
+    if (document.fonts && typeof document.fonts.ready !== 'undefined') {
+      document.fonts.ready.then(() => {
+        if (stage && layer) {
+          embroideryLines.forEach((line, index) => {
+            if (line.node && line.text) {
+              updateEmbroideryLineNode(line, index);
+            }
+          });
+          layer.batchDraw();
+        }
+      });
+    }
   })();
-</script> 
+</script>
