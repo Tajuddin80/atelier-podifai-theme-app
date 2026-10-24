@@ -1,0 +1,2816 @@
+<!-- Load Konva.js -->
+<script src="{{ 'konva.min.js' | asset_url }}" defer></script>
+
+{{ 'atelier-customizer.css' | asset_url | stylesheet_tag }}
+
+<script>
+  (function () {
+    const BASE_STAGE_REF = 600;
+    const configEl = document.getElementById('podifai-customizer-config');
+    const CURRENCY_SYMBOL = configEl ? configEl.dataset.currencySymbol || 'RM' : 'RM';
+    const PATCH_UNIT_PRICE = configEl ? parseFloat(configEl.dataset.patchPrice) || 6.0 : 6.0;
+    const EMBROIDERY_UNIT_PRICE = configEl ? parseFloat(configEl.dataset.embroideryPrice) || 20.0 : 20.0;
+    const PATCH_ADDON_VARIANT = configEl ? configEl.dataset.patchAddonVariant || '' : '';
+    const EMBROIDERY_ADDON_VARIANT = configEl ? configEl.dataset.embroideryAddonVariant || '' : '';
+    const ENABLE_ADDON = configEl ? configEl.dataset.enableAddon !== 'false' : true;
+    const IMGBB_API_KEY = configEl ? (configEl.dataset.imgbbApiKey || '').trim() : '';
+    const CLOUD_NAME = configEl ? configEl.dataset.cloudName || '' : '';
+    const UPLOAD_PRESET = configEl ? configEl.dataset.uploadPreset || '' : '';
+    const TEXT_INPUT_LABEL = '{{ custom_settings.text_input_label_text | default: "Your text" | escape }}';
+
+    // Parse Patch Addon Variants & Inventory
+    let patchVariantsList = [];
+    const patchVariantsEl = document.getElementById('podifai-patch-addon-variants');
+    if (patchVariantsEl) {
+      try {
+        patchVariantsList = JSON.parse(patchVariantsEl.textContent) || [];
+      } catch (_) {}
+    }
+
+    // Auto-discover any newly added or renamed patch products from the store collection asynchronously
+    try {
+      const collHandle = (configEl && configEl.dataset.patchAddonsCollection) || 'patch-addons';
+      fetch(`/collections/${collHandle}/products.json?limit=250`)
+        .then((res) => (res.ok ? res.json() : null))
+        .then((data) => {
+          if (data && Array.isArray(data.products)) {
+            let updated = false;
+            data.products.forEach((prod) => {
+              (prod.variants || []).forEach((v) => {
+                if (!patchVariantsList.some((existing) => String(existing.id) === String(v.id))) {
+                  patchVariantsList.push({
+                    id: v.id,
+                    title: v.title,
+                    product_title: prod.title,
+                    product_handle: prod.handle,
+                    option1: v.option1 || null,
+                    option2: v.option2 || null,
+                    option3: v.option3 || null,
+                    sku: v.sku || '',
+                    image: (v.featured_image && v.featured_image.src) || (prod.images && prod.images[0] && prod.images[0].src) || '',
+                    available: v.available !== false,
+                    inventory_quantity: v.inventory_quantity || 0,
+                    inventory_policy: v.inventory_policy || 'deny',
+                    inventory_management: v.inventory_management || null,
+                  });
+                  updated = true;
+                }
+              });
+            });
+            if (updated && typeof updateUIBadges === 'function') {
+              updateUIBadges();
+            }
+          }
+        })
+        .catch(() => {});
+    } catch (_) {}
+
+    // Floating Stock Notice Toast
+    let stockToastTimer = null;
+    function showStockToast(message) {
+      let toast = document.getElementById('podifai-stock-toast');
+      if (!toast) {
+        toast = document.createElement('div');
+        toast.id = 'podifai-stock-toast';
+        toast.className = 'podifai-stock-toast';
+        const canvasWrapper = document.getElementById('podifai-canvas-wrapper');
+        if (canvasWrapper) {
+          canvasWrapper.appendChild(toast);
+        } else {
+          document.body.appendChild(toast);
+        }
+      }
+      toast.innerText = message;
+      toast.style.display = 'flex';
+      clearTimeout(stockToastTimer);
+      stockToastTimer = setTimeout(() => {
+        toast.style.display = 'none';
+      }, 2800);
+    }
+
+    // Resolves Shopify Variant matching for a selected patch or letter
+    function getVariantForPatch(patchInfo) {
+      if (!patchVariantsList || patchVariantsList.length === 0) return null;
+
+      const norm = (s) => (s || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+
+      // 1. Character Patches (e.g. "Sushi · P2", "Sushi #2", "Blossom", filename, SKU)
+      if (patchInfo.type === 'character') {
+        const raw = patchInfo.name || patchInfo.letterChar || 'Patch';
+        let patchLabel = '';
+        const m = raw.match(/^(.*?)\s*#(\d+)$/);
+        if (m) {
+          patchLabel = `${m[1].replace(/^[^\w\s]+/, '').trim()} · P${m[2]}`;
+        } else {
+          patchLabel = raw.replace(',', ' ·');
+        }
+
+        const targetNormLabel = norm(patchLabel);
+        const targetNormName = norm(raw);
+        const targetRefId = norm(patchInfo.patchRefId || patchInfo.patchId);
+        const targetAlt = norm(patchInfo.alt);
+        const targetFilename = norm((patchInfo.filename || '').replace(/\.[^/.]+$/, ''));
+        const cat = (patchInfo.categoryLabel || patchInfo.category || '').toLowerCase().trim();
+        const catNorm = norm(cat);
+        const patchIdx = patchInfo.index ? String(patchInfo.index) : '';
+
+        // Priority 1: Exact Title, Alt, or RefId match
+        let found = patchVariantsList.find((v) => {
+          const vt = (v.title || '').toLowerCase().trim();
+          const vtNorm = norm(vt);
+          if (!vtNorm) return false;
+          if (vtNorm === targetNormLabel || vtNorm === targetNormName) return true;
+          if (targetAlt && vtNorm === targetAlt) return true;
+          if (targetRefId && vtNorm === targetRefId) return true;
+          return false;
+        });
+        if (found) return found;
+
+        // Priority 2: Category + Index match (e.g. "Category 1 · P2", "Cutie Faces · P2", or "P2" in matching product)
+        if (patchIdx) {
+          const expectedIndexTitle = norm(`P${patchIdx}`);
+          found = patchVariantsList.find((v) => {
+            const vt = (v.title || '').toLowerCase().trim();
+            const vtNorm = norm(vt);
+            const pTitle = norm(v.product_title || '');
+            const pHandle = norm(v.product_handle || '');
+
+            if (vtNorm === expectedIndexTitle || vtNorm === patchIdx) {
+              if (!catNorm || pTitle.includes(catNorm) || pHandle.includes(catNorm)) {
+                return true;
+              }
+            }
+            if (
+              vtNorm.endsWith(expectedIndexTitle) &&
+              (!catNorm || pTitle.includes(catNorm) || vtNorm.includes(catNorm))
+            ) {
+              return true;
+            }
+            return false;
+          });
+          if (found) return found;
+        }
+
+        // Priority 3: Filename / SKU matching
+        if (targetFilename) {
+          found = patchVariantsList.find((v) => {
+            const vSku = norm(v.sku || '');
+            if (vSku && vSku === targetFilename) return true;
+            const vImg = norm((v.image || '').split('/').pop()?.split('?')[0]?.replace(/\.[^/.]+$/, '') || '');
+            if (vImg && (vImg === targetFilename || vImg.includes(targetFilename))) return true;
+            return false;
+          });
+          if (found) return found;
+        }
+
+        return null;
+      }
+
+      // 2. Alphabet Letters (e.g. letter "P" in "Black Capital Letters")
+      if (patchInfo.type === 'letter') {
+        const char = (patchInfo.letter || patchInfo.name || patchInfo.letterChar || '').toUpperCase().trim();
+        if (!char) return null;
+
+        const charLower = char.toLowerCase();
+        const cat = (patchInfo.categoryLabel || patchInfo.category || '').toLowerCase().trim();
+        const catNorm = norm(cat);
+        const fullExpectedNorm = norm(`${cat}${char}`);
+
+        // Priority 1: Match directly via variant option1 (Style) and option2 (Letter)
+        let found = patchVariantsList.find((v) => {
+          if (!v) return false;
+          if (v.option1 && v.option2) {
+            const opt1Norm = norm(v.option1);
+            const opt2Norm = (v.option2 || '').toUpperCase().trim();
+            if (opt1Norm === catNorm && opt2Norm === char) return true;
+          }
+          if (v.option2 && v.option1) {
+            const opt2Norm = norm(v.option2);
+            const opt1Norm = (v.option1 || '').toUpperCase().trim();
+            if (opt2Norm === catNorm && opt1Norm === char) return true;
+          }
+          return false;
+        });
+        if (found) return found;
+
+        // Priority 2: Match within the same category or product by title
+        found = patchVariantsList.find((v) => {
+          const vt = (v.title || '').trim();
+          const vtLower = vt.toLowerCase();
+          const vtNorm = norm(vt);
+          if (!vtNorm) return false;
+
+          const pTitleNorm = norm(v.product_title || '');
+          const pHandleNorm = norm(v.product_handle || '');
+          const belongsToCat = !catNorm || pTitleNorm.includes(catNorm) || pHandleNorm.includes(catNorm) || vtNorm.includes(catNorm);
+
+          // 2a: Full category + letter match (e.g. "Black Capital Letters / P" or "Black Capital Letters · P")
+          if (vtNorm === fullExpectedNorm) return true;
+
+          // 2b: Belongs to category and variant is standalone letter or ends with letter
+          if (belongsToCat) {
+            if (vt.toUpperCase() === char || vtLower === `letter ${charLower}`) return true;
+            if (
+              vtLower.endsWith(`· ${charLower}`) ||
+              vtLower.endsWith(`- ${charLower}`) ||
+              vtLower.endsWith(` ${charLower}`) ||
+              vtLower.endsWith(` / ${charLower}`) ||
+              vtLower.endsWith(`/${charLower}`) ||
+              vtLower.endsWith(`. ${charLower}`) ||
+              vtLower.endsWith(`.${charLower}`)
+            ) {
+              return true;
+            }
+          }
+          return false;
+        });
+
+        if (found) return found;
+
+        // Priority 3: Standalone letter fallback
+        return (
+          patchVariantsList.find((v) => {
+            const vt = (v.title || '').trim();
+            return vt.toUpperCase() === char || vt.toLowerCase() === `letter ${charLower}`;
+          }) || null
+        );
+      }
+
+      return null;
+    }
+
+    // Gets stock count & availability state for a patch
+    function getPatchStockInfo(patchInfo) {
+      const variant = getVariantForPatch(patchInfo);
+      if (!variant) {
+        return {
+          variant: null,
+          variantId: null,
+          isTracked: false,
+          isAvailable: true,
+          qtyAvailable: 999,
+          policy: 'continue',
+          isSoldOut: false,
+        };
+      }
+
+      const isTracked = variant.inventory_management === 'shopify';
+      const isAvailable = variant.available !== false;
+      const qtyAvailable = isTracked ? parseInt(variant.inventory_quantity) || 0 : 999;
+      const policy = variant.inventory_policy || 'deny';
+      const isSoldOut = !isAvailable || (isTracked && policy !== 'continue' && qtyAvailable <= 0);
+
+      return {
+        variant,
+        variantId: variant.id,
+        isTracked,
+        isAvailable,
+        qtyAvailable,
+        policy,
+        isSoldOut,
+      };
+    }
+
+    // Updates UI stock badges and disabled states on patch picker buttons
+    function updateButtonStockDisplay(btn, stock, selectedCount) {
+      let stockTag = btn.querySelector('.podifai-stock-tag');
+
+      if (!stock || !stock.isTracked) {
+        if (stock && stock.isSoldOut) {
+          btn.classList.add('is-sold-out');
+          btn.setAttribute('aria-disabled', 'true');
+          if (!stockTag) {
+            stockTag = document.createElement('span');
+            btn.appendChild(stockTag);
+          }
+          stockTag.className = 'podifai-stock-tag sold-out';
+          stockTag.innerText = 'Sold Out';
+        } else {
+          btn.classList.remove('is-sold-out', 'max-stock-reached');
+          btn.removeAttribute('aria-disabled');
+          if (stockTag) stockTag.remove();
+        }
+        return;
+      }
+
+      if (stock.isSoldOut) {
+        btn.classList.add('is-sold-out');
+        btn.classList.remove('max-stock-reached');
+        btn.setAttribute('aria-disabled', 'true');
+        if (!stockTag) {
+          stockTag = document.createElement('span');
+          btn.appendChild(stockTag);
+        }
+        stockTag.className = 'podifai-stock-tag sold-out';
+        stockTag.innerText = 'Sold Out';
+      } else {
+        btn.classList.remove('is-sold-out');
+        const remaining = stock.qtyAvailable - selectedCount;
+
+        if (remaining <= 0 && stock.policy !== 'continue') {
+          btn.classList.add('max-stock-reached');
+          btn.setAttribute('aria-disabled', 'true');
+          if (!stockTag) {
+            stockTag = document.createElement('span');
+            btn.appendChild(stockTag);
+          }
+          stockTag.className = 'podifai-stock-tag sold-out';
+          stockTag.innerText = 'Sold Out';
+        } else {
+          btn.classList.remove('max-stock-reached');
+          btn.removeAttribute('aria-disabled');
+          if (stockTag) stockTag.remove();
+        }
+      }
+    }
+
+    let selectedPatches = [];
+    let stage = null;
+    let layer = null;
+    let transformer = null;
+    let deleteBtnGroup = null;
+    let rotateBtnGroup = null;
+    let mediaContainerEl = null;
+
+    // Multi-Text Embroidery State
+    let embroideryLines = [
+      {
+        id: 'emb-line-1',
+        text: '',
+        font: "'DM Serif Display', Georgia, serif",
+        color: '#FAF8F5',
+        colorName: 'Ivory',
+        node: null,
+        relX: 0.5,
+        relY: 0.5,
+        baseFontSize: 44,
+        baseScaleX: 1,
+        baseScaleY: 1,
+        rotation: 0,
+      },
+    ];
+    let nextEmbroideryLineId = 2;
+
+    // Active Categories Tracking
+    const initialCharPill =
+      document.querySelector('#podifai-char-categories .podifai-pill-btn.active') ||
+      document.querySelector('#podifai-char-categories .podifai-pill-btn');
+    let currentCharCategory = initialCharPill ? initialCharPill.dataset.charCat : '';
+
+    const initialAlphabetPill =
+      document.querySelector('#podifai-alphabet-categories .podifai-pill-btn.active') ||
+      document.querySelector('#podifai-alphabet-categories .podifai-pill-btn');
+    let currentAlphabetCategory = initialAlphabetPill ? initialAlphabetPill.dataset.cat : '';
+
+    // Live Dynamic Surcharge Pricing & Summary Card Engine
+    function updateDynamicPrice() {
+      const priceEl = document.getElementById('podifai-product-price');
+      const priceDisplayEl = document.getElementById('podifai-price-display');
+      const btnPriceDisplayEl = document.getElementById('podifai-btn-price-display');
+      const configEl = document.getElementById('podifai-customizer-config');
+
+      let rawBase = 0;
+      if (priceEl && priceEl.dataset.basePrice) {
+        rawBase = parseFloat(priceEl.dataset.basePrice) || 0;
+      } else if (configEl && configEl.dataset.basePrice) {
+        rawBase = parseFloat(configEl.dataset.basePrice) || 0;
+      }
+
+      const basePrice = rawBase > 1000 ? rawBase / 100 : rawBase;
+
+      const patchCount = selectedPatches.length;
+      const activeEmbroideryCount = embroideryLines.filter((l) => l.text && l.text.trim().length > 0).length;
+
+      const qtyInput = document.getElementById('product-quantity-input');
+      const qty = parseInt(qtyInput ? qtyInput.value : 1) || 1;
+
+      const patchTotal = patchCount * PATCH_UNIT_PRICE;
+      const embroideryTotal = activeEmbroideryCount * EMBROIDERY_UNIT_PRICE;
+      const unitTotal = basePrice + patchTotal + embroideryTotal;
+      const grandTotal = unitTotal * qty;
+
+      const formattedUnitPrice = `${CURRENCY_SYMBOL}${unitTotal.toFixed(2)}`;
+      const formattedGrandPrice = `${CURRENCY_SYMBOL}${grandTotal.toFixed(2)}`;
+      const formattedPatchTotal = `${CURRENCY_SYMBOL}${patchTotal.toFixed(2)}`;
+      const formattedEmbroideryTotal = `${CURRENCY_SYMBOL}${embroideryTotal.toFixed(2)}`;
+      const formattedBasePrice = `${CURRENCY_SYMBOL}${basePrice.toFixed(2)}`;
+
+      if (priceDisplayEl) {
+        priceDisplayEl.innerText = formattedUnitPrice;
+      }
+      if (btnPriceDisplayEl) {
+        btnPriceDisplayEl.innerText = formattedGrandPrice;
+      }
+
+      // Step 3 bottom summary price
+      const summaryPriceEl = document.getElementById('podifai-summary-price');
+      if (summaryPriceEl) {
+        summaryPriceEl.innerText = formattedPatchTotal;
+      }
+
+      // Step 3 header meta info
+      const patchesHeaderCountText = document.getElementById('podifai-patches-header-count-text');
+      const clearAllPatchesBtn = document.getElementById('podifai-clear-all-patches-btn');
+      if (patchesHeaderCountText) {
+        if (patchCount > 0) {
+          patchesHeaderCountText.innerText = `${patchCount} added`;
+          if (clearAllPatchesBtn) clearAllPatchesBtn.style.display = 'inline-block';
+        } else {
+          patchesHeaderCountText.innerText = '';
+          if (clearAllPatchesBtn) clearAllPatchesBtn.style.display = 'none';
+        }
+      }
+
+      // Live Order Breakdown Card
+      const basePriceRow = document.getElementById('podifai-summary-base-price');
+      if (basePriceRow) basePriceRow.innerText = formattedBasePrice;
+
+      const checkedSize = document.querySelector('.variant-option-group--size .size-pill-input:checked, .size-pill-input:checked');
+      const sizeVal = checkedSize ? checkedSize.value : '';
+      const productNameEl = document.getElementById('podifai-summary-product-name');
+      const productTitle = '{{ product.title | escape }}';
+      if (productNameEl) {
+        productNameEl.innerText = sizeVal ? `${productTitle} (${sizeVal})` : productTitle;
+      }
+
+      const patchesRow = document.getElementById('podifai-summary-patches-row');
+      const patchesQtyEl = document.getElementById('podifai-summary-patches-qty');
+      const patchesTotalEl = document.getElementById('podifai-summary-patches-total');
+      if (patchesRow && patchesQtyEl && patchesTotalEl) {
+        if (patchCount > 0) {
+          patchesRow.style.display = 'flex';
+          patchesQtyEl.innerText = patchCount;
+          patchesTotalEl.innerText = formattedPatchTotal;
+        } else {
+          patchesRow.style.display = 'none';
+        }
+      }
+
+      const embRow = document.getElementById('podifai-summary-embroidery-row');
+      const embQtyEl = document.getElementById('podifai-summary-embroidery-qty');
+      const embTotalEl = document.getElementById('podifai-summary-embroidery-total');
+      if (embRow && embQtyEl && embTotalEl) {
+        if (activeEmbroideryCount > 0) {
+          embRow.style.display = 'flex';
+          embQtyEl.innerText = activeEmbroideryCount;
+          embTotalEl.innerText = formattedEmbroideryTotal;
+        } else {
+          embRow.style.display = 'none';
+        }
+      }
+
+      const grandTotalEl = document.getElementById('podifai-summary-grand-total');
+      if (grandTotalEl) grandTotalEl.innerText = formattedUnitPrice;
+
+      return {
+        basePrice,
+        unitTotal,
+        patchTotal,
+        embroideryTotal,
+        grandTotal,
+        formattedPrice: formattedUnitPrice,
+        formattedGrandPrice,
+        patchCount,
+        activeEmbroideryCount,
+        quantity: qty,
+      };
+    }
+
+    // Filter Character Patches Grid
+    function filterCharacterPatchesGrid() {
+      const activePill =
+        document.querySelector('#podifai-char-categories .podifai-pill-btn.active') ||
+        document.querySelector('#podifai-char-categories .podifai-pill-btn');
+      if (activePill) {
+        currentCharCategory =
+          activePill.dataset.charCat || activePill.dataset.category || activePill.textContent.trim();
+        updateCharacterSublabel(activePill);
+      }
+
+      const items = document.querySelectorAll('#podifai-character-patches .podifai-patch-item');
+      if (items.length === 0) return;
+
+      const normCurrent = (currentCharCategory || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+
+      items.forEach((btn) => {
+        const rawCat = btn.dataset.charCategory || btn.dataset.category || '';
+        const normCat = rawCat.toLowerCase().replace(/[^a-z0-9]/g, '');
+
+        if (
+          !normCat ||
+          !normCurrent ||
+          normCat === normCurrent ||
+          normCurrent.includes(normCat) ||
+          normCat.includes(normCurrent)
+        ) {
+          btn.classList.remove('hidden');
+          btn.style.display = '';
+        } else {
+          btn.classList.add('hidden');
+          btn.style.display = 'none';
+        }
+      });
+    }
+
+    // Dynamic Letter Patch SVG Generator
+    function getLetterPatchImageUrl(category, letterChar) {
+      const charUpper = (letterChar || 'A').toUpperCase();
+      const charLower = (letterChar || 'a').toLowerCase();
+      const catLower = (category || '').toLowerCase();
+
+      if (catLower.includes('blue')) {
+        const svgString = `<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120" viewBox="0 0 120 120">
+          <text x="60" y="80" font-size="76" font-weight="900" font-family="'Arial Black', sans-serif" fill="#0091EA" stroke="#FFFFFF" stroke-width="6" stroke-linejoin="round" text-anchor="middle">${charUpper}</text>
+        </svg>`;
+        return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svgString);
+      } else if (catLower.includes('pink')) {
+        const svgString = `<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120" viewBox="0 0 120 120">
+          <text x="60" y="80" font-size="76" font-weight="900" font-family="'Arial Black', sans-serif" fill="#E91E63" stroke="#FFFFFF" stroke-width="6" stroke-linejoin="round" text-anchor="middle">${charUpper}</text>
+        </svg>`;
+        return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svgString);
+      } else if (catLower.includes('yellow')) {
+        const svgString = `<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120" viewBox="0 0 120 120">
+          <text x="60" y="80" font-size="76" font-weight="900" font-family="'Arial Black', sans-serif" fill="#FFC107" stroke="#FFFFFF" stroke-width="6" stroke-linejoin="round" text-anchor="middle">${charUpper}</text>
+        </svg>`;
+        return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svgString);
+      } else if (catLower.includes('mix')) {
+        const rainbowColors = ['#E91E63', '#FF5722', '#FFC107', '#4CAF50', '#2196F3', '#9C27B0'];
+        const charCode = (letterChar || 'A').charCodeAt(0) || 0;
+        const color = rainbowColors[charCode % rainbowColors.length];
+        const svgString = `<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120" viewBox="0 0 120 120">
+          <text x="60" y="80" font-size="76" font-weight="900" font-family="'Arial Black', sans-serif" fill="${color}" stroke="#FFFFFF" stroke-width="6" stroke-linejoin="round" text-anchor="middle">${charUpper}</text>
+        </svg>`;
+        return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svgString);
+      } else {
+        // Default / Black caps
+        const svgString = `<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120" viewBox="0 0 120 120">
+          <text x="60" y="80" font-size="76" font-weight="900" font-family="'Impact', 'Arial Black', sans-serif" fill="#1A1A1A" stroke="#FFFFFF" stroke-width="5" stroke-linejoin="round" text-anchor="middle">${charUpper}</text>
+        </svg>`;
+        return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svgString);
+      }
+    }
+
+    // Filter Alphabet Letter Grid
+    function updateAlphabetGrid() {
+      const activeAlphaPill =
+        document.querySelector('#podifai-alphabet-categories .podifai-pill-btn.active') ||
+        document.querySelector('#podifai-alphabet-categories .podifai-pill-btn');
+      if (activeAlphaPill) {
+        currentAlphabetCategory =
+          activeAlphaPill.dataset.cat || activeAlphaPill.dataset.category || activeAlphaPill.textContent.trim();
+        updateAlphabetSublabel(activeAlphaPill);
+      }
+
+      const normCurrent = (currentAlphabetCategory || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+      const items = document.querySelectorAll('#podifai-alphabet-grid .podifai-letter-item');
+
+      items.forEach((btn) => {
+        const rawCat = btn.dataset.letterCategory || btn.dataset.category || '';
+        const normCat = rawCat.toLowerCase().replace(/[^a-z0-9]/g, '');
+        const letter = btn.dataset.letter;
+        const imgEl = btn.querySelector('.podifai-letter-img');
+        const customImg = btn.dataset.customImg;
+
+        if (
+          !normCat ||
+          !normCurrent ||
+          normCat === normCurrent ||
+          normCurrent.includes(normCat) ||
+          normCat.includes(normCurrent)
+        ) {
+          btn.classList.remove('hidden');
+          btn.style.display = '';
+          if (imgEl) {
+            imgEl.src = customImg || getLetterPatchImageUrl(currentAlphabetCategory, letter);
+          }
+        } else {
+          btn.classList.add('hidden');
+          btn.style.display = 'none';
+        }
+      });
+    }
+
+    function formatDimensionString(rawStr) {
+      if (!rawStr) return '8cm x 8cm';
+      let clean = rawStr.toString().trim();
+      const nums = clean.match(/(\d+(?:\.\d+)?)/g);
+      if (!nums || nums.length === 0) return '8cm x 8cm';
+      const w = nums[0];
+      const h = nums.length > 1 ? nums[1] : w;
+      return `${w}cm x ${h}cm`;
+    }
+
+{% assign char_scale_on = section.settings.enable_proportional_scaling_char %}
+{% if char_scale_on == nil %}
+  {% assign char_scale_on = section_settings.enable_proportional_scaling_char %}
+{% endif %}
+{% if char_scale_on == nil %}
+  {% assign char_scale_on = true %}
+{% endif %}
+
+{% assign alpha_scale_on = section.settings.enable_proportional_scaling_alpha %}
+{% if alpha_scale_on == nil %}
+  {% assign alpha_scale_on = section_settings.enable_proportional_scaling_alpha %}
+{% endif %}
+{% if alpha_scale_on == nil %}
+  {% assign alpha_scale_on = true %}
+{% endif %}
+
+    function getPatchDimensionsPx(sizeStr, patchType) {
+      const isCharEnabled = {{ char_scale_on | json }};
+      const isAlphaEnabled = {{ alpha_scale_on | json }};
+
+      const isScalingActive = patchType === 'letter' ? isAlphaEnabled : isCharEnabled;
+
+      if (!isScalingActive) {
+        return { width: 95, height: 95 };
+      }
+
+      if (!sizeStr) return { width: 95, height: 95 };
+
+      const numbers = sizeStr.toString().match(/(\d+(?:\.\d+)?)/g);
+      if (!numbers || numbers.length === 0) return { width: 95, height: 95 };
+
+      // Use dominant dimension (e.g. 6cm from "6cm x 4cm", 5cm from "5cm x 5cm", 2cm from "2cm x 2cm")
+      const parsed = numbers.map((n) => parseFloat(n)).filter((n) => !isNaN(n));
+      let maxCm = Math.max(...parsed);
+
+      // Clamp to reasonable physical bounds
+      maxCm = Math.max(1, Math.min(maxCm, 12));
+
+      // Compact visual scaling — 15px per cm for clear size differentiation:
+      //   2cm x 2cm     -> 40px x 40px
+      //   3cm x 3cm     -> 55px x 55px
+      //   4cm x 4cm     -> 70px x 70px
+      //   5cm x 5cm     -> 85px x 85px
+      //   5.5cm x 5.5cm -> 93px x 93px
+      //   6cm x 4cm     -> 100px x 100px
+      //   8cm x 8cm     -> 130px x 130px
+      const visualPx = Math.min(135, Math.round(40 + (maxCm - 2) * 15));
+
+      return {
+        width: Math.max(35, visualPx),
+        height: Math.max(35, visualPx),
+      };
+    }
+
+    function updateCharacterSublabel(pill) {
+      if (!pill) {
+        pill =
+          document.querySelector('#podifai-char-categories .podifai-pill-btn.active') ||
+          document.querySelector('#podifai-char-categories .podifai-pill-btn');
+      }
+      if (!pill) return;
+
+      const catSize = formatDimensionString(pill.dataset.size || '8cm x 8cm');
+      const sublabelEl = document.getElementById('podifai-char-sublabel');
+      if (sublabelEl) {
+        sublabelEl.innerHTML = `Size approximately <span id="podifai-char-cat-size">${catSize}</span>`;
+      }
+    }
+
+    function updateAlphabetSublabel(pill) {
+      if (!pill) {
+        pill =
+          document.querySelector('#podifai-alphabet-categories .podifai-pill-btn.active') ||
+          document.querySelector('#podifai-alphabet-categories .podifai-pill-btn');
+      }
+      if (!pill) return;
+
+      const catSize = formatDimensionString(pill.dataset.size || '8cm x 8cm');
+      const sublabelEl = document.getElementById('podifai-alpha-sublabel');
+      if (sublabelEl) {
+        sublabelEl.innerHTML = `Size approximately <span id="podifai-alpha-cat-size">${catSize}</span>`;
+      }
+    }
+
+    function updateActiveHeaderLabels() {
+      const activeCharPill = document.querySelector('#podifai-char-categories .podifai-pill-btn.active');
+      if (activeCharPill) {
+        const charHeaderLabel = document.getElementById('podifai-active-char-cat-label');
+        if (charHeaderLabel) charHeaderLabel.innerText = activeCharPill.dataset.label || activeCharPill.innerText;
+        updateCharacterSublabel(activeCharPill);
+      }
+      const activeAlphaPill = document.querySelector('#podifai-alphabet-categories .podifai-pill-btn.active');
+      if (activeAlphaPill) {
+        const alphaHeaderLabel = document.getElementById('podifai-active-category-label');
+        if (alphaHeaderLabel) alphaHeaderLabel.innerText = activeAlphaPill.dataset.label || activeAlphaPill.innerText;
+        updateAlphabetSublabel(activeAlphaPill);
+      }
+    }
+
+    let lastCanvasW = 0;
+    let lastCanvasH = 0;
+    let resizeFrameId = null;
+
+    // Helper to disable / enable Add to Cart button when overlap occurs or variant is sold out
+    function setAddToCartDisabled(disabled) {
+      const atcBtns = document.querySelectorAll(
+        '#add-to-cart-btn, .product-submit-row button[type="submit"], [name="add"], .product-submit-btn'
+      );
+      const currentVariantId = document.getElementById('selected-variant-id')?.value;
+      let variantIsSoldOut = false;
+      const variantsEl = document.getElementById('podifai-product-variants-json');
+      if (currentVariantId && variantsEl) {
+        try {
+          const variantsList = JSON.parse(variantsEl.textContent) || [];
+          const v = variantsList.find((item) => String(item.id) === String(currentVariantId));
+          if (v && v.available === false) variantIsSoldOut = true;
+        } catch (_) {}
+      }
+
+      atcBtns.forEach((btn) => {
+        if (disabled || variantIsSoldOut) {
+          btn.disabled = true;
+          btn.classList.add('disabled');
+          btn.setAttribute('aria-disabled', 'true');
+          btn.style.opacity = '0.5';
+          btn.style.cursor = 'not-allowed';
+          btn.style.pointerEvents = 'none';
+          if (variantIsSoldOut) {
+            const btnText = document.getElementById('add-to-cart-text');
+            if (btnText) btnText.innerHTML = 'SOLD OUT';
+          }
+        } else {
+          btn.disabled = false;
+          btn.classList.remove('disabled');
+          btn.removeAttribute('aria-disabled');
+          btn.style.opacity = '';
+          btn.style.cursor = '';
+          btn.style.pointerEvents = '';
+        }
+      });
+    }
+
+    // Checks all editable patches against each other and against fixed, centred embroidery.
+    function checkPatchOverlaps() {
+      const toast = document.getElementById('podifai-overlap-error-toast');
+      if (!stage || !layer) {
+        if (toast) toast.style.display = 'none';
+        if (transformer) {
+          transformer.borderStroke('#333333');
+          transformer.borderStrokeWidth(1);
+        }
+        setAddToCartDisabled(false);
+        return false;
+      }
+
+      const activePatchNodes = selectedPatches
+        .map((p) => p.node)
+        .filter((n) => n && typeof n.getStage === 'function' && n.getStage());
+
+      let hasOverlap = false;
+
+      // Bounding-box collision with small inset to skip transparent edge padding
+      // Shrink each rect by 5% on each side so only real pixel-to-pixel overlap triggers
+      const INSET_RATIO = 0.05;
+      const patchRects = activePatchNodes.map((node) => {
+        // getClientRect accounts for rotation, scale, and offset
+        const rect = node.getClientRect({ relativeTo: stage });
+        const insetX = rect.width * INSET_RATIO;
+        const insetY = rect.height * INSET_RATIO;
+        return {
+          left: rect.x + insetX,
+          right: rect.x + rect.width - insetX,
+          top: rect.y + insetY,
+          bottom: rect.y + rect.height - insetY,
+          node: node,
+        };
+      });
+
+      const embroideryRects = embroideryLines
+        .map((line) => line.node)
+        .filter((node) => node && typeof node.getStage === 'function' && node.getStage())
+        .map((node) => {
+          const rect = node.getClientRect({ relativeTo: stage });
+          const insetX = rect.width * INSET_RATIO;
+          const insetY = rect.height * INSET_RATIO;
+          return {
+            left: rect.x + insetX,
+            right: rect.x + rect.width - insetX,
+            top: rect.y + insetY,
+            bottom: rect.y + rect.height - insetY,
+          };
+        });
+
+      const rectanglesOverlap = (a, b) =>
+        a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top;
+
+      for (let i = 0; i < patchRects.length; i++) {
+        for (let j = i + 1; j < patchRects.length; j++) {
+          const a = patchRects[i];
+          const b = patchRects[j];
+
+          // AABB intersection: overlaps when visible artwork areas actually touch
+          if (rectanglesOverlap(a, b)) {
+            hasOverlap = true;
+            break;
+          }
+        }
+        if (hasOverlap) break;
+      }
+
+      // Embroidery cannot be covered by a patch, and a patch cannot be placed
+      // over embroidery. The same comparison enforces both cases.
+      if (!hasOverlap) {
+        for (const patchRect of patchRects) {
+          if (embroideryRects.some((embroideryRect) => rectanglesOverlap(patchRect, embroideryRect))) {
+            hasOverlap = true;
+            break;
+          }
+        }
+      }
+
+      if (hasOverlap) {
+        if (toast) toast.style.display = 'flex';
+        if (transformer) {
+          transformer.borderStroke('#dc2626');
+          transformer.borderStrokeWidth(1.5);
+        }
+        setAddToCartDisabled(true);
+      } else {
+        if (toast) toast.style.display = 'none';
+        if (transformer) {
+          transformer.borderStroke('#333333');
+          transformer.borderStrokeWidth(1);
+        }
+        setAddToCartDisabled(false);
+      }
+
+      return hasOverlap;
+    }
+
+    // Helper to position floating Delete (top-right) and Rotate (bottom-right) buttons
+    function updateTransformerButtonsPosition() {
+      if (!stage || !layer) return;
+      const nodes = transformer ? transformer.nodes() : [];
+      if (!nodes || nodes.length === 0) {
+        if (deleteBtnGroup) deleteBtnGroup.visible(false);
+        if (rotateBtnGroup) rotateBtnGroup.visible(false);
+        layer.batchDraw();
+        return;
+      }
+      const selectedNode = nodes[0];
+      const box = selectedNode.getClientRect({ relativeTo: layer });
+
+      if (deleteBtnGroup) {
+        deleteBtnGroup.position({
+          x: box.x + box.width + 2,
+          y: box.y - 2,
+        });
+        deleteBtnGroup.visible(true);
+        deleteBtnGroup.moveToTop();
+      }
+
+      if (rotateBtnGroup) {
+        rotateBtnGroup.position({
+          x: box.x + box.width + 2,
+          y: box.y + box.height + 2,
+        });
+        rotateBtnGroup.visible(true);
+        rotateBtnGroup.moveToTop();
+      }
+
+      layer.batchDraw();
+    }
+    const updateDeleteButtonPosition = updateTransformerButtonsPosition;
+
+    // Responsive Canvas Resize & Re-anchor Function
+    function resizeAndRedrawCanvas() {
+      if (!mediaContainerEl || !stage || !layer) return;
+
+      const newRect = mediaContainerEl.getBoundingClientRect();
+      if (newRect.width <= 0 || newRect.height <= 0) return;
+
+      // Prevent fractional subpixel micro-reflows that cause mobile screen shaking
+      if (Math.abs(newRect.width - lastCanvasW) < 1.5 && Math.abs(newRect.height - lastCanvasH) < 1.5) {
+        return;
+      }
+
+      lastCanvasW = newRect.width;
+      lastCanvasH = newRect.height;
+
+      const newWidth = newRect.width;
+      const newHeight = newRect.height;
+
+      stage.width(newWidth);
+      stage.height(newHeight);
+
+      const scaleFactor = newWidth / BASE_STAGE_REF;
+
+      selectedPatches.forEach((p) => {
+        if (p.node) {
+          p.node.x(p.relX * newWidth);
+          p.node.y(p.relY * newHeight);
+          p.node.scaleX((p.baseScaleX || 1) * scaleFactor);
+          p.node.scaleY((p.baseScaleY || 1) * scaleFactor);
+          if (typeof p.rotation === 'number') {
+            p.node.rotation(p.rotation);
+          }
+        }
+      });
+
+      const baseEmbSize = 44 * scaleFactor;
+      const maxEmbW = Math.min(240 * scaleFactor, newWidth * 0.48);
+      const activeEmbLines = embroideryLines.filter((l) => (l.text || '').trim().length > 0);
+      const totalActive = activeEmbLines.length || 1;
+      const embSpacing = 42 * scaleFactor;
+
+      embroideryLines.forEach((line) => {
+        if (line.node) {
+          line.node.fontSize(baseEmbSize);
+          if (line.node.width() > maxEmbW) {
+            line.node.fontSize(baseEmbSize * (maxEmbW / line.node.width()));
+          }
+          line.node.offsetX(line.node.width() / 2);
+          line.node.offsetY(line.node.height() / 2);
+
+          const centerX = newWidth / 2;
+          const activeIndex = Math.max(0, activeEmbLines.indexOf(line));
+          const centerY = newHeight * 0.50 + (activeIndex - (totalActive - 1) / 2) * embSpacing;
+          line.node.x(centerX);
+          line.node.y(centerY);
+          line.isCustomMoved = false;
+          line.relX = 0.5;
+          line.relY = centerY / newHeight;
+          line.node._dragStartX = line.node.x();
+          line.node._dragStartY = line.node.y();
+          line.node._dragLockAxis = null;
+          line.node.draggable(false);
+          if (typeof line.rotation === 'number') {
+            line.node.rotation(0);
+          }
+        }
+      });
+
+      updateTransformerButtonsPosition();
+      checkPatchOverlaps();
+      layer.batchDraw();
+    }
+
+    // Initialize Konva Canvas Engine
+    function initKonvaOverlay() {
+      mediaContainerEl = document.querySelector(
+        '.product-images, .product-media-gallery, [data-product-single-media-group], .product-gallery__main'
+      );
+      const canvasWrapper = document.getElementById('podifai-canvas-wrapper');
+
+      if (mediaContainerEl && canvasWrapper) {
+        if (getComputedStyle(mediaContainerEl).position === 'static') {
+          mediaContainerEl.style.position = 'relative';
+        }
+        mediaContainerEl.appendChild(canvasWrapper);
+
+        // Ensure preview disclaimer is rendered below mediaContainerEl
+        const existingDisclaimer = mediaContainerEl.parentNode
+          ? mediaContainerEl.parentNode.querySelector('.podifai-preview-disclaimer')
+          : null;
+        if (!existingDisclaimer && mediaContainerEl.parentNode) {
+          const disc = document.createElement('div');
+          disc.className = 'podifai-preview-disclaimer';
+          {% assign js_disc_text = block.settings.preview_disclaimer_text | default: section_settings.preview_disclaimer_text | default: section.settings.preview_disclaimer_text %}
+          {% if js_disc_text == blank and block.settings.preview_disclaimer_text == nil and section_settings.preview_disclaimer_text == nil and section.settings.preview_disclaimer_text == nil %}
+            {% assign js_disc_text = '💛 The preview is a guide — colours and placement are approximate. Every piece is made by hand, so your final piece may vary a touch.' %}
+          {% endif %}
+          disc.innerHTML = {{ js_disc_text | json }};
+          if (mediaContainerEl.nextSibling) {
+            mediaContainerEl.parentNode.insertBefore(disc, mediaContainerEl.nextSibling);
+          } else {
+            mediaContainerEl.parentNode.appendChild(disc);
+          }
+        }
+
+        const rect = mediaContainerEl.getBoundingClientRect();
+        const width = rect.width || 500;
+        const height = rect.height || 500;
+
+        lastCanvasW = width;
+        lastCanvasH = height;
+
+        stage = new Konva.Stage({
+          container: 'podifai-konva-container',
+          width: width,
+          height: height,
+        });
+
+        layer = new Konva.Layer();
+        stage.add(layer);
+
+        // Transformer: Allows rotation and dragging while strictly locking size / preventing resizing
+        transformer = new Konva.Transformer({
+          rotateEnabled: false,
+          resizeEnabled: false,
+          enabledAnchors: [],
+          borderStroke: '#333333',
+          borderStrokeWidth: 1,
+          borderDash: [3, 3],
+          padding: 4,
+        });
+        layer.add(transformer);
+
+        // Floating Delete / Trash Bin Icon Button (Top-Right)
+        deleteBtnGroup = new Konva.Group({
+          name: 'deleteBtnGroup',
+          visible: false,
+          listening: true,
+        });
+
+        const deleteBtnBg = new Konva.Circle({
+          radius: 11,
+          fill: '#ffffff',
+          stroke: '#555555',
+          strokeWidth: 0.75,
+          shadowColor: 'rgba(0, 0, 0, 0.10)',
+          shadowBlur: 2,
+          shadowOffset: { x: 0, y: 1 },
+          shadowOpacity: 0.15,
+          cursor: 'pointer',
+        });
+
+        const deleteBtnIcon = new Konva.Path({
+          data: 'm14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0',
+          stroke: '#2b2b2b',
+          strokeWidth: 1.0,
+          strokeScaleEnabled: false,
+          fillEnabled: false,
+          lineCap: 'round',
+          lineJoin: 'round',
+          scale: { x: 0.48, y: 0.48 },
+          offsetX: 12,
+          offsetY: 12,
+          cursor: 'pointer',
+        });
+
+        deleteBtnGroup.add(deleteBtnBg);
+        deleteBtnGroup.add(deleteBtnIcon);
+        layer.add(deleteBtnGroup);
+
+        deleteBtnGroup.on('mouseenter', () => {
+          if (typeof document !== 'undefined') document.body.style.cursor = 'pointer';
+          deleteBtnBg.fill('#fee2e2');
+          deleteBtnBg.stroke('#dc2626');
+          deleteBtnIcon.stroke('#dc2626');
+          layer.batchDraw();
+        });
+
+        deleteBtnGroup.on('mouseleave', () => {
+          if (typeof document !== 'undefined') document.body.style.cursor = 'default';
+          deleteBtnBg.fill('#ffffff');
+          deleteBtnBg.stroke('#555555');
+          deleteBtnIcon.stroke('#2b2b2b');
+          layer.batchDraw();
+        });
+
+        deleteBtnGroup.on('click tap', (e) => {
+          e.cancelBubble = true;
+          const nodes = transformer ? transformer.nodes() : [];
+          if (nodes && nodes.length > 0) {
+            const targetNode = nodes[0];
+            const patchObj = selectedPatches.find((p) => p.node === targetNode);
+            if (patchObj) {
+              removePatchById(patchObj.id);
+            }
+            if (transformer) transformer.nodes([]);
+            updateTransformerButtonsPosition();
+            checkPatchOverlaps();
+          }
+        });
+
+        // Floating Rotate Button (Bottom-Right)
+        rotateBtnGroup = new Konva.Group({
+          name: 'rotateBtnGroup',
+          visible: false,
+          listening: true,
+        });
+
+        const rotateBtnBg = new Konva.Circle({
+          radius: 11,
+          fill: '#ffffff',
+          stroke: '#555555',
+          strokeWidth: 0.75,
+          shadowColor: 'rgba(0, 0, 0, 0.10)',
+          shadowBlur: 2,
+          shadowOffset: { x: 0, y: 1 },
+          shadowOpacity: 0.15,
+          cursor: 'grab',
+        });
+
+        const rotateBtnIcon = new Konva.Path({
+          data: 'M19.5 12c0-1.232-.046-2.453-.138-3.662a4.006 4.006 0 0 0-3.7-3.7 48.678 48.678 0 0 0-7.324 0 4.006 4.006 0 0 0-3.7 3.7c-.017.22-.032.441-.046.662M19.5 12l3-3m-3 3-3-3m-12 3c0 1.232.046 2.453.138 3.662a4.006 4.006 0 0 0 3.7 3.7 48.656 48.656 0 0 0 7.324 0 4.006 4.006 0 0 0 3.7-3.7c.017-.22.032-.441.046-.662M4.5 12l3 3m-3-3-3 3',
+          stroke: '#2b2b2b',
+          strokeWidth: 1.0,
+          strokeScaleEnabled: false,
+          fillEnabled: false,
+          lineCap: 'round',
+          lineJoin: 'round',
+          scale: { x: 0.48, y: 0.48 },
+          offsetX: 12,
+          offsetY: 12,
+          cursor: 'grab',
+        });
+
+        rotateBtnGroup.add(rotateBtnBg);
+        rotateBtnGroup.add(rotateBtnIcon);
+        layer.add(rotateBtnGroup);
+
+        rotateBtnGroup.on('mouseenter', () => {
+          if (typeof document !== 'undefined') document.body.style.cursor = 'grab';
+          rotateBtnBg.fill('#f3f4f6');
+          layer.batchDraw();
+        });
+
+        rotateBtnGroup.on('mouseleave', () => {
+          if (typeof document !== 'undefined' && !isRotatingHandle) document.body.style.cursor = 'default';
+          rotateBtnBg.fill('#ffffff');
+          layer.batchDraw();
+        });
+
+        let isRotatingHandle = false;
+        let rotateStartAngle = 0;
+        let nodeStartRotation = 0;
+        let rotateHasMoved = false;
+
+        rotateBtnGroup.on('mousedown touchstart', (e) => {
+          e.cancelBubble = true;
+          const nodes = transformer ? transformer.nodes() : [];
+          if (!nodes || nodes.length === 0) return;
+          const selectedNode = nodes[0];
+          isRotatingHandle = true;
+          rotateHasMoved = false;
+
+          const nodeCenter = {
+            x: selectedNode.x(),
+            y: selectedNode.y(),
+          };
+
+          const pointerPos = stage.getPointerPosition();
+          if (pointerPos) {
+            rotateStartAngle = Math.atan2(pointerPos.y - nodeCenter.y, pointerPos.x - nodeCenter.x) * (180 / Math.PI);
+            nodeStartRotation = selectedNode.rotation() || 0;
+          }
+
+          if (typeof document !== 'undefined') {
+            document.body.style.cursor = 'grabbing';
+          }
+        });
+
+        const onPointerMoveRotate = () => {
+          if (!isRotatingHandle || !stage) return;
+          const nodes = transformer ? transformer.nodes() : [];
+          if (!nodes || nodes.length === 0) return;
+          const selectedNode = nodes[0];
+          const pointerPos = stage.getPointerPosition();
+          if (!pointerPos) return;
+
+          const nodeCenter = { x: selectedNode.x(), y: selectedNode.y() };
+          const curAngle = Math.atan2(pointerPos.y - nodeCenter.y, pointerPos.x - nodeCenter.x) * (180 / Math.PI);
+          const angleDiff = curAngle - rotateStartAngle;
+
+          if (Math.abs(angleDiff) > 2) {
+            rotateHasMoved = true;
+          }
+
+          let newRot = Math.round((nodeStartRotation + angleDiff) % 360);
+          if (newRot < 0) newRot += 360;
+          selectedNode.rotation(newRot);
+
+          const patchObj = selectedPatches.find((p) => p.node === selectedNode);
+          if (patchObj) {
+            patchObj.rotation = newRot;
+          }
+
+          updateTransformerButtonsPosition();
+          checkPatchOverlaps();
+          layer.batchDraw();
+        };
+
+        const onPointerUpRotate = () => {
+          if (!isRotatingHandle) return;
+          isRotatingHandle = false;
+          if (typeof document !== 'undefined') {
+            document.body.style.cursor = 'default';
+          }
+          checkPatchOverlaps();
+        };
+
+        window.addEventListener('mousemove', onPointerMoveRotate);
+        window.addEventListener('touchmove', onPointerMoveRotate, { passive: false });
+        window.addEventListener('mouseup', onPointerUpRotate);
+        window.addEventListener('touchend', onPointerUpRotate);
+
+        // Click / Tap on rotate button rotates by +45 degrees if not dragged
+        rotateBtnGroup.on('click tap', (e) => {
+          e.cancelBubble = true;
+          if (rotateHasMoved) return;
+          const nodes = transformer ? transformer.nodes() : [];
+          if (!nodes || nodes.length === 0) return;
+          const selectedNode = nodes[0];
+          let curRot = selectedNode.rotation() || 0;
+          let newRot = (curRot + 45) % 360;
+          selectedNode.rotation(newRot);
+
+          const patchObj = selectedPatches.find((p) => p.node === selectedNode);
+          if (patchObj) {
+            patchObj.rotation = newRot;
+          }
+
+          updateTransformerButtonsPosition();
+          checkPatchOverlaps();
+          layer.batchDraw();
+        });
+
+        stage.on('click tap', (e) => {
+          if (e.target === stage) {
+            transformer.nodes([]);
+            updateTransformerButtonsPosition();
+          }
+        });
+
+        if (window.ResizeObserver) {
+          const ro = new ResizeObserver(() => {
+            if (resizeFrameId) cancelAnimationFrame(resizeFrameId);
+            resizeFrameId = requestAnimationFrame(resizeAndRedrawCanvas);
+          });
+          ro.observe(mediaContainerEl);
+        }
+
+        window.addEventListener('resize', () => {
+          if (resizeFrameId) cancelAnimationFrame(resizeFrameId);
+          resizeFrameId = requestAnimationFrame(resizeAndRedrawCanvas);
+        });
+        window.addEventListener('orientationchange', () => {
+          setTimeout(resizeAndRedrawCanvas, 200);
+        });
+      }
+    }
+
+    // Accordion Toggle
+    document.querySelectorAll('.podifai-accordion__trigger').forEach((trigger) => {
+      trigger.addEventListener('click', () => {
+        const accordion = trigger.closest('.podifai-accordion');
+        const isActive = accordion.classList.toggle('active');
+        const icon = accordion.querySelector('.podifai-accordion__icon');
+        if (icon) {
+          icon.innerHTML = isActive ? '&times;' : '+';
+        }
+        const content = accordion.querySelector('.podifai-accordion__content');
+        if (content) {
+          content.style.display = isActive ? 'block' : 'none';
+        }
+      });
+    });
+
+    // Update Persistent UI Summary Bar & Badges
+    function updateUIBadges() {
+      // 1. Character patch items badge count - Strictly match unique patchRefId
+      document.querySelectorAll('#podifai-character-patches .podifai-patch-item').forEach((btn) => {
+        const pId = btn.dataset.patchId;
+        const name = btn.dataset.patchName;
+        const cat = btn.dataset.charCategory;
+        const count = selectedPatches.filter((p) => p.type === 'character' && p.patchRefId === pId).length;
+
+        const badge = btn.querySelector('.podifai-patch-badge');
+        if (count > 0) {
+          btn.classList.add('active');
+          if (badge) badge.innerText = count;
+        } else {
+          btn.classList.remove('active');
+          if (badge) badge.innerText = '';
+        }
+
+        const stock = getPatchStockInfo({
+          type: 'character',
+          name: name,
+          letterChar: name,
+          category: cat,
+          patchId: pId,
+        });
+        updateButtonStockDisplay(btn, stock, count);
+      });
+
+      const charSelectedCount = selectedPatches.filter((p) => p.type === 'character').length;
+      const charSelectedCountEl = document.getElementById('podifai-char-selected-count');
+      if (charSelectedCountEl) charSelectedCountEl.innerText = charSelectedCount;
+
+      // 2. Alphabet patch items badge count
+      const activeAlphaPill = document.querySelector('#podifai-alphabet-categories .podifai-pill-btn.active');
+      const activeAlphaCatLabel = activeAlphaPill
+        ? activeAlphaPill.dataset.label || activeAlphaPill.innerText
+        : currentAlphabetCategory;
+
+      document.querySelectorAll('#podifai-alphabet-grid .podifai-letter-item').forEach((btn) => {
+        const letter = (btn.dataset.letter || '').toLowerCase();
+        const count = selectedPatches.filter(
+          (p) =>
+            p.type === 'letter' &&
+            p.category === currentAlphabetCategory &&
+            (p.letterChar || '').toLowerCase() === letter
+        ).length;
+
+        const badge = btn.querySelector('.podifai-patch-badge');
+        if (count > 0) {
+          btn.classList.add('active');
+          if (badge) badge.innerText = count;
+        } else {
+          btn.classList.remove('active');
+          if (badge) badge.innerText = '';
+        }
+
+        const stock = getPatchStockInfo({
+          type: 'letter',
+          name: letter,
+          letterChar: letter,
+          letter: letter,
+          category: currentAlphabetCategory,
+          categoryLabel: activeAlphaCatLabel,
+          patchId: `letter-${currentAlphabetCategory}-${letter}`,
+        });
+        updateButtonStockDisplay(btn, stock, count);
+      });
+
+      // 3. Bottom Summary Bar in Step 3
+      const summaryContainer = document.getElementById('podifai-active-summary');
+      const summaryTags = document.getElementById('podifai-summary-tags');
+      const summaryCount = document.getElementById('podifai-summary-count');
+
+      if (summaryContainer && summaryTags && summaryCount) {
+        summaryCount.innerText = selectedPatches.length;
+        summaryTags.innerHTML = '';
+
+        if (selectedPatches.length > 0) {
+          summaryContainer.style.display = 'block';
+          selectedPatches.forEach((p) => {
+            const tag = document.createElement('div');
+            tag.className = 'podifai-summary-tag';
+
+            let labelText = '';
+            if (p.type === 'character') {
+              const raw = p.letterChar || 'Patch';
+              const m = raw.match(/^(.*?)\s*#(\d+)$/);
+              if (m) {
+                labelText = `${m[1].trim()}, P${m[2]}`;
+              } else {
+                labelText = raw;
+              }
+            } else {
+              const cat = p.categoryLabel || p.category || 'Alphabet';
+              const char = (p.letterChar || '').toUpperCase().replace(/'/g, '');
+              labelText = `${cat}, ${char}`;
+            }
+
+            tag.innerHTML = `
+              <img src="${p.imgUrl}" alt="${labelText}">
+              <span>${labelText}</span>
+              <button type="button" class="podifai-summary-remove" data-id="${p.id}">&times;</button>
+            `;
+            summaryTags.appendChild(tag);
+          });
+
+          summaryTags.querySelectorAll('.podifai-summary-remove').forEach((btn) => {
+            btn.addEventListener('click', () => {
+              const instanceId = btn.dataset.id;
+              removePatchById(instanceId);
+            });
+          });
+        } else {
+          summaryContainer.style.display = 'none';
+        }
+      }
+
+      updateDynamicPrice();
+    }
+
+    function removePatchById(instanceId) {
+      const idx = selectedPatches.findIndex((p) => p.id === instanceId);
+      if (idx > -1) {
+        const removed = selectedPatches.splice(idx, 1)[0];
+        if (removed.node) {
+          removed.node.destroy();
+          transformer.nodes([]);
+          updateTransformerButtonsPosition();
+          checkPatchOverlaps();
+        }
+        updateUIBadges();
+      }
+    }
+
+    // Clear All Patches button in Step 3 header
+    const clearAllPatchesBtn = document.getElementById('podifai-clear-all-patches-btn');
+    if (clearAllPatchesBtn) {
+      clearAllPatchesBtn.addEventListener('click', () => {
+        selectedPatches.forEach((p) => {
+          if (p.node) p.node.destroy();
+        });
+        selectedPatches = [];
+        if (transformer) transformer.nodes([]);
+        updateTransformerButtonsPosition();
+        checkPatchOverlaps();
+        if (layer) layer.draw();
+        updateUIBadges();
+      });
+    }
+
+    // Auto-trim transparent padding from patch images so the actual graphic fills the bounds
+    function trimTransparentBorders(image) {
+      try {
+        const w = image.naturalWidth || image.width;
+        const h = image.naturalHeight || image.height;
+        if (!w || !h) return image;
+
+        const canvas = document.createElement('canvas');
+        canvas.width = w;
+        canvas.height = h;
+        const ctx = canvas.getContext('2d', { willReadFrequently: true });
+        ctx.drawImage(image, 0, 0);
+
+        const imgData = ctx.getImageData(0, 0, w, h);
+        const data = imgData.data;
+
+        let minX = w, minY = h, maxX = 0, maxY = 0;
+        let found = false;
+
+        for (let y = 0; y < h; y += 2) {
+          for (let x = 0; x < w; x += 2) {
+            const alpha = data[(y * w + x) * 4 + 3];
+            if (alpha > 15) {
+              if (x < minX) minX = x;
+              if (x > maxX) maxX = x;
+              if (y < minY) minY = y;
+              if (y > maxY) maxY = y;
+              found = true;
+            }
+          }
+        }
+
+        if (!found || (minX < 5 && minY < 5 && maxX > w - 5 && maxY > h - 5)) {
+          return image;
+        }
+
+        minX = Math.max(0, minX - 2);
+        minY = Math.max(0, minY - 2);
+        maxX = Math.min(w, maxX + 4);
+        maxY = Math.min(h, maxY + 4);
+
+        const cropW = maxX - minX;
+        const cropH = maxY - minY;
+
+        if (cropW <= 10 || cropH <= 10) return image;
+
+        const trimmedCanvas = document.createElement('canvas');
+        trimmedCanvas.width = cropW;
+        trimmedCanvas.height = cropH;
+        const trimCtx = trimmedCanvas.getContext('2d');
+        trimCtx.drawImage(canvas, minX, minY, cropW, cropH, 0, 0, cropW, cropH);
+
+        return trimmedCanvas;
+      } catch (err) {
+        return image;
+      }
+    }
+
+    // Add Patch Handler (supports multiple instances of the same patch / letter)
+    function handlePatchAdd(btnEl, patchRefId, patchType, titleStr, svgOrImgSrc, categoryStr, categoryLabel) {
+      if (!layer || !stage) return;
+
+      const stock = getPatchStockInfo({
+        type: patchType,
+        name: titleStr,
+        letterChar: titleStr,
+        letter: titleStr,
+        category: categoryStr,
+        categoryLabel: categoryLabel,
+        patchId: patchRefId,
+        alt: btnEl?.dataset?.patchAlt || '',
+        index: btnEl?.dataset?.patchIndex || btnEl?.dataset?.index || '',
+        filename: btnEl?.dataset?.patchFilename || btnEl?.dataset?.filename || '',
+      });
+
+      if (stock.isSoldOut) {
+        showStockToast(`"${titleStr}" is currently sold out.`);
+        return;
+      }
+
+      if (stock.isTracked && stock.policy !== 'continue') {
+        const alreadyCount = selectedPatches.filter((p) => {
+          if (patchType === 'character') {
+            return p.type === 'character' && p.patchRefId === patchRefId;
+          } else {
+            return (
+              p.type === 'letter' &&
+              p.category === (categoryStr || currentAlphabetCategory) &&
+              (p.letterChar || '').toLowerCase() === (titleStr || '').toLowerCase()
+            );
+          }
+        }).length;
+
+        if (alreadyCount >= stock.qtyAvailable) {
+          showStockToast(`Maximum available quantity already added for "${titleStr}".`);
+          return;
+        }
+      }
+
+      const currentW = stage.width();
+      const currentH = stage.height();
+      const scaleFactor = currentW / BASE_STAGE_REF;
+
+      const imgObj = new Image();
+      imgObj.crossOrigin = 'Anonymous';
+      const finalImgSrc = svgOrImgSrc || getLetterPatchImageUrl(categoryStr || currentAlphabetCategory, titleStr);
+      imgObj.src = finalImgSrc;
+
+      // Unique instance ID for this specific patch node
+      const instanceId = `${patchRefId}-inst-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`;
+
+      // Stagger positions nicely across canvas
+      const patchIndex = selectedPatches.length;
+      const initX = Math.min(Math.max(50, currentW / 2 + ((patchIndex % 5) - 2) * 45), currentW - 50);
+      const initY = Math.min(Math.max(50, currentH / 2 + Math.floor(patchIndex / 5) * 45), currentH - 50);
+      const relX = initX / currentW;
+      const relY = initY / currentH;
+
+      let rawSizeStr = null;
+      if (btnEl && btnEl.dataset.size) {
+        rawSizeStr = btnEl.dataset.size;
+      }
+      if (!rawSizeStr && btnEl && btnEl.closest('[data-size]')) {
+        rawSizeStr = btnEl.closest('[data-size]').dataset.size;
+      }
+      if (!rawSizeStr && categoryStr) {
+        const pill = document.querySelector(
+          patchType === 'letter'
+            ? `#podifai-alphabet-categories .podifai-pill-btn[data-cat="${categoryStr}"]`
+            : `#podifai-char-categories .podifai-pill-btn[data-char-cat="${categoryStr}"]`
+        );
+        if (pill && pill.dataset.size) rawSizeStr = pill.dataset.size;
+      }
+      if (!rawSizeStr) {
+        if (patchType === 'letter') {
+          const activeAlphaPill = document.querySelector('#podifai-alphabet-categories .podifai-pill-btn.active');
+          if (activeAlphaPill) rawSizeStr = activeAlphaPill.dataset.size;
+        } else {
+          const activeCharPill = document.querySelector('#podifai-char-categories .podifai-pill-btn.active');
+          if (activeCharPill) rawSizeStr = activeCharPill.dataset.size;
+        }
+      }
+      if (!rawSizeStr) rawSizeStr = '8cm x 8cm';
+
+      const dim = getPatchDimensionsPx(rawSizeStr, patchType);
+      const baseWidth = dim.width;
+      const baseHeight = dim.height;
+
+      const node = new Konva.Image({
+        x: initX,
+        y: initY,
+        image: imgObj,
+        width: baseWidth,
+        height: baseHeight,
+        offsetX: baseWidth / 2,
+        offsetY: baseHeight / 2,
+        scaleX: scaleFactor,
+        scaleY: scaleFactor,
+        draggable: true,
+        dragBoundFunc: function (pos) {
+          if (!stage) return pos;
+          const sw = stage.width();
+          const sh = stage.height();
+          const s = this.scaleX();
+          const halfW = (this.width() * s) / 2;
+          const halfH = (this.height() * s) / 2;
+          const m = 6;
+          return {
+            x: Math.max(halfW + m, Math.min(pos.x, sw - halfW - m)),
+            y: Math.max(halfH + m, Math.min(pos.y, sh - halfH - m)),
+          };
+        },
+      });
+
+      function applyImageDimensions() {
+        const processedImg = trimTransparentBorders(imgObj) || imgObj;
+        node.image(processedImg);
+
+        const natW = processedImg.width || processedImg.naturalWidth;
+        const natH = processedImg.height || processedImg.naturalHeight;
+
+        if (natW && natH) {
+          const natRatio = natW / natH;
+          let w = baseWidth;
+          let h = baseHeight;
+
+          if (patchType === 'letter') {
+            const char = (titleStr || '').trim().toLowerCase();
+            const catLower = (categoryLabel || categoryStr || '').toLowerCase();
+            const isSmallLetterCategory =
+              catLower.includes('small') ||
+              catLower.includes('lower') ||
+              (catLower.includes('letters') && !catLower.includes('capital'));
+
+            if (isSmallLetterCategory) {
+              // Standard lowercase letters without ascenders or descenders (x-height letters)
+              const xHeightLetters = new Set(['a', 'c', 'e', 'm', 'n', 'o', 'r', 's', 'u', 'v', 'w', 'x', 'z']);
+              const descenderLetters = new Set(['g', 'j', 'p', 'q', 'y']);
+
+              let targetH;
+              if (xHeightLetters.has(char)) {
+                // All core lowercase letters (m, n, s, etc.) share the exact same uniform x-height
+                targetH = Math.round(baseHeight * 0.72);
+              } else if (char === 'i') {
+                targetH = Math.round(baseHeight * 0.85);
+              } else if (descenderLetters.has(char)) {
+                targetH = Math.round(baseHeight * 0.95);
+              } else {
+                // Ascenders (b, d, f, h, k, l, t) stand at full height
+                targetH = baseHeight;
+              }
+              h = targetH;
+              w = Math.round(targetH * natRatio);
+
+              // Guardrails: ensure width doesn't get excessively stretched
+              const maxW = Math.round(baseWidth * 1.5);
+              if (w > maxW) {
+                w = maxW;
+                h = Math.round(w / natRatio);
+              }
+            } else {
+              // Capital letters: all capital letters stand at a uniform cap-height
+              let targetH = baseHeight;
+              if (char === 'q' || char === 'j') {
+                targetH = Math.round(baseHeight * 1.05);
+              }
+              h = targetH;
+              w = Math.round(targetH * natRatio);
+
+              const maxW = Math.round(baseWidth * 1.4);
+              if (w > maxW) {
+                w = maxW;
+                h = Math.round(w / natRatio);
+              }
+            }
+          } else {
+            // Character patches (icons, emojis, graphics): fit within bounding box
+            const maxDim = Math.max(baseWidth, baseHeight);
+            w = maxDim;
+            h = maxDim;
+            if (natRatio > 1.05) {
+              h = Math.round(maxDim / natRatio);
+            } else if (natRatio < 0.95) {
+              w = Math.round(maxDim * natRatio);
+            }
+          }
+
+          node.width(w);
+          node.height(h);
+          node.offsetX(w / 2);
+          node.offsetY(h / 2);
+        }
+        updateTransformerButtonsPosition();
+        checkPatchOverlaps();
+        layer.draw();
+      }
+
+      if (imgObj.complete && (imgObj.naturalWidth || imgObj.width)) {
+        applyImageDimensions();
+      } else {
+        imgObj.onload = applyImageDimensions;
+      }
+
+      const patchObj = {
+        id: instanceId,
+        patchRefId: patchRefId,
+        type: patchType,
+        category: categoryStr,
+        categoryLabel: categoryLabel,
+        letterChar: titleStr,
+        node: node,
+        element: btnEl,
+        alt: btnEl?.dataset?.patchAlt || '',
+        index: btnEl?.dataset?.patchIndex || btnEl?.dataset?.index || '',
+        filename: btnEl?.dataset?.patchFilename || btnEl?.dataset?.filename || '',
+        imgUrl: finalImgSrc,
+        relX: relX,
+        relY: relY,
+        baseScaleX: 1,
+        baseScaleY: 1,
+        rotation: 0,
+      };
+
+      function syncNodeRelativeState() {
+        const w = stage.width();
+        const h = stage.height();
+        patchObj.relX = node.x() / w;
+        patchObj.relY = node.y() / h;
+        patchObj.rotation = node.rotation();
+      }
+
+      node.on('dragmove dragend transform transformend', () => {
+        syncNodeRelativeState();
+        updateTransformerButtonsPosition();
+        checkPatchOverlaps();
+      });
+
+      node.on('click tap', () => {
+        transformer.nodes([node]);
+        updateTransformerButtonsPosition();
+        checkPatchOverlaps();
+      });
+
+      layer.add(node);
+      transformer.nodes([node]);
+      updateTransformerButtonsPosition();
+
+      selectedPatches.push(patchObj);
+      checkPatchOverlaps();
+      updateUIBadges();
+    }
+
+    // Character Category Switcher Listeners
+    document.querySelectorAll('#podifai-char-categories .podifai-pill-btn').forEach((pill) => {
+      pill.addEventListener('click', () => {
+        document
+          .querySelectorAll('#podifai-char-categories .podifai-pill-btn')
+          .forEach((p) => p.classList.remove('active'));
+        pill.classList.add('active');
+
+        currentCharCategory = pill.dataset.charCat;
+        const catLabel = pill.dataset.label || pill.innerText;
+
+        const charHeaderLabel = document.getElementById('podifai-active-char-cat-label');
+        if (charHeaderLabel) charHeaderLabel.innerText = catLabel;
+
+        updateCharacterSublabel(pill);
+        filterCharacterPatchesGrid();
+        updateUIBadges();
+      });
+    });
+
+    // Attach Character Patch Click Listeners
+    document.querySelectorAll('#podifai-character-patches .podifai-patch-item').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const patchId = btn.dataset.patchId;
+        const patchType = btn.dataset.patchType || 'character';
+        const name = btn.dataset.patchName;
+        const img = btn.dataset.patchImg || btn.querySelector('img')?.src;
+        const cat = btn.dataset.charCategory;
+        const catTitle = btn.dataset.categoryTitle || 'Character';
+        handlePatchAdd(btn, patchId, patchType, name, img, cat, catTitle);
+      });
+    });
+
+    // Alphabet Category Switcher Listeners
+    document.querySelectorAll('#podifai-alphabet-categories .podifai-pill-btn').forEach((pill) => {
+      pill.addEventListener('click', () => {
+        document
+          .querySelectorAll('#podifai-alphabet-categories .podifai-pill-btn')
+          .forEach((p) => p.classList.remove('active'));
+        pill.classList.add('active');
+
+        currentAlphabetCategory = pill.dataset.cat;
+        const catLabel = pill.dataset.label || pill.innerText;
+
+        const categoryHeaderLabel = document.getElementById('podifai-active-category-label');
+        if (categoryHeaderLabel) categoryHeaderLabel.innerText = catLabel;
+
+        updateAlphabetSublabel(pill);
+        updateAlphabetGrid();
+        updateUIBadges();
+      });
+    });
+
+    // Attach Alphabet Patch Click Listeners
+    document.querySelectorAll('#podifai-alphabet-grid .podifai-letter-item').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const letter = btn.dataset.letter;
+        const activePill = document.querySelector('#podifai-alphabet-categories .podifai-pill-btn.active');
+        const categoryLabel = activePill ? activePill.dataset.label || activePill.innerText : currentAlphabetCategory;
+        const patchId = `letter-${currentAlphabetCategory}-${letter}`;
+        const imgUrl =
+          btn.dataset.customImg ||
+          btn.querySelector('.podifai-letter-img')?.src ||
+          getLetterPatchImageUrl(currentAlphabetCategory, letter);
+        handlePatchAdd(btn, patchId, 'letter', letter, imgUrl, currentAlphabetCategory, categoryLabel);
+      });
+    });
+
+    // ==========================================
+    // MULTI-TEXT EMBROIDERY MANAGEMENT SYSTEM
+    // ==========================================
+    const embroideryLinesContainer = document.getElementById('podifai-embroidery-lines');
+    const addTextBtn = document.getElementById('podifai-add-text-btn');
+    const threadSource = document.getElementById('podifai-thread-options-source');
+
+    function updateEmbroideryLineNode(lineObj, lineIndex) {
+      if (!stage || !layer) return;
+
+      const trimmedText = (lineObj.text || '').trim();
+
+      if (!trimmedText) {
+        if (lineObj.node) {
+          lineObj.node.destroy();
+          lineObj.node = null;
+          transformer.nodes([]);
+          layer.draw();
+        }
+        updateDynamicPrice();
+        checkPatchOverlaps();
+        return;
+      }
+
+      const currentW = stage.width();
+      const currentH = stage.height();
+      const scaleFactor = currentW / BASE_STAGE_REF;
+      const baseFontSize = 44;
+      const MAX_EMB_WIDTH = Math.min(240 * scaleFactor, currentW * 0.48);
+
+      const activeEmbLines = embroideryLines.filter((l) => (l.text || '').trim().length > 0);
+      const totalActive = activeEmbLines.length || 1;
+      const embSpacing = 42 * scaleFactor;
+      const defaultCenterX = currentW / 2;
+      const activeLineIndex = Math.max(0, activeEmbLines.indexOf(lineObj));
+      const defaultCenterY = currentH * 0.50 + (activeLineIndex - (totalActive - 1) / 2) * embSpacing;
+
+      // Embroidery is intentionally fixed to the centre of the bag preview.
+      // Multiple lines remain grouped around that centre point.
+      const targetX = defaultCenterX;
+      const targetY = defaultCenterY;
+      lineObj.isCustomMoved = false;
+      lineObj.relX = defaultCenterX / currentW;
+      lineObj.relY = defaultCenterY / currentH;
+      lineObj.baseFontSize = baseFontSize;
+
+      const isGaramond = lineObj.font && lineObj.font.includes('Garamond');
+      const isItalic =
+        lineObj.font.includes('Chancery') ||
+        lineObj.font.includes('Picturama') ||
+        lineObj.font.includes('Brush Script');
+
+      const resolvedFontFamily = isGaramond ? "'EB Garamond', serif" : lineObj.font;
+      const fontStyleStr = isItalic ? 'italic' : (isGaramond ? '500' : 'normal');
+
+      if (!lineObj.node) {
+        const node = new Konva.Text({
+          x: targetX,
+          y: targetY,
+          text: lineObj.text,
+          fontSize: baseFontSize * scaleFactor,
+          fontFamily: resolvedFontFamily,
+          fontStyle: fontStyleStr,
+          fill: lineObj.color,
+          align: 'center',
+          draggable: false,
+        });
+
+        node._dragStartX = targetX;
+        node._dragStartY = targetY;
+        node._dragLockAxis = null;
+
+        // Enforce ~8cm proportion constraint
+        if (node.width() > MAX_EMB_WIDTH) {
+          node.fontSize(baseFontSize * scaleFactor * (MAX_EMB_WIDTH / node.width()));
+        }
+        node.offsetX(node.width() / 2);
+        node.offsetY(node.height() / 2);
+
+        node.on('click tap', () => {
+          if (transformer) {
+            transformer.nodes([]);
+            updateTransformerButtonsPosition();
+          }
+          const inputEl = document.querySelector(`.podifai-embroidery-card[data-line-id="${lineObj.id}"] .podifai-text-input`);
+          if (inputEl) inputEl.focus();
+        });
+
+        layer.add(node);
+        lineObj.node = node;
+      } else {
+        lineObj.node.text(lineObj.text);
+        lineObj.node.fontFamily(resolvedFontFamily);
+        lineObj.node.fontStyle(fontStyleStr);
+        lineObj.node.fill(lineObj.color);
+        lineObj.node.fontSize(baseFontSize * scaleFactor);
+
+        // Enforce ~8cm proportion constraint
+        if (lineObj.node.width() > MAX_EMB_WIDTH) {
+          lineObj.node.fontSize(baseFontSize * scaleFactor * (MAX_EMB_WIDTH / lineObj.node.width()));
+        }
+        lineObj.node.offsetX(lineObj.node.width() / 2);
+        lineObj.node.offsetY(lineObj.node.height() / 2);
+
+        lineObj.node.x(targetX);
+        lineObj.node.y(targetY);
+        lineObj.node._dragStartX = targetX;
+        lineObj.node._dragStartY = targetY;
+        lineObj.node._dragLockAxis = null;
+        lineObj.node.draggable(false);
+      }
+
+      updateTransformerButtonsPosition();
+      updateDynamicPrice();
+      checkPatchOverlaps();
+    }
+
+    function getFontDisplayName(fontStr) {
+      if (!fontStr) return 'DM Serif Display';
+      if (fontStr.includes('Garamond')) return 'EB Garamond';
+      if (fontStr.includes('Chancery')) return 'Chancery';
+      if (fontStr.includes('DM Serif Display')) return 'DM Serif Display';
+      if (fontStr.includes('Picturama Founder')) return 'Picturama Founder';
+      if (fontStr.includes('Georgia')) return 'DM Serif Display';
+      if (fontStr.includes('Brush Script')) return 'Picturama Founder';
+      return 'DM Serif Display';
+    }
+
+    function renderEmbroideryLinesUI() {
+      if (!embroideryLinesContainer) return;
+
+      embroideryLinesContainer.innerHTML = '';
+
+      embroideryLines.forEach((line, index) => {
+        // Fallback removed Gill Sans / Inter font to DM Serif Display
+        if (line.font && (line.font.includes('Gill Sans') || line.font.includes('Inter'))) {
+          line.font = "'DM Serif Display', Georgia, serif";
+          if (line.node) line.node.fontFamily(line.font);
+        }
+        if (line.font && line.font.includes('Garamond')) {
+          line.font = "'EB Garamond', serif";
+        }
+
+        const card = document.createElement('div');
+        card.className = 'podifai-embroidery-card';
+        card.dataset.lineId = line.id;
+
+        card.innerHTML = `
+          ${
+            embroideryLines.length > 1
+              ? `<div class="podifai-card-header">
+                  <span class="podifai-card-title">Embroidery Text #${index + 1}</span>
+                  <button type="button" class="podifai-card-remove" data-id="${line.id}">&times; Remove</button>
+                </div>`
+              : ''
+          }
+
+          <!-- Font Style Picker -->
+          <div class="podifai-field-group">
+            <label class="podifai-field-label">Font: <strong class="podifai-selected-font-name">${getFontDisplayName(line.font)}</strong></label>
+            <div class="podifai-font-picker">
+              <button type="button" class="podifai-font-btn ${
+                line.font.includes('DM Serif Display') || line.font.includes('Georgia') ? 'active' : ''
+              }" data-font="'DM Serif Display', Georgia, serif" style="font-family: 'DM Serif Display', Georgia, serif;" title="DM Serif Display">
+                Aa
+              </button>
+              <button type="button" class="podifai-font-btn ${
+                line.font.includes('Picturama Founder') || line.font.includes('Brush Script') ? 'active' : ''
+              }" data-font="'Picturama Founder', 'Brush Script MT', cursive" style="font-family: 'Picturama Founder', 'Brush Script MT', cursive; font-style: italic; font-weight: normal;" title="Picturama Founder">
+                Aa
+              </button>
+              <button type="button" class="podifai-font-btn ${
+                line.font.includes('Garamond') ? 'active' : ''
+              }" data-font="'EB Garamond', serif" style="font-family: 'EB Garamond', serif; font-weight: 500;" title="EB Garamond">
+                Aa
+              </button>
+              <button type="button" class="podifai-font-btn ${
+                line.font.includes('Chancery') ? 'active' : ''
+              }" data-font="'Apple Chancery', 'Zapf Chancery', cursive" style="font-family: 'Apple Chancery', 'Zapf Chancery', cursive; font-style: italic;" title="Chancery">
+                Aa
+              </button>
+            </div>
+          </div>
+
+          <!-- Text Input -->
+          <div class="podifai-field-group">
+            <div class="podifai-field-label-row">
+              <label class="podifai-field-label">${TEXT_INPUT_LABEL}</label>
+              <span class="podifai-char-counter">${(line.text || '').length}/10</span>
+            </div>
+            <input
+              type="text"
+              class="podifai-text-input"
+              maxlength="10"
+              value="${line.text || ''}"
+              autocomplete="off"
+            >
+          </div>
+
+          <!-- Thread Color Picker -->
+          <div class="podifai-field-group">
+            <label class="podifai-field-label">Thread colour: <strong class="podifai-selected-thread-name">${
+              line.colorName || 'Ivory'
+            }</strong></label>
+            <div class="podifai-color-picker">
+              ${threadSource ? threadSource.innerHTML : ''}
+            </div>
+          </div>
+        `;
+
+        const swatches = card.querySelectorAll('.podifai-color-swatch');
+        const threadNameLabel = card.querySelector('.podifai-selected-thread-name');
+
+        swatches.forEach((sw) => {
+          if (sw.dataset.color.toLowerCase() === line.color.toLowerCase()) {
+            sw.classList.add('active');
+          }
+          sw.addEventListener('click', () => {
+            swatches.forEach((s) => s.classList.remove('active'));
+            sw.classList.add('active');
+            line.color = sw.dataset.color;
+            line.colorName = sw.dataset.colorName || sw.title || 'Selected';
+            if (threadNameLabel) {
+              threadNameLabel.innerText = line.colorName;
+            }
+            updateEmbroideryLineNode(line, index);
+          });
+        });
+
+        const fontBtns = card.querySelectorAll('.podifai-font-btn');
+        const fontNameLabel = card.querySelector('.podifai-selected-font-name');
+        fontBtns.forEach((fb) => {
+          fb.addEventListener('click', () => {
+            fontBtns.forEach((b) => b.classList.remove('active'));
+            fb.classList.add('active');
+            line.font = fb.dataset.font;
+            if (fontNameLabel) {
+              fontNameLabel.innerText = getFontDisplayName(line.font);
+            }
+            updateEmbroideryLineNode(line, index);
+            if (document.fonts && typeof document.fonts.load === 'function') {
+              try {
+                document.fonts.load(`16px ${line.font}`).then(() => {
+                  if (stage && layer) {
+                    updateEmbroideryLineNode(line, index);
+                    layer.batchDraw();
+                  }
+                });
+              } catch (_) {}
+            }
+          });
+        });
+
+        const textInput = card.querySelector('.podifai-text-input');
+        const charCounter = card.querySelector('.podifai-char-counter');
+        textInput.addEventListener('input', (e) => {
+          line.text = e.target.value;
+          if (charCounter) charCounter.innerText = `${line.text.length}/10`;
+          updateEmbroideryLineNode(line, index);
+          // A newly added/removed line changes the centred stack, so recalculate
+          // the other active embroidery lines as well.
+          embroideryLines.forEach((otherLine, otherIndex) => {
+            if (otherLine !== line && (otherLine.text || '').trim()) {
+              updateEmbroideryLineNode(otherLine, otherIndex);
+            }
+          });
+        });
+
+        const removeBtn = card.querySelector('.podifai-card-remove');
+        if (removeBtn) {
+          removeBtn.addEventListener('click', () => {
+            if (line.node) {
+              line.node.destroy();
+              transformer.nodes([]);
+              layer.draw();
+            }
+            embroideryLines = embroideryLines.filter((l) => l.id !== line.id);
+            embroideryLines.forEach((otherLine, otherIndex) => {
+              if ((otherLine.text || '').trim()) updateEmbroideryLineNode(otherLine, otherIndex);
+            });
+            renderEmbroideryLinesUI();
+            updateDynamicPrice();
+            checkPatchOverlaps();
+          });
+        }
+
+        embroideryLinesContainer.appendChild(card);
+      });
+    }
+
+    if (addTextBtn) {
+      addTextBtn.addEventListener('click', () => {
+        const newLine = {
+          id: `emb-line-${nextEmbroideryLineId++}`,
+          text: '',
+          font: "'Brush Script MT', cursive",
+          color: '#FAF8F5',
+          colorName: 'Ivory',
+          node: null,
+          relX: 0.5,
+          relY: 0.5,
+          baseFontSize: 28,
+          baseScaleX: 1,
+          baseScaleY: 1,
+          rotation: 0,
+        };
+        embroideryLines.push(newLine);
+        renderEmbroideryLinesUI();
+        updateDynamicPrice();
+      });
+    }
+
+    // Ultra High-Definition Composite Snapshot Generator for Cloudinary
+    async function generateFullCustomizationSnapshot() {
+      try {
+        const activeImgEl =
+          document.querySelector('.product-image-wrapper.active img') ||
+          document.querySelector('.product-main-image') ||
+          document.querySelector('.product-images img');
+
+        const exportW = 1200;
+        const exportH = 1200;
+
+        const exportCanvas = document.createElement('canvas');
+        exportCanvas.width = exportW;
+        exportCanvas.height = exportH;
+        const ctx = exportCanvas.getContext('2d');
+        if (!ctx) return null;
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = 'high';
+
+        // 1. Draw product background image
+        if (activeImgEl && (activeImgEl.complete || activeImgEl.naturalWidth > 0)) {
+          try {
+            const imgW = activeImgEl.naturalWidth || exportW;
+            const imgH = activeImgEl.naturalHeight || exportH;
+            const imgRatio = imgW / imgH;
+            const containerRatio = exportW / exportH;
+
+            let drawW, drawH, drawX, drawY;
+            if (imgRatio > containerRatio) {
+              drawW = exportW;
+              drawH = exportW / imgRatio;
+              drawX = 0;
+              drawY = (exportH - drawH) / 2;
+            } else {
+              drawH = exportH;
+              drawW = exportH * imgRatio;
+              drawX = (exportW - drawW) / 2;
+              drawY = 0;
+            }
+
+            ctx.drawImage(activeImgEl, drawX, drawY, drawW, drawH);
+          } catch (e) {
+            console.warn('Background draw note:', e);
+          }
+        }
+
+        // 2. Temporarily detach transformer & hide delete and rotate buttons for clean export
+        if (deleteBtnGroup) {
+          deleteBtnGroup.visible(false);
+        }
+        if (rotateBtnGroup) {
+          rotateBtnGroup.visible(false);
+        }
+        if (transformer) {
+          transformer.detach();
+        }
+        if (layer) {
+          layer.draw();
+        }
+
+        // 3. Draw Konva canvas elements in high resolution
+        if (stage) {
+          const konvaDataUrl = stage.toDataURL({ pixelRatio: 2 });
+          await new Promise((resolve) => {
+            const konvaImg = new Image();
+            konvaImg.crossOrigin = 'anonymous';
+            konvaImg.onload = () => {
+              try {
+                ctx.drawImage(konvaImg, 0, 0, exportW, exportH);
+              } catch (_) {}
+              resolve();
+            };
+            konvaImg.onerror = () => resolve();
+            konvaImg.src = konvaDataUrl;
+          });
+        }
+
+        return exportCanvas.toDataURL('image/png');
+      } catch (err) {
+        console.warn('Snapshot generation note:', err);
+        return null;
+      }
+    }
+
+    // Direct Image Upload Function (ImgBB Direct Upload with Cloudinary Fallback)
+    async function uploadPreviewToCloudinary(base64Data) {
+      return uploadPreviewImage(base64Data);
+    }
+
+    async function uploadPreviewImage(base64Data) {
+      if (!base64Data || typeof base64Data !== 'string' || !base64Data.startsWith('data:image')) {
+        return null;
+      }
+
+      // 1. Primary: Direct ImgBB API Upload (Preserves 100% untouched original full resolution)
+      if (IMGBB_API_KEY) {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 5000);
+
+        try {
+          const formData = new FormData();
+          // Extract base64 payload cleanly
+          const base64Body = base64Data.replace(/^data:image\/[a-z]+;base64,/, '');
+          formData.append('image', base64Body);
+          formData.append('key', IMGBB_API_KEY);
+
+          const res = await fetch(`https://api.imgbb.com/1/upload?key=${encodeURIComponent(IMGBB_API_KEY)}`, {
+            method: 'POST',
+            body: formData,
+            signal: controller.signal,
+          });
+
+          clearTimeout(timeoutId);
+
+          if (res.ok) {
+            const result = await res.json();
+            if (result && result.success && result.data) {
+              // Direct high-quality original file URL (https://i.ibb.co/...)
+              const directFullResUrl = result.data.url || (result.data.image && result.data.image.url);
+              if (directFullResUrl && typeof directFullResUrl === 'string' && directFullResUrl.startsWith('http')) {
+                return directFullResUrl;
+              }
+            }
+          } else {
+            console.warn('ImgBB upload returned non-200 status code:', res.status);
+          }
+        } catch (err) {
+          if (err.name === 'AbortError') {
+            console.warn('ImgBB upload timed out after 5s; proceeding without preview link.');
+          } else {
+            console.warn('ImgBB upload error:', err);
+          }
+        } finally {
+          clearTimeout(timeoutId);
+        }
+      }
+
+      // 2. Fallback: Cloudinary (if IMGBB_API_KEY not configured but Cloudinary credentials exist)
+      if (CLOUD_NAME && UPLOAD_PRESET) {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 4500);
+
+        try {
+          const formData = new FormData();
+          formData.append('file', base64Data);
+          formData.append('upload_preset', UPLOAD_PRESET);
+          formData.append('folder', 'podifai_customizations');
+
+          const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`, {
+            method: 'POST',
+            body: formData,
+            signal: controller.signal,
+          });
+
+          clearTimeout(timeoutId);
+
+          if (res.ok) {
+            const data = await res.json();
+            if (data && (data.secure_url || data.url)) {
+              return data.secure_url || data.url;
+            }
+          } else {
+            console.warn('Cloudinary upload returned non-200 status code:', res.status);
+          }
+        } catch (err) {
+          if (err.name === 'AbortError') {
+            console.warn('Cloudinary upload timed out after 4.5s; proceeding without preview link.');
+          } else {
+            console.warn('Cloudinary upload failed:', err);
+          }
+        } finally {
+          clearTimeout(timeoutId);
+        }
+      }
+
+      return null;
+    }
+
+    // Custom AJAX Add to Cart Handler
+    async function handleCustomAddToCart(form) {
+      // Validate patch overlaps
+      if (checkPatchOverlaps()) {
+        const toast = document.getElementById('podifai-overlap-error-toast');
+        if (toast) {
+          toast.style.display = 'flex';
+          toast.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+        return false;
+      }
+
+      const btn = form.querySelector('[type="submit"]') || document.getElementById('add-to-cart-btn');
+      const originalBtnHTML = btn ? btn.innerHTML : 'Add to bag';
+
+      if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<span>Capturing preview...</span>';
+      }
+
+      const fullMergedSnapshot = await generateFullCustomizationSnapshot();
+      const priceInfo = updateDynamicPrice() || {};
+      const mainVariantId =
+        form.querySelector('[name="id"]')?.value || document.getElementById('selected-variant-id')?.value;
+      const qty = parseInt(form.querySelector('[name="quantity"]')?.value) || 1;
+
+      if (!mainVariantId) {
+        if (btn) {
+          btn.disabled = false;
+          btn.innerHTML = originalBtnHTML;
+        }
+        return false;
+      }
+
+      const mainProductTitle = document.querySelector('.product-title')?.innerText || 'Customized Product';
+
+      const activeEmbLines = embroideryLines.filter((l) => l.text && l.text.trim() !== '');
+
+      // Deterministic signature based on variant, selected patches, and embroidery
+      function computeCustomizationSignature(variantId, patches, embLines) {
+        const patchParts = (patches || [])
+          .map((p) =>
+            `${p.id || ''}:${p.category || ''}:${p.letterChar || ''}:${Math.round((parseFloat(p.relX) || 0) * 100)}:${Math.round(
+              (parseFloat(p.relY) || 0) * 100
+            )}:${Math.round(parseFloat(p.rotation) || 0)}`
+          )
+          .sort()
+          .join('|');
+
+        const embParts = (embLines || [])
+          .map((l) =>
+            `${l.text.trim()}:${(l.font || '').split(',')[0].replace(/['"]/g, '').trim()}:${(l.colorName || l.color || '').trim()}:${Math.round(
+              (parseFloat(l.relX) || 0) * 100
+            )}:${Math.round((parseFloat(l.relY) || 0) * 100)}`
+          )
+          .join('|');
+
+        const raw = `${variantId}__P_${patchParts}__E_${embParts}`;
+        let hash = 0x811c9dc5;
+        for (let i = 0; i < raw.length; i++) {
+          hash ^= raw.charCodeAt(i);
+          hash = Math.imul(hash, 0x01000193);
+        }
+        return (hash >>> 0).toString(36);
+      }
+
+      const customSig = computeCustomizationSignature(mainVariantId, selectedPatches, activeEmbLines);
+      const bundleId = 'bundle_' + mainVariantId + '_' + customSig;
+
+      // Cache preview image URL by signature so identical customizations share the same exact URL & properties
+      let previewImageUrl = null;
+      try {
+        const cacheKey = 'podifai_prev_' + mainVariantId + '_' + customSig;
+        const cachedUrl = sessionStorage.getItem(cacheKey);
+        if (cachedUrl && cachedUrl.startsWith('http')) {
+          previewImageUrl = cachedUrl;
+        } else if (fullMergedSnapshot) {
+          previewImageUrl = await uploadPreviewImage(fullMergedSnapshot);
+          if (previewImageUrl && previewImageUrl.startsWith('http')) {
+            try {
+              sessionStorage.setItem(cacheKey, previewImageUrl);
+            } catch (_) {}
+          }
+        }
+      } catch (uploadErr) {
+        console.warn('Preview upload skipped due to error:', uploadErr);
+        previewImageUrl = null;
+      }
+
+      const mainItemProperties = {
+        _bundle_id: bundleId,
+        _customization_signature: customSig,
+      };
+
+      activeEmbLines.forEach((line, idx) => {
+        const embKey = activeEmbLines.length > 1 ? `_Embroidery ${idx + 1}` : '_Embroidery';
+        mainItemProperties[embKey] = `${line.text} (${getFontDisplayName(line.font)}, ${
+          line.colorName || line.color
+        })`;
+      });
+
+      mainItemProperties['_Customisation Breakdown'] = `${priceInfo.patchCount || 0} Patches (+${CURRENCY_SYMBOL}${(
+        priceInfo.patchTotal || 0
+      ).toFixed(2)}), ${priceInfo.activeEmbroideryCount || 0} Embroidery (+${CURRENCY_SYMBOL}${(
+        priceInfo.embroideryTotal || 0
+      ).toFixed(2)})`;
+      mainItemProperties['_Total Custom Price'] =
+        priceInfo.formattedPrice || `${CURRENCY_SYMBOL}${(priceInfo.grandTotal || 0).toFixed(2)}`;
+      mainItemProperties['_Base Product Price'] = `${CURRENCY_SYMBOL}${(priceInfo.basePrice || 0).toFixed(2)}`;
+
+      // Only set _Preview if a valid HTTP URL was generated from ImgBB or Cloudinary.
+      // Never fall back to massive base64 data URLs which cause Shopify /cart/add.js or checkout payload errors.
+      if (previewImageUrl && typeof previewImageUrl === 'string' && previewImageUrl.startsWith('http')) {
+        mainItemProperties['_Preview'] = previewImageUrl;
+      }
+
+      if (selectedPatches.length > 0) {
+        mainItemProperties['_Selected Patches'] = selectedPatches.map((p) => p.letterChar || 'Patch').join(', ');
+      }
+
+      mainItemProperties['_Customization Data'] = JSON.stringify({
+        signature: customSig,
+        pricing: priceInfo,
+        patches: selectedPatches.map((p, idx) => ({
+          order: idx + 1,
+          id: p.id,
+          type: p.type,
+          category: p.category,
+          letterChar: p.letterChar,
+          relX: p.relX,
+          relY: p.relY,
+          rotation: p.rotation || 0,
+        })),
+        embroidery: activeEmbLines.map((line, idx) => ({
+          line: idx + 1,
+          text: line.text,
+          font: line.font,
+          color: line.color,
+          colorName: line.colorName,
+          relX: line.relX,
+          relY: line.relY,
+          rotation: line.rotation || 0,
+        })),
+      });
+
+      mainItemProperties['_patches_per_bag'] = String(priceInfo.patchCount);
+      mainItemProperties['_embroidery_per_bag'] = String(priceInfo.activeEmbroideryCount);
+
+      const resolvedProductTitle =
+        {{ product.title | json }} ||
+        document.querySelector('.product-title')?.innerText?.trim() ||
+        mainProductTitle ||
+        'Customized Bag';
+
+      // Resolve variant title so add-ons show the main product variant (e.g. "The Everyday Joy Bag Medium / Electric Orange")
+      let variantTitle = '';
+      let variantsList = [];
+      try {
+        variantsList = {{ product.variants | json }} || [];
+      } catch (_) {}
+      if (!variantsList || !variantsList.length) {
+        const variantsEl = document.getElementById('podifai-product-variants-json');
+        if (variantsEl) {
+          try {
+            variantsList = JSON.parse(variantsEl.textContent);
+          } catch (_) {}
+        }
+      }
+
+      const matchedVariant = (variantsList || []).find((v) => String(v.id) === String(mainVariantId));
+      if (matchedVariant && matchedVariant.title && matchedVariant.title !== 'Default Title') {
+        variantTitle = matchedVariant.title.trim();
+      }
+
+      // Fallback to reading selected variant options from DOM if not found in variantsList
+      if (!variantTitle) {
+        const selectedOpts = [];
+        document.querySelectorAll('.variant-option-group').forEach((g) => {
+          const val =
+            g.querySelector('.selected-option-value')?.innerText?.trim() ||
+            g.querySelector('.color-swatch-btn.active:not(.swatch-hidden), .color-swatch-btn.active')?.dataset?.optionValue?.trim() ||
+            g.querySelector('.size-pill-input:checked')?.value?.trim();
+          if (val) selectedOpts.push(val);
+        });
+        if (selectedOpts.length > 0) {
+          variantTitle = selectedOpts.join(' / ');
+        }
+      }
+
+      let parentLabel = resolvedProductTitle;
+      if (variantTitle) {
+        if (variantTitle.toLowerCase().startsWith(resolvedProductTitle.toLowerCase())) {
+          parentLabel = variantTitle;
+        } else {
+          parentLabel = `${resolvedProductTitle} – ${variantTitle}`;
+        }
+      }
+
+      const embSummary = activeEmbLines
+        .map((l) => `${l.text} (${getFontDisplayName(l.font)}, ${l.colorName || l.color})`)
+        .join('; ');
+      const patchSummary = selectedPatches
+        .map((p) => {
+          const cat = p.category ? `${p.category}: ` : '';
+          return `${cat}${p.letterChar || 'Patch'}`;
+        })
+        .join(', ');
+      const previewText =
+        previewImageUrl && previewImageUrl.startsWith('http') ? previewImageUrl : 'None';
+      const noteEntry = `[${mainProductTitle}] Patches: ${patchSummary || 'None'} | Embroidery: ${
+        embSummary || 'None'
+      } | Preview: ${previewText}`;
+
+      mainItemProperties['_note_entry'] = noteEntry;
+
+      const itemsPayload = [
+        {
+          id: parseInt(mainVariantId),
+          quantity: qty,
+          properties: mainItemProperties,
+        },
+      ];
+
+      if (ENABLE_ADDON && priceInfo.patchCount > 0) {
+        selectedPatches.forEach((p, idx) => {
+          let patchLabel = '';
+          if (p.type === 'character') {
+            const raw = p.letterChar || 'Patch';
+            const m = raw.match(/^(.*?)\s*#(\d+)$/);
+            if (m) {
+              patchLabel = `${m[1].replace(/^[^\w\s]+/, '').trim()} · P${m[2]}`;
+            } else {
+              patchLabel = raw.replace(',', ' ·');
+            }
+          } else {
+            const cat = p.categoryLabel || p.category || 'Alphabet';
+            const char = (p.letterChar || '').toUpperCase().replace(/'/g, '');
+            patchLabel = `${cat} · ${char}`;
+          }
+
+          let fullPatchImgUrl = p.imgUrl || '';
+          if (fullPatchImgUrl.startsWith('//')) {
+            fullPatchImgUrl = 'https:' + fullPatchImgUrl;
+          }
+
+          let patchVariantId = null;
+          const matchedVariant = getVariantForPatch({
+            type: p.type,
+            name: p.letterChar,
+            letterChar: p.letterChar,
+            category: p.category,
+            categoryLabel: p.categoryLabel,
+            patchRefId: p.patchRefId,
+            alt: p.alt,
+            index: p.index,
+            filename: p.filename,
+          });
+          if (matchedVariant && matchedVariant.id) {
+            patchVariantId = parseInt(matchedVariant.id);
+          } else if (PATCH_ADDON_VARIANT) {
+            patchVariantId = parseInt(PATCH_ADDON_VARIANT);
+          } else if (patchVariantsList && patchVariantsList.length > 0) {
+            const genericVariant =
+              patchVariantsList.find((v) => (v.product_handle || '').includes('patch-addon')) ||
+              patchVariantsList.find((v) => (v.title || '').toLowerCase().includes('default')) ||
+              patchVariantsList[0];
+            if (genericVariant) patchVariantId = parseInt(genericVariant.id);
+          }
+
+          const patchProps = {
+            'For': parentLabel,
+            _parent_item: parentLabel,
+            _bundle_id: bundleId,
+            _addon_type: 'Patch Add on',
+            _is_companion: 'true',
+            _patch_index: String(idx + 1),
+            _patch_instance_id: p.id,
+            _image: fullPatchImgUrl,
+            _thumbnail: fullPatchImgUrl,
+            _patch_img: fullPatchImgUrl,
+          };
+          // Only show 'Patch: ...' property if variant is generic (e.g. 'Default Title')
+          // When variant is specific (e.g. 'Sushi · P2'), Shopify checkout already displays the variant title cleanly
+          if (!matchedVariant || (matchedVariant.title || '').toLowerCase().includes('default')) {
+            patchProps['Patch'] = patchLabel;
+          }
+
+          itemsPayload.push({
+            id: patchVariantId,
+            quantity: 1 * qty,
+            properties: patchProps,
+          });
+        });
+      }
+
+      if (ENABLE_ADDON && EMBROIDERY_ADDON_VARIANT && priceInfo.activeEmbroideryCount > 0) {
+        itemsPayload.push({
+          id: parseInt(EMBROIDERY_ADDON_VARIANT),
+          quantity: priceInfo.activeEmbroideryCount * qty,
+          properties: {
+            _bundle_id: bundleId,
+            _parent_item: parentLabel,
+            'For': parentLabel,
+            _embroidery_per_bag: String(priceInfo.activeEmbroideryCount),
+            _addon_type: 'Embroidery Add on',
+            _is_companion: 'true',
+          },
+        });
+      }
+
+      if (btn) {
+        btn.innerHTML = '<span>Adding to bag...</span>';
+      }
+
+      try {
+        const response = await fetch('/cart/add.js', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Accept: 'application/json',
+          },
+          body: JSON.stringify({ items: itemsPayload }),
+        });
+
+        if (response.ok) {
+          const cartResponse = await response.json();
+          if (btn) {
+            btn.innerHTML = '<span>Added to bag!</span>';
+          }
+
+          const cartAddEvent = new CustomEvent('cart:update', {
+            bubbles: true,
+            detail: {
+              resource: cartResponse,
+              sourceId: form.id || 'product-form',
+              data: {
+                source: 'product-form-component',
+                itemCount: qty,
+              },
+            },
+          });
+          document.dispatchEvent(cartAddEvent);
+
+          // Immediately update header and drawer bubbles
+          const currentCountEl = document.querySelector('.cart-bubble__text-count');
+          const currentCount = parseInt(currentCountEl?.textContent?.trim() || '0', 10);
+          const newTotalCount = currentCount + qty;
+          if (typeof window.updateHeaderCountUI === 'function') {
+            window.updateHeaderCountUI(newTotalCount);
+          }
+
+          const cartDrawer = document.querySelector('cart-drawer-component');
+          if (cartDrawer && typeof cartDrawer.open === 'function') {
+            cartDrawer.open();
+          }
+
+          document.dispatchEvent(new CustomEvent('cart:updated', { detail: { cart: cartResponse } }));
+          window.dispatchEvent(new CustomEvent('cart:updated', { detail: { cart: cartResponse } }));
+          document.dispatchEvent(new CustomEvent('cart:refresh'));
+
+          if (typeof window.syncCartEngine === 'function') {
+            window.syncCartEngine();
+          }
+
+          // Asynchronously sync Cart / Order Notes so ONLY active bags currently in the cart are kept
+          (async function syncOrderNote() {
+            try {
+              const curRes = await fetch('/cart.js', { headers: { 'x-cart-sync': '1' } });
+              const curCart = await curRes.json();
+
+              const activeBagNotes = [];
+              (curCart.items || []).forEach((it) => {
+                const p = it.properties || {};
+                const isCompanion = p['_is_companion'] === 'true' || p['_addon_type'] != null;
+                if (isCompanion) return;
+
+                if (p['_note_entry']) {
+                  activeBagNotes.push(p['_note_entry']);
+                } else if (p['_bundle_id'] === bundleId) {
+                  activeBagNotes.push(noteEntry);
+                } else if (p['_bundle_id'] || p['_Preview']) {
+                  const t = it.product_title || it.title || 'Customized Bag';
+                  const pat = p['_Selected Patches'] || 'None';
+                  const em = p['_Embroidery'] || 'None';
+                  const pv = p['_Preview'] || 'None';
+                  activeBagNotes.push(`[${t}] Patches: ${pat} | Embroidery: ${em} | Preview: ${pv}`);
+                }
+              });
+
+              if (!activeBagNotes.includes(noteEntry)) {
+                activeBagNotes.push(noteEntry);
+              }
+
+              // Preserve any non-bag manual notes entered by the shopper
+              const isAutoBagNote = (t) =>
+                t.startsWith('[') && t.includes('Patches:') && t.includes('Preview:');
+
+              const existingChunks = (curCart.note || '').split('\n\n');
+              const manualCustomerChunks = existingChunks.filter((chunk) => {
+                const t = chunk.trim();
+                return t && !isAutoBagNote(t);
+              });
+              const manualCustomerNote = manualCustomerChunks.join('\n\n').trim();
+
+              let desiredNote = '';
+              if (manualCustomerNote && activeBagNotes.length > 0) {
+                desiredNote = `${manualCustomerNote}\n\n${activeBagNotes.join('\n\n')}`;
+              } else if (activeBagNotes.length > 0) {
+                desiredNote = activeBagNotes.join('\n\n');
+              } else {
+                desiredNote = manualCustomerNote;
+              }
+
+              if ((curCart.note || '').trim() !== desiredNote.trim()) {
+                await fetch('/cart/update.js', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json', Accept: 'application/json', 'x-cart-sync': '1' },
+                  body: JSON.stringify({ note: desiredNote }),
+                });
+              }
+            } catch (e) {}
+          })();
+
+          // Reset Add to Bag button back to active state after 1.8 seconds
+          setTimeout(() => {
+            if (btn) {
+              btn.disabled = false;
+              btn.innerHTML = `<span id="add-to-cart-text">Add to bag · <span id="podifai-btn-price-display"></span></span>`;
+              if (typeof updateDynamicPrice === 'function') {
+                updateDynamicPrice();
+              }
+            }
+          }, 1800);
+
+          return true;
+        } else {
+          const errData = await response.json().catch(() => ({}));
+          const errMsg =
+            errData.description ||
+            errData.message ||
+            'This item is currently sold out. Please select another colour or size.';
+          console.warn('Cart add error from Shopify:', errMsg);
+
+          if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = `<span>${errMsg}</span>`;
+            setTimeout(() => {
+              btn.innerHTML = originalBtnHTML;
+            }, 4000);
+          }
+          return false;
+        }
+      } catch (err) {
+        console.error('Add to cart bundle error:', err);
+        if (btn) {
+          btn.disabled = false;
+          btn.innerHTML = originalBtnHTML;
+        }
+        return false;
+      }
+    }
+
+    // Intercept Form Submit
+    document.addEventListener(
+      'submit',
+      async (e) => {
+        const form = e.target;
+        if (
+          form &&
+          (form.matches('form[action*="/cart/add"]') ||
+            form.matches('form[data-type="add-to-cart-form"]') ||
+            form.id === 'product-form')
+        ) {
+          e.preventDefault();
+          await handleCustomAddToCart(form);
+        }
+      },
+      true
+    );
+
+    window.PodifaiCustomizer = {
+      updatePrice: updateDynamicPrice,
+      getStage: () => stage,
+      reAnchor: resizeAndRedrawCanvas,
+    };
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', () => {
+        initKonvaOverlay();
+        filterCharacterPatchesGrid();
+        updateAlphabetGrid();
+        updateUIBadges();
+        renderEmbroideryLinesUI();
+        updateActiveHeaderLabels();
+        updateDynamicPrice();
+      });
+    } else {
+      initKonvaOverlay();
+      filterCharacterPatchesGrid();
+      updateAlphabetGrid();
+      updateUIBadges();
+      renderEmbroideryLinesUI();
+      updateActiveHeaderLabels();
+      updateDynamicPrice();
+    }
+
+    if (document.fonts) {
+      if (typeof document.fonts.load === 'function') {
+        try {
+          document.fonts.load('500 16px "EB Garamond"');
+          document.fonts.load('400 16px "EB Garamond"');
+          document.fonts.load('italic 16px "Brush Script MT"');
+          document.fonts.load('16px "Brush Script MT"');
+          document.fonts.load('italic 16px "Picturama Founder"');
+          document.fonts.load('16px "Picturama Founder"');
+          document.fonts.load('italic 16px "Apple Chancery"');
+          document.fonts.load('16px "Apple Chancery"');
+        } catch (_) {}
+      }
+      if (typeof document.fonts.ready !== 'undefined') {
+        document.fonts.ready.then(() => {
+          if (stage && layer) {
+            embroideryLines.forEach((line, index) => {
+              if (line.node && line.text) {
+                updateEmbroideryLineNode(line, index);
+              }
+            });
+            layer.batchDraw();
+          }
+        });
+      }
+    }
+  })();
+</script>

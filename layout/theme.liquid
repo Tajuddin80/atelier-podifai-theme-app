@@ -232,10 +232,11 @@
 
         function isPatchAddon(it) {
           const p = it.properties || {};
+          if (p['_addon_type'] === 'Patch Add on' || p['_addon_type'] === 'patch') {
+            return true;
+          }
           if (
             p['_Customization Data'] ||
-            p['_Preview'] ||
-            p['Preview'] ||
             p['Customisation Preview'] ||
             p['Customization Preview'] ||
             p['Customisation'] ||
@@ -589,6 +590,32 @@
                   headers: { 'Content-Type': 'application/json', 'x-cart-sync': '1' },
                 });
                 isSyncing = false;
+              } else if (cart.note && cart.note.trim() !== '') {
+                // When cart is empty, clean out any leftover automated bag notes
+                const nonBagNotes = (cart.note || '')
+                  .split('\n\n')
+                  .filter((c) => {
+                    const t = c.trim();
+                    return (
+                      t &&
+                      !t.includes('Preview:') &&
+                      !t.includes('Patches:') &&
+                      !t.includes('Embroidery:') &&
+                      !t.includes('i.ibb.co') &&
+                      !t.includes('cloudinary.com')
+                    );
+                  })
+                  .join('\n\n')
+                  .trim();
+                if (nonBagNotes !== (cart.note || '').trim()) {
+                  isSyncing = true;
+                  await fetch('/cart/update.js', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', Accept: 'application/json', 'x-cart-sync': '1' },
+                    body: JSON.stringify({ note: nonBagNotes }),
+                  });
+                  isSyncing = false;
+                }
               }
               updateHeaderCountUI(0);
               document
@@ -649,8 +676,9 @@
               } else {
                 const bundleInfo = bagsByBundle[bId];
                 if (isPatchAddon(it)) {
-                  if (it.quantity !== bundleInfo.requiredPatches) {
-                    updates[it.key] = bundleInfo.requiredPatches;
+                  const expectedQty = it.properties?._patch_instance_id ? bundleInfo.qty : bundleInfo.requiredPatches;
+                  if (it.quantity !== expectedQty) {
+                    updates[it.key] = expectedQty;
                     needsUpdate = true;
                   }
                 } else if (isEmbroideryAddon(it)) {
@@ -662,12 +690,71 @@
               }
             });
 
-            if (needsUpdate) {
+            // 3. Synchronize Cart Notes to strictly match active bags in cart
+            const activeCustomizedBags = cart.items.filter((it) => {
+              if (isAnyAddon(it)) return false;
+              if (updates[it.key] === 0) return false; // Bag is being removed in this pass
+              const p = it.properties || {};
+              return (
+                p['_bundle_id'] ||
+                p['_note_entry'] ||
+                p['_Preview'] ||
+                p['Preview'] ||
+                p['Customisation'] ||
+                p['Customization'] ||
+                p['_patches_per_bag']
+              );
+            });
+
+            const activeBagNotes = activeCustomizedBags
+              .map((it) => {
+                const p = it.properties || {};
+                if (p['_note_entry']) return p['_note_entry'];
+
+                const title = it.product_title || it.title || 'The Everyday Joy Bag';
+                const patches = p['_Selected Patches'] || 'None';
+                const emb = p['_Embroidery'] || p['_Embroidery 1'] || 'None';
+                const preview = p['_Preview'] || p['Preview'] || 'None';
+                return `[${title}] Patches: ${patches} | Embroidery: ${emb} | Preview: ${preview}`;
+              })
+              .filter(Boolean);
+
+            const isAutoBagNote = (t) =>
+              t.startsWith('[') && t.includes('Patches:') && t.includes('Preview:');
+
+            const existingChunks = (cart.note || '').split('\n\n');
+            const manualCustomerChunks = existingChunks.filter((chunk) => {
+              const t = chunk.trim();
+              return t && !isAutoBagNote(t);
+            });
+            const manualCustomerNote = manualCustomerChunks.join('\n\n').trim();
+
+            let desiredNote = '';
+            if (manualCustomerNote && activeBagNotes.length > 0) {
+              desiredNote = `${manualCustomerNote}\n\n${activeBagNotes.join('\n\n')}`;
+            } else if (activeBagNotes.length > 0) {
+              desiredNote = activeBagNotes.join('\n\n');
+            } else {
+              desiredNote = manualCustomerNote;
+            }
+
+            const currentNoteClean = (cart.note || '').trim();
+            const noteNeedsUpdate = currentNoteClean !== desiredNote.trim();
+
+            if (needsUpdate || noteNeedsUpdate) {
               isSyncing = true;
+              const payload = {};
+              if (Object.keys(updates).length > 0) {
+                payload.updates = updates;
+              }
+              if (noteNeedsUpdate) {
+                payload.note = desiredNote;
+              }
+
               const updateRes = await fetch('/cart/update.js', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', Accept: 'application/json', 'x-cart-sync': '1' },
-                body: JSON.stringify({ updates }),
+                body: JSON.stringify(payload),
               });
               isSyncing = false;
               if (updateRes.ok) {

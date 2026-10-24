@@ -20,7 +20,7 @@
     assign item_title_lower = item.product.title | downcase
     assign item_handle = item.product.handle | downcase
     assign addon_type = item.properties['Add on Type'] | default: item.properties['Addon Type'] | default: item.properties._addon_type | default: item.properties._Add_on_Type
-    assign parent_item = item.properties._parent_item | default: item.properties.parent_item | default: item.properties['Add-on For'] | default: item.properties['Add-on for']
+    assign parent_item = item.properties._parent_item | default: item.properties.parent_item | default: item.properties['For'] | default: item.properties['for'] | default: item.properties['Add-on For'] | default: item.properties['Add-on for']
 
     assign is_customized_item = false
     if item.properties.Preview != blank or item.properties._Preview != blank or item.properties.Customisation != blank or item.properties.Customization != blank
@@ -165,7 +165,7 @@
               {% assign row_item_title_lower = item.product.title | downcase %}
               {% assign row_item_handle = item.product.handle | downcase %}
               {% assign row_addon_type = item.properties['Add on Type'] | default: item.properties['Addon Type'] | default: item.properties._addon_type | default: item.properties._Add_on_Type %}
-              {% assign row_parent_item = item.properties._parent_item | default: item.properties.parent_item | default: item.properties['Add-on For'] | default: item.properties['Add-on for'] %}
+              {% assign row_parent_item = item.properties._parent_item | default: item.properties.parent_item | default: item.properties['For'] | default: item.properties['for'] | default: item.properties['Add-on For'] | default: item.properties['Add-on for'] %}
 
               {% if is_row_customized == false %}
                 {% if row_item_title_lower contains 'addon'
@@ -281,7 +281,7 @@
                       endif
                     endif
 
-                    assign live_preview_image = item.properties._Preview | default: item.properties.Preview | default: item.properties['Customisation Preview'] | default: item.properties['Customization Preview'] | default: item.properties['_Customisation Preview'] | default: item.properties['Live Preview Image'] | default: item.properties['_Live Preview Image'] | default: item.properties._live_preview_image
+                    assign live_preview_image = item.properties._Preview | default: item.properties.Preview | default: item.properties['Customisation Preview'] | default: item.properties['Customization Preview'] | default: item.properties['_Customisation Preview'] | default: item.properties['Live Preview Image'] | default: item.properties['_Live Preview Image'] | default: item.properties._live_preview_image | default: item.properties._image | default: item.properties._thumbnail | default: item.properties._patch_img | default: item.properties['Patch Image']
                   %}
                   <a
                     href="{{ item.url }}"
@@ -391,7 +391,7 @@
                               <div class="cart-items__property">
                                 <dt>{{ prop_label }}:</dt>
                                 <dd>
-                                  {%- if property.last contains 'cloudinary.com' or property.last contains 'http' -%}
+                                  {%- if property.last contains 'ibb.co' or property.last contains 'cloudinary.com' or property.last contains 'http' -%}
                                     <a
                                       href="{{ property.last }}"
                                       target="_blank"

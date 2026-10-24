@@ -58,6 +58,21 @@
   .card.square { width: 280px; height: 380px; }
 
   .card img, .card video { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .instagram-wrapper {
+    width: 100%;
+    height: 100%;
+    position: relative;
+    overflow: hidden;
+    background: #000;
+    border-radius: var(--card-radius);
+  }
+  .gallery-instagram-iframe {
+    width: 100%;
+    height: 100%;
+    border: none;
+    overflow: hidden;
+    display: block;
+  }
 
   /* Transparent Video Controls (Top Corner) */
   .video-controls {
@@ -144,10 +159,47 @@
   <div class="slider-container">
     <div class="wedding-slick-{{ section.id }}">
       {% for block in section.blocks %}
+        {% assign insta_shortcode = blank %}
+        {% if block.settings.instagram_url != blank %}
+          {% assign clean_insta = block.settings.instagram_url | split: '?' | first %}
+          {% if clean_insta contains '/reel/' %}
+            {% assign insta_shortcode = clean_insta | split: '/reel/' | last | split: '/' | first %}
+          {% elsif clean_insta contains '/reels/' %}
+            {% assign insta_shortcode = clean_insta | split: '/reels/' | last | split: '/' | first %}
+          {% elsif clean_insta contains '/p/' %}
+            {% assign insta_shortcode = clean_insta | split: '/p/' | last | split: '/' | first %}
+          {% elsif clean_insta contains '/tv/' %}
+            {% assign insta_shortcode = clean_insta | split: '/tv/' | last | split: '/' | first %}
+          {% endif %}
+        {% endif %}
+
+        {% assign media_mode = block.settings.media_type | default: 'auto' %}
+        {% if media_mode == 'auto' %}
+          {% if insta_shortcode != blank %}
+            {% assign media_mode = 'instagram' %}
+          {% elsif block.settings.video != blank %}
+            {% assign media_mode = 'video' %}
+          {% else %}
+            {% assign media_mode = 'image' %}
+          {% endif %}
+        {% endif %}
+
         <div class="card {{ block.settings.card_type }}" {{ block.shopify_attributes }}>
           
-          {% comment %} Condition to check Video or Image {% endcomment %}
-          {% if block.settings.video != blank %}
+          {% if media_mode == 'instagram' and insta_shortcode != blank %}
+            <div class="instagram-wrapper">
+              <iframe
+                src="https://www.instagram.com/p/{{ insta_shortcode }}/embed/"
+                class="gallery-instagram-iframe"
+                allowtransparency="true"
+                allowfullscreen="true"
+                frameborder="0"
+                scrolling="no"
+                allow="encrypted-media"
+                loading="lazy"
+              ></iframe>
+            </div>
+          {% elsif media_mode == 'video' and block.settings.video != blank %}
             <div class="video-wrapper" style="width:100%; height:100%;">
               {{ block.settings.video | video_tag: autoplay: true, loop: true, muted: true, playsinline: true, controls: false, class: 'gallery-video' }}
               
@@ -170,13 +222,14 @@
           {% endif %}
          
           {% comment %} On/Off Condition for Text Label {% endcomment %}
-          {% if block.settings.show_label and block.settings.label != blank %}
+          {% if block.settings.show_label and block.settings.label != blank and media_mode != 'instagram' %}
             <div class="recap-label">{{ block.settings.label }}</div>
           {% endif %}
          
           {% comment %} On/Off Condition for Instagram Icon + Main Link Setting {% endcomment %}
-          {% if block.settings.show_icon %}
-            <a href="{{ section.settings.insta_link | default: '#' }}" target="_blank" class="badge-link">
+          {% if block.settings.show_icon and media_mode != 'instagram' %}
+            {% assign card_badge_link = block.settings.instagram_url | default: section.settings.insta_link | default: '#' %}
+            <a href="{{ card_badge_link }}" target="_blank" class="badge-link" rel="noopener noreferrer">
               <div class="badge"><svg viewBox="0 0 24 24"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg></div>
             </a>
           {% endif %}
@@ -332,18 +385,37 @@ $(document).ready(function(){
   "blocks": [
     {
       "type": "image_block",
-      "name": "Slide Image / Video",
+      "name": "Slide Item",
       "settings": [
         {
-          "type": "image_picker",
-          "id": "image",
-          "label": "Select Image"
+          "type": "select",
+          "id": "media_type",
+          "label": "Media Source",
+          "options": [
+            { "value": "auto", "label": "Auto-Detect" },
+            { "value": "instagram", "label": "Instagram Link (Reel / Post)" },
+            { "value": "video", "label": "Shopify Video" },
+            { "value": "image", "label": "Image" }
+          ],
+          "default": "auto",
+          "info": "Choose what to display, or leave on Auto-Detect."
+        },
+        {
+          "type": "text",
+          "id": "instagram_url",
+          "label": "Instagram Post or Reel URL",
+          "info": "Paste any Instagram link (e.g. https://www.instagram.com/reel/C8xxx/ or https://www.instagram.com/p/C8xxx/)"
         },
         {
           "type": "video",
           "id": "video",
-          "label": "Select Video (Optional)",
-          "info": "If video is selected, it will show instead of the image."
+          "label": "Select Shopify Video (Optional)",
+          "info": "Upload or select an MP4 video hosted on Shopify."
+        },
+        {
+          "type": "image_picker",
+          "id": "image",
+          "label": "Select Image"
         },
         {
           "type": "checkbox",

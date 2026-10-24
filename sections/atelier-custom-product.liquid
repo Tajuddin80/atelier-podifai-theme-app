@@ -677,7 +677,7 @@
         {% assign default_medium_orange_variant = null %}
         {% for v in product.variants %}
           {% assign v_title_down = v.title | downcase %}
-          {% if v_title_down contains 'medium' and v_title_down contains 'orange' %}
+          {% if v_title_down contains 'medium' and v_title_down contains 'orange' and v.available %}
             {% assign default_medium_orange_variant = v %}
             {% break %}
           {% endif %}
@@ -685,14 +685,14 @@
         {% if default_medium_orange_variant == null %}
           {% for v in product.variants %}
             {% assign v_title_down = v.title | downcase %}
-            {% if v_title_down contains 'medium' %}
+            {% if v_title_down contains 'medium' and v.available %}
               {% assign default_medium_orange_variant = v %}
               {% break %}
             {% endif %}
           {% endfor %}
         {% endif %}
         {% if default_medium_orange_variant == null %}
-          {% assign default_medium_orange_variant = product.selected_or_first_available_variant %}
+          {% assign default_medium_orange_variant = product.selected_or_first_available_variant | default: product.variants.first %}
         {% endif %}
 
         {% assign active_variant = default_medium_orange_variant %}
@@ -811,7 +811,7 @@
       <span class="product-form-text__error hidden" ref="addToCartTextError"></span>
 
       {% form 'product', product, class: 'product-main-form', id: product_form_id, data-type: 'add-to-cart-form' %}
-        <input type="hidden" name="properties[Customization Preview]" class="podifai-preview-input" value="">
+        <input type="hidden" name="properties[_Preview]" class="podifai-preview-input" value="">
         <input type="hidden" name="properties[_Customization Data]" class="podifai-data-input" value="">
 
         {% assign current_variant = default_medium_orange_variant %}
@@ -824,14 +824,7 @@
             {% assign downcase_name = option.name | downcase %}
             {% assign opt_idx = forloop.index0 %}
             {% if downcase_name == 'size' %}
-              {% assign default_size_label = 'Medium' %}
-              {% for v_val in option.values %}
-                {% assign vvd = v_val | downcase %}
-                {% if vvd contains 'medium' %}
-                  {% assign default_size_label = v_val %}
-                  {% break %}
-                {% endif %}
-              {% endfor %}
+              {% assign default_size_label = default_medium_orange_variant.options[opt_idx] | default: 'Medium' %}
               <div
                 class="variant-option-group variant-option-group--size"
                 data-option-index="{{ opt_idx }}"
@@ -851,15 +844,6 @@
                   </div>
                 </div>
                 <div class="size-pill-swatches">
-                  {% assign has_medium = false %}
-                  {% for v_val in option.values %}
-                    {% assign vvd = v_val | downcase %}
-                    {% if vvd contains 'medium' %}
-                      {% assign has_medium = true %}
-                      {% break %}
-                    {% endif %}
-                  {% endfor %}
-
                   {% for value in option.values %}
                     {% assign matched_v = null %}
                     {% for v in product.variants %}
@@ -891,9 +875,9 @@
                     {% endif %}
 
                     {% assign is_default_size = false %}
-                    {% if has_medium and val_down contains 'medium' %}
+                    {% if value == default_size_label %}
                       {% assign is_default_size = true %}
-                    {% elsif has_medium == false and forloop.first %}
+                    {% elsif default_size_label == blank and forloop.first %}
                       {% assign is_default_size = true %}
                     {% endif %}
 
@@ -949,19 +933,7 @@
             {% assign downcase_name = option.name | downcase %}
             {% assign opt_idx = forloop.index0 %}
             {% if downcase_name == 'color' or downcase_name == 'colour' %}
-              {% assign default_color_label = 'Electric Orange' %}
-              {% assign has_orange = false %}
-              {% for v_val in option.values %}
-                {% assign vvd = v_val | downcase %}
-                {% if vvd contains 'electric orange' or vvd contains 'orange' %}
-                  {% assign default_color_label = v_val %}
-                  {% assign has_orange = true %}
-                  {% break %}
-                {% endif %}
-              {% endfor %}
-              {% if has_orange == false %}
-                {% assign default_color_label = option.values.first %}
-              {% endif %}
+              {% assign default_color_label = default_medium_orange_variant.options[opt_idx] | default: 'Electric Orange' %}
 
               <div
                 class="variant-option-group variant-option-group--colour"
@@ -1028,9 +1000,9 @@
                     {% endif %}
 
                     {% assign is_default_color = false %}
-                    {% if has_orange and val_down contains 'orange' %}
+                    {% if value == default_color_label %}
                       {% assign is_default_color = true %}
-                    {% elsif has_orange == false and forloop.first %}
+                    {% elsif default_color_label == blank and forloop.first %}
                       {% assign is_default_color = true %}
                     {% endif %}
 
@@ -1106,13 +1078,10 @@
         {% endunless %}
 
         <!-- Steps 3 & 4: Customizer Block (Patches & Embroidery) -->
-        {% assign customizer_block = section.blocks
-          | where: 'type', 'atelier-customizer'
-          | first
-          | default: section.blocks
-          | where: 'type', 'podifai-customizer'
-          | first
-        %}
+        {% assign customizer_block = section.blocks | where: 'type', 'atelier-customizer' | first %}
+        {% if customizer_block == blank %}
+          {% assign customizer_block = section.blocks | where: 'type', 'podifai-customizer' | first %}
+        {% endif %}
         {% render 'atelier-customizer', block: customizer_block, section_settings: section.settings %}
 
         <!-- Quantity Selector & Add to Cart CTA -->
@@ -1703,30 +1672,55 @@
       });
     });
 
-    // Always default to Medium size and Electric Orange color
-    const sizeGroup = document.querySelector('.variant-option-group--size, [data-option-name*="size" i]');
-    if (sizeGroup) {
-      const mediumInput = Array.from(sizeGroup.querySelectorAll('.size-pill-input')).find(
-        (inp) => (inp.value || '').toLowerCase().includes('medium')
-      );
-      if (mediumInput) {
-        sizeGroup.querySelectorAll('.size-pill-label').forEach((p) => p.classList.remove('active'));
-        const lbl = mediumInput.closest('.size-pill-label');
-        if (lbl) lbl.classList.add('active');
-        mediumInput.checked = true;
-      }
+    // Default to Medium size and Electric Orange if available, otherwise first available in-stock variant
+    let targetInitVariant = productVariants
+      ? productVariants.find((v) => {
+          const t = (v.title || '').toLowerCase();
+          return t.includes('medium') && t.includes('orange') && v.available;
+        })
+      : null;
+
+    if (!targetInitVariant && productVariants) {
+      targetInitVariant =
+        productVariants.find((v) => {
+          const t = (v.title || '').toLowerCase();
+          return t.includes('medium') && v.available;
+        }) ||
+        productVariants.find((v) => v.available) ||
+        productVariants[0];
     }
 
-    const colorGroup = document.querySelector('.variant-option-group--colour, [data-option-name*="colo" i]');
-    if (colorGroup) {
-      const orangeBtn = Array.from(colorGroup.querySelectorAll('.color-swatch-btn')).find(
-        (btn) =>
-          (btn.dataset.optionValue || '').toLowerCase().includes('electric orange') ||
-          (btn.dataset.optionValue || '').toLowerCase().includes('orange')
-      );
-      if (orangeBtn) {
-        colorGroup.querySelectorAll('.color-swatch-btn').forEach((b) => b.classList.remove('active'));
-        orangeBtn.classList.add('active');
+    if (targetInitVariant) {
+      const sizeGroup = document.querySelector('.variant-option-group--size, [data-option-name*="size" i]');
+      if (sizeGroup) {
+        const sizeIdx = parseInt(sizeGroup.dataset.optionIndex);
+        const targetSizeVal = targetInitVariant.options[sizeIdx];
+        if (targetSizeVal) {
+          const matchedInput = Array.from(sizeGroup.querySelectorAll('.size-pill-input')).find(
+            (inp) => inp.value === targetSizeVal
+          );
+          if (matchedInput) {
+            sizeGroup.querySelectorAll('.size-pill-label').forEach((p) => p.classList.remove('active'));
+            const lbl = matchedInput.closest('.size-pill-label');
+            if (lbl) lbl.classList.add('active');
+            matchedInput.checked = true;
+          }
+        }
+      }
+
+      const colorGroup = document.querySelector('.variant-option-group--colour, [data-option-name*="colo" i]');
+      if (colorGroup) {
+        const colorIdx = parseInt(colorGroup.dataset.optionIndex);
+        const targetColorVal = targetInitVariant.options[colorIdx];
+        if (targetColorVal) {
+          const matchedBtn = Array.from(colorGroup.querySelectorAll('.color-swatch-btn')).find(
+            (btn) => btn.dataset.optionValue === targetColorVal
+          );
+          if (matchedBtn) {
+            colorGroup.querySelectorAll('.color-swatch-btn').forEach((b) => b.classList.remove('active'));
+            matchedBtn.classList.add('active');
+          }
+        }
       }
     }
 
@@ -1940,20 +1934,27 @@
       "settings": [
         {
           "type": "header",
-          "content": "Cloud Image Hosting (Optional - Cloudinary Direct)"
+          "content": "Cloud Image Hosting (ImgBB / Cloudinary)"
+        },
+        {
+          "type": "text",
+          "id": "imgbb_api_key",
+          "label": "ImgBB API Key (Recommended)",
+          "info": "Your free ImgBB API key from https://api.imgbb.com/ (Provides free full high-resolution image hosting)",
+          "default": "222e573c91bea794c21c7d5a1550cc41"
         },
         {
           "type": "text",
           "id": "cloudinary_cloud_name",
-          "label": "Cloudinary Cloud Name",
-          "info": "Your free Cloudinary Cloud Name (e.g. demo or my-store)",
+          "label": "Cloudinary Cloud Name (Fallback)",
+          "info": "Optional fallback if not using ImgBB",
           "default": "tifgkltm"
         },
         {
           "type": "text",
           "id": "cloudinary_upload_preset",
-          "label": "Cloudinary Unsigned Upload Preset",
-          "info": "Your unsigned upload preset name (e.g. unsigned_presets)",
+          "label": "Cloudinary Unsigned Upload Preset (Fallback)",
+          "info": "Optional fallback if not using ImgBB",
           "default": "shopify_preset_podifai"
         },
         {
@@ -1972,6 +1973,12 @@
           "id": "patch_addon_product",
           "label": "Patch Surcharge Product",
           "info": "Select the addon product priced per patch (e.g. $6.00)"
+        },
+        {
+          "type": "collection",
+          "id": "patch_addons_collection",
+          "label": "Patch Addons Collection (Optional)",
+          "info": "Collection containing all patch products to track inventory across multiple products (defaults to 'patch-addons')"
         },
         {
           "type": "product",
@@ -2071,22 +2078,34 @@
           "info": "Displayed in the category sublabel, e.g. 8cm x 8cm"
         },
         {
+          "type": "product",
+          "id": "patch_product",
+          "label": "Patch Product (For Pricing & Inventory)",
+          "info": "Select the product that holds the variants for this category. Leave blank to auto-detect."
+        },
+        {
           "type": "header",
           "content": "Unlimited Metafield Data Source"
         },
         {
           "type": "checkbox",
           "id": "use_metafield",
-          "label": "Load from Product Metafield (Unlimited Files)",
+          "label": "Load from Metaobject or Metafield (Unlimited Files)",
           "default": false,
-          "info": "Attach unlimited images via Product Metafield (List of files)"
+          "info": "Load patches dynamically from Shopify Metaobjects or Product Metafields"
         },
         {
           "type": "text",
           "id": "metafield_key",
-          "label": "Product Metafield Key",
-          "info": "e.g. custom.character_patches or custom.animal_patches",
-          "default": "custom.character_patches",
+          "label": "Metafield or Metaobject Key",
+          "info": "Defaults to category name (e.g. 'animals', 'sushi', or 'custom.animals'). Leave blank to auto-match category.",
+          "visible_if": "{{ block.settings.use_metafield == true }}"
+        },
+        {
+          "type": "text",
+          "id": "metaobject_handle",
+          "label": "Metaobject Entry Handle (Optional)",
+          "info": "Optional custom handle in shop.metaobjects.patch_category. If left blank, matches category title automatically.",
           "visible_if": "{{ block.settings.use_metafield == true }}"
         },
         {
@@ -2174,184 +2193,35 @@
           "info": "Displayed in the category sublabel, e.g. 8cm x 8cm"
         },
         {
+          "type": "product",
+          "id": "patch_product",
+          "label": "Patch Product (For Pricing & Inventory)",
+          "info": "Select the product that holds the variants for this category. Leave blank to auto-detect."
+        },
+        {
           "type": "header",
           "content": "Unlimited Metafield Data Source"
         },
         {
           "type": "checkbox",
           "id": "use_metafield",
-          "label": "Load from Product Metafield (Unlimited Files)",
+          "label": "Load from Metaobject or Metafield (Unlimited Files)",
           "default": false,
-          "info": "Attach unlimited letter images via Product Metafield (List of files)"
+          "info": "Load alphabet letters dynamically from Shopify Metaobjects or Product Metafields"
         },
         {
           "type": "text",
           "id": "metafield_key",
-          "label": "Product Metafield Key",
-          "info": "e.g. custom.alpha_black or custom.alpha_pink_glitter",
-          "default": "custom.alphabet_patches",
+          "label": "Metafield or Metaobject Key",
+          "info": "Defaults to category name (e.g. 'black_capital_letters', 'pink_glitter'). Leave blank to auto-match category.",
           "visible_if": "{{ block.settings.use_metafield == true }}"
         },
         {
-          "type": "header",
-          "content": "Manual Letter Upload Slots (Optional - A to Z)",
-          "visible_if": "{{ block.settings.use_metafield == false }}"
-        },
-        {
-          "type": "image_picker",
-          "id": "img_a",
-          "label": "Letter A Image",
-          "visible_if": "{{ block.settings.use_metafield == false }}"
-        },
-        {
-          "type": "image_picker",
-          "id": "img_b",
-          "label": "Letter B Image",
-          "visible_if": "{{ block.settings.use_metafield == false }}"
-        },
-        {
-          "type": "image_picker",
-          "id": "img_c",
-          "label": "Letter C Image",
-          "visible_if": "{{ block.settings.use_metafield == false }}"
-        },
-        {
-          "type": "image_picker",
-          "id": "img_d",
-          "label": "Letter D Image",
-          "visible_if": "{{ block.settings.use_metafield == false }}"
-        },
-        {
-          "type": "image_picker",
-          "id": "img_e",
-          "label": "Letter E Image",
-          "visible_if": "{{ block.settings.use_metafield == false }}"
-        },
-        {
-          "type": "image_picker",
-          "id": "img_f",
-          "label": "Letter F Image",
-          "visible_if": "{{ block.settings.use_metafield == false }}"
-        },
-        {
-          "type": "image_picker",
-          "id": "img_g",
-          "label": "Letter G Image",
-          "visible_if": "{{ block.settings.use_metafield == false }}"
-        },
-        {
-          "type": "image_picker",
-          "id": "img_h",
-          "label": "Letter H Image",
-          "visible_if": "{{ block.settings.use_metafield == false }}"
-        },
-        {
-          "type": "image_picker",
-          "id": "img_i",
-          "label": "Letter I Image",
-          "visible_if": "{{ block.settings.use_metafield == false }}"
-        },
-        {
-          "type": "image_picker",
-          "id": "img_j",
-          "label": "Letter J Image",
-          "visible_if": "{{ block.settings.use_metafield == false }}"
-        },
-        {
-          "type": "image_picker",
-          "id": "img_k",
-          "label": "Letter K Image",
-          "visible_if": "{{ block.settings.use_metafield == false }}"
-        },
-        {
-          "type": "image_picker",
-          "id": "img_l",
-          "label": "Letter L Image",
-          "visible_if": "{{ block.settings.use_metafield == false }}"
-        },
-        {
-          "type": "image_picker",
-          "id": "img_m",
-          "label": "Letter M Image",
-          "visible_if": "{{ block.settings.use_metafield == false }}"
-        },
-        {
-          "type": "image_picker",
-          "id": "img_n",
-          "label": "Letter N Image",
-          "visible_if": "{{ block.settings.use_metafield == false }}"
-        },
-        {
-          "type": "image_picker",
-          "id": "img_o",
-          "label": "Letter O Image",
-          "visible_if": "{{ block.settings.use_metafield == false }}"
-        },
-        {
-          "type": "image_picker",
-          "id": "img_p",
-          "label": "Letter P Image",
-          "visible_if": "{{ block.settings.use_metafield == false }}"
-        },
-        {
-          "type": "image_picker",
-          "id": "img_q",
-          "label": "Letter Q Image",
-          "visible_if": "{{ block.settings.use_metafield == false }}"
-        },
-        {
-          "type": "image_picker",
-          "id": "img_r",
-          "label": "Letter R Image",
-          "visible_if": "{{ block.settings.use_metafield == false }}"
-        },
-        {
-          "type": "image_picker",
-          "id": "img_s",
-          "label": "Letter S Image",
-          "visible_if": "{{ block.settings.use_metafield == false }}"
-        },
-        {
-          "type": "image_picker",
-          "id": "img_t",
-          "label": "Letter T Image",
-          "visible_if": "{{ block.settings.use_metafield == false }}"
-        },
-        {
-          "type": "image_picker",
-          "id": "img_u",
-          "label": "Letter U Image",
-          "visible_if": "{{ block.settings.use_metafield == false }}"
-        },
-        {
-          "type": "image_picker",
-          "id": "img_v",
-          "label": "Letter V Image",
-          "visible_if": "{{ block.settings.use_metafield == false }}"
-        },
-        {
-          "type": "image_picker",
-          "id": "img_w",
-          "label": "Letter W Image",
-          "visible_if": "{{ block.settings.use_metafield == false }}"
-        },
-        {
-          "type": "image_picker",
-          "id": "img_x",
-          "label": "Letter X Image",
-          "visible_if": "{{ block.settings.use_metafield == false }}"
-        },
-        {
-          "type": "image_picker",
-          "id": "img_y",
-          "label": "Letter Y Image",
-          "visible_if": "{{ block.settings.use_metafield == false }}"
-        },
-        {
-          "type": "image_picker",
-          "id": "img_z",
-          "label": "Letter Z Image",
-          "visible_if": "{{ block.settings.use_metafield == false }}"
+          "type": "text",
+          "id": "metaobject_handle",
+          "label": "Metaobject Entry Handle (Optional)",
+          "info": "Optional custom handle in shop.metaobjects.alphabet_category. If left blank, matches category title automatically.",
+          "visible_if": "{{ block.settings.use_metafield == true }}"
         }
       ]
     },

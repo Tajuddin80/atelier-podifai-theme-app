@@ -342,6 +342,72 @@
   transform: scale(1);
 }
 
+/* Stock Badges & Out of Stock / Low Stock States */
+.podifai-stock-tag {
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  font-size: 0.58rem;
+  font-weight: 700;
+  padding: 1px 4px;
+  border-radius: 4px;
+  white-space: nowrap;
+  pointer-events: none;
+  line-height: 1.2;
+  z-index: 3;
+  letter-spacing: 0.02em;
+}
+
+.podifai-stock-tag.sold-out {
+  background: #dc2626;
+  color: #ffffff;
+}
+
+.podifai-stock-tag.low-stock,
+.podifai-stock-tag.in-stock {
+  display: none !important;
+}
+
+.podifai-patch-item.is-sold-out,
+.podifai-letter-item.is-sold-out {
+  opacity: 0.45;
+  cursor: not-allowed;
+  filter: grayscale(85%);
+  border-color: #e5e7eb;
+}
+
+.podifai-patch-item.is-sold-out:hover,
+.podifai-letter-item.is-sold-out:hover {
+  border-color: #e5e7eb;
+}
+
+.podifai-patch-item.max-stock-reached,
+.podifai-letter-item.max-stock-reached {
+  border-color: #ea580c;
+}
+
+/* Floating Stock Notice Toast */
+.podifai-stock-toast {
+  position: absolute;
+  top: 20%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: #1f2937;
+  color: #ffffff;
+  padding: 8px 18px;
+  border-radius: 9999px;
+  font-size: 13px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.28);
+  z-index: 110;
+  pointer-events: none;
+  white-space: nowrap;
+  animation: podifaiToastFadeIn 0.2s ease-out;
+}
+
 /* Alphabet Letters Grid: 5 -> 4 -> 3 -> 2 columns responsive layout */
 .podifai-alphabet-grid {
   display: grid;
@@ -607,6 +673,11 @@
   background-color: var(--podifai-primary-btn-bg);
   color: var(--podifai-primary-btn-text);
   border-color: var(--podifai-primary-btn-bg);
+}
+
+.podifai-font-btn[data-font*="Picturama"],
+.podifai-font-btn[data-font*="Brush Script"] {
+  font-weight: normal;
 }
 
 .podifai-text-input {

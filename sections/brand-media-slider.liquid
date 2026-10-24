@@ -46,7 +46,6 @@
   .media_slider_inner {
     display: flex;
     overflow-x: auto;
-    scroll-snap-type: x mandatory;
     scroll-behavior: smooth;
     gap: 15px;
     padding-bottom: 15px;
@@ -54,6 +53,14 @@
     -webkit-overflow-scrolling: touch;
     scrollbar-width: none; /* Firefox */
     -ms-overflow-style: none;  /* IE & Edge */
+    cursor: grab;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+
+  .media_slider_inner.is-dragging {
+    cursor: grabbing;
+    scroll-behavior: auto !important;
   }
 
   .media_slider_inner::-webkit-scrollbar {
@@ -63,7 +70,6 @@
   /* Mobile: smaller card + next card preview */
   .media_item_card {
     flex: 0 0 85%;
-    scroll-snap-align: start;
     cursor: pointer;
     position: relative;
   }
@@ -83,7 +89,7 @@
     overflow:hidden;
     border-radius:{{ section.settings.card_radius }}px;
     background:#f5f5f5;
-}
+  }
 
   .media_card_square img,
   .media_card_square video,
@@ -95,32 +101,28 @@
     height:100%;
     object-fit:cover;
     border:none;
+    -webkit-user-drag: none;
+    user-drag: none;
+    pointer-events: none;
   }
 
   .media_item_card:hover .media_card_square img,
   .media_item_card:hover .media_card_square video {
     transform: scale(1.06);
+    transition: transform .35s ease;
   }
-
-
 
   /* Video Icon Overlay */
   .media_video_overlay {
     position:absolute;
     inset:0;
-
     display:flex;
     align-items:center;
     justify-content:center;
-
     background:rgba(0,0,0,.35);
-
     opacity:0;
-
     transition:.35s;
-
     z-index:5;
-
     pointer-events:none;
   }
   .media_video_overlay svg {
@@ -168,14 +170,14 @@
     /* Dynamic width calculations based on theme setting columns */
     .media_item_card {
       {%- assign desktop_columns = section.settings.columns_desktop | plus: 0 -%}
+      {%- if desktop_columns < 1 -%}{%- assign desktop_columns = 3 -%}{%- endif -%}
       flex: 0 0 calc((100% - ({{ section.settings.gap_desktop }}px * ({{ desktop_columns }} - 1))) / {{ desktop_columns }});
+      max-width: calc((100% - ({{ section.settings.gap_desktop }}px * ({{ desktop_columns }} - 1))) / {{ desktop_columns }});
     }
     .slider_nav_btn {
       display: flex;
     }
   }
-
-
 {%- endstyle -%}
 
 <section class="brand_media_slider_section" id="BrandMediaSlider-{{ section.id }}">
@@ -199,45 +201,51 @@
 
       <div class="media_slider_inner">
         {%- if section.blocks.size > 0 -%}
-          {%- for block in section.blocks -%}
-            
-            <div class="media_item_card" 
-                 data-media-type="{{ block.settings.media_type }}"
-                 {{ block.shopify_attributes }}>
+          {%- assign repeat_times = 1 -%}
+          {%- if section.blocks.size <= 4 -%}
+            {%- assign repeat_times = 2 -%}
+          {%- endif -%}
+          {%- for r in (1..repeat_times) -%}
+            {%- for block in section.blocks -%}
               
-              <div class="media_card_square">
-                {%- if block.settings.media_type == 'video' -%}
-                  <div class="media_video_overlay">
-                    <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
-                  </div>
+              <div class="media_item_card" 
+                   data-media-type="{{ block.settings.media_type }}"
+                   {% if r == 1 %}{{ block.shopify_attributes }}{% endif %}>
+                
+                <div class="media_card_square">
+                  {%- if block.settings.media_type == 'video' -%}
+                    <div class="media_video_overlay">
+                      <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                    </div>
 
-                  {%- if block.settings.video_file != blank -%}
-                    <video muted loop playsinline preload="metadata" {% if block.settings.image != blank %}poster="{{ block.settings.image | img_url: '800x800', crop: 'center' }}"{% endif %} class="target-media-src">
-                      <source src="{{ block.settings.video_file.sources[0].url }}" type="video/mp4">
-                    </video>
-                  {%- elsif block.settings.video_url != blank -%}
-                    <video muted loop playsinline preload="metadata" {% if block.settings.image != blank %}poster="{{ block.settings.image | img_url: '800x800', crop: 'center' }}"{% endif %} class="target-media-src">
-                      <source src="{{ block.settings.video_url }}" type="video/mp4">
-                    </video>
+                    {%- if block.settings.video_file != blank -%}
+                      <video muted loop playsinline preload="metadata" {% if block.settings.image != blank %}poster="{{ block.settings.image | img_url: '800x800', crop: 'center' }}"{% endif %} class="target-media-src">
+                        <source src="{{ block.settings.video_file.sources[0].url }}" type="video/mp4">
+                      </video>
+                    {%- elsif block.settings.video_url != blank -%}
+                      <video muted loop playsinline preload="metadata" {% if block.settings.image != blank %}poster="{{ block.settings.image | img_url: '800x800', crop: 'center' }}"{% endif %} class="target-media-src">
+                        <source src="{{ block.settings.video_url }}" type="video/mp4">
+                      </video>
+                    {%- else -%}
+                      {{ 'lifestyle-1' | placeholder_svg_tag: 'placeholder-svg target-media-src' }}
+                    {%- endif -%}
                   {%- else -%}
-                    {{ 'lifestyle-1' | placeholder_svg_tag: 'placeholder-svg target-media-src' }}
+                    {%- if block.settings.image != blank -%}
+                      <img src="{{ block.settings.image | img_url: '800x800', crop: 'center' }}" alt="{{ block.settings.image.alt | default: 'Brand Media' }}" class="target-media-src" loading="lazy">
+                    {%- else -%}
+                      {{ 'image' | placeholder_svg_tag: 'placeholder-svg target-media-src' }}
+                    {%- endif -%}
                   {%- endif -%}
-                {%- else -%}
-                  {%- if block.settings.image != blank -%}
-                    <img src="{{ block.settings.image | img_url: '800x800', crop: 'center' }}" alt="{{ block.settings.image.alt | default: 'Brand Media' }}" class="target-media-src" loading="lazy">
-                  {%- else -%}
-                    {{ 'image' | placeholder_svg_tag: 'placeholder-svg target-media-src' }}
-                  {%- endif -%}
-                {%- endif -%}
 
-                <div class="media_card_overlay">
-                  <div class="overlay_instagram_icon">
-                    <svg viewBox="0 0 24 24"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.051.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/></svg>
+                  <div class="media_card_overlay">
+                    <div class="overlay_instagram_icon">
+                      <svg viewBox="0 0 24 24"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.051.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/></svg>
+                    </div>
                   </div>
                 </div>
-              </div>
 
-            </div>
+              </div>
+            {%- endfor -%}
           {%- endfor -%}
         {%- else -%}
           {%- for i in (1..6) -%}
@@ -264,35 +272,152 @@
   </div>
 </section>
 
-
-
 <script>
 document.addEventListener("DOMContentLoaded", function() {
-  const sliderInner = document.querySelector("#shopify-section-{{ section.id }} .media_slider_inner");
-  const prevBtn = document.querySelector("#shopify-section-{{ section.id }} .prev_btn");
-  const nextBtn = document.querySelector("#shopify-section-{{ section.id }} .next_btn");
+  const sectionEl = document.querySelector("#shopify-section-{{ section.id }}") || document.querySelector("#BrandMediaSlider-{{ section.id }}")?.closest(".shopify-section") || document.querySelector("#BrandMediaSlider-{{ section.id }}");
+  if (!sectionEl) return;
+
+  const sliderInner = sectionEl.querySelector(".media_slider_inner");
+  const prevBtn = sectionEl.querySelector(".prev_btn");
+  const nextBtn = sectionEl.querySelector(".next_btn");
+  const sliderWrapper = sectionEl.querySelector(".media_slider_wrapper") || sliderInner;
 
   // --- Slider Functionality ---
-  if (sliderInner && prevBtn && nextBtn) {
-    nextBtn.addEventListener("click", () => {
+  if (sliderInner) {
+    function getScrollStep() {
       const card = sliderInner.querySelector(".media_item_card");
-      if (card) {
-        const cardWidth = card.clientWidth;
-        sliderInner.scrollBy({ left: cardWidth + 15, behavior: "smooth" });
+      if (!card) return 300;
+      const style = window.getComputedStyle(sliderInner);
+      const gap = parseFloat(style.gap) || 15;
+      return card.clientWidth + gap;
+    }
+
+    function scrollNext() {
+      const step = getScrollStep();
+      const maxScroll = sliderInner.scrollWidth - sliderInner.clientWidth;
+      if (sliderInner.scrollLeft >= maxScroll - 10) {
+        sliderInner.scrollTo({ left: 0, behavior: "smooth" });
+      } else {
+        sliderInner.scrollBy({ left: step, behavior: "smooth" });
       }
+    }
+
+    function scrollPrev() {
+      const step = getScrollStep();
+      if (sliderInner.scrollLeft <= 10) {
+        const maxScroll = sliderInner.scrollWidth - sliderInner.clientWidth;
+        sliderInner.scrollTo({ left: maxScroll, behavior: "smooth" });
+      } else {
+        sliderInner.scrollBy({ left: -step, behavior: "smooth" });
+      }
+    }
+
+    if (nextBtn) {
+      nextBtn.addEventListener("click", () => {
+        scrollNext();
+        resetAutoplay();
+      });
+    }
+
+    if (prevBtn) {
+      prevBtn.addEventListener("click", () => {
+        scrollPrev();
+        resetAutoplay();
+      });
+    }
+
+    // --- Drag to Scroll Feature (Desktop Mouse Drag & Touch) ---
+    let isDown = false;
+    let startX = 0;
+    let scrollLeftStart = 0;
+    let hasDragged = false;
+
+    sliderInner.addEventListener("mousedown", (e) => {
+      isDown = true;
+      hasDragged = false;
+      sliderInner.classList.add("is-dragging");
+      startX = e.pageX - sliderInner.offsetLeft;
+      scrollLeftStart = sliderInner.scrollLeft;
+      stopAutoplay();
     });
 
-    prevBtn.addEventListener("click", () => {
-      const card = sliderInner.querySelector(".media_item_card");
-      if (card) {
-        const cardWidth = card.clientWidth;
-        sliderInner.scrollBy({ left: -(cardWidth + 15), behavior: "smooth" });
-      }
+    window.addEventListener("mouseup", () => {
+      if (!isDown) return;
+      isDown = false;
+      sliderInner.classList.remove("is-dragging");
+      setTimeout(() => {
+        hasDragged = false;
+      }, 50);
+      startAutoplay();
     });
+
+    sliderInner.addEventListener("mousemove", (e) => {
+      if (!isDown) return;
+      e.preventDefault();
+      const x = e.pageX - sliderInner.offsetLeft;
+      const walk = (x - startX) * 1.5;
+      if (Math.abs(walk) > 5) {
+        hasDragged = true;
+      }
+      sliderInner.scrollLeft = scrollLeftStart - walk;
+    });
+
+    sliderInner.addEventListener("click", (e) => {
+      if (hasDragged) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+    }, true);
+
+    // --- Automatic Scrolling ---
+    let autoScrollTimer = null;
+    let isHovered = false;
+
+    function startAutoplay() {
+      stopAutoplay();
+      autoScrollTimer = setInterval(() => {
+        if (!isHovered && !isDown && sliderInner.scrollWidth > sliderInner.clientWidth + 5) {
+          scrollNext();
+        }
+      }, 3000);
+    }
+
+    function stopAutoplay() {
+      if (autoScrollTimer) {
+        clearInterval(autoScrollTimer);
+        autoScrollTimer = null;
+      }
+    }
+
+    function resetAutoplay() {
+      stopAutoplay();
+      startAutoplay();
+    }
+
+    if (sliderWrapper) {
+      sliderWrapper.addEventListener("mouseenter", () => {
+        isHovered = true;
+      });
+      sliderWrapper.addEventListener("mouseleave", () => {
+        isHovered = false;
+      });
+      sliderWrapper.addEventListener("touchstart", () => {
+        isHovered = true;
+        stopAutoplay();
+      }, { passive: true });
+      sliderWrapper.addEventListener("touchend", () => {
+        setTimeout(() => {
+          isHovered = false;
+          startAutoplay();
+        }, 1500);
+      }, { passive: true });
+    }
+
+    startAutoplay();
   }
 
   function initVideoHoverPlay() {
-    document.querySelectorAll("#shopify-section-{{ section.id }} .media_item_card").forEach(card => {
+    sectionEl.querySelectorAll(".media_item_card").forEach(card => {
       const video = card.querySelector("video");
       if (video) {
         card.addEventListener("mouseenter", () => {

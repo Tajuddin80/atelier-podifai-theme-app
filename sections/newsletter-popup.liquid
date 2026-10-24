@@ -1,0 +1,1466 @@
+{% comment %}
+  Renders a highly customizable, theme-native Newsletter Pop-Up section with a two-column layout,
+  timer delay trigger, manual triggers, session/cookie management, Shopify Customer database integration,
+  and a success state revealing an incentive discount code with a one-click copy button.
+{% endcomment %}
+
+{%- assign section_color = section.settings.color_scheme -%}
+{%- assign form_id = 'NewsletterPopupForm-' | append: section.id -%}
+
+<newsletter-popup
+  id="NewsletterPopup-{{ section.id }}"
+  class="newsletter-popup-root"
+  data-section-id="{{ section.id }}"
+  data-timer-delay="{{ section.settings.timer_delay }}"
+  data-cookie-duration="{{ section.settings.cookie_duration }}"
+  data-discount-code="{{ section.settings.discount_code | escape }}"
+  data-preview-mode="{{ section.settings.preview_mode }}"
+  data-editor-view-mode="{{ section.settings.editor_view_mode | default: 'form' }}"
+  role="region"
+  aria-label="{{ section.settings.heading | default: 'Newsletter' | escape }}"
+  style="--overlay-opacity: {{ section.settings.overlay_opacity | default: 25 | divided_by: 100.0 }};"
+>
+  <!-- Backdrop -->
+  <div class="newsletter-popup__backdrop" data-newsletter-close aria-hidden="true"></div>
+
+  <!-- Modal Dialog -->
+  <div
+    class="newsletter-popup__dialog color-{{ section_color }}"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="NewsletterPopupHeading-{{ section.id }}"
+    tabindex="-1"
+  >
+    <!-- Close Button -->
+    <button
+      type="button"
+      class="newsletter-popup__close-btn"
+      data-newsletter-close
+      aria-label="{{ 'accessibility.close_dialog' | t }}"
+    >
+      <span class="newsletter-popup__close-icon" aria-hidden="true">
+        {{ 'icon-close.svg' | inline_asset_content }}
+      </span>
+    </button>
+
+    <div class="newsletter-popup__grid {% if section.settings.image_position == 'right' %}newsletter-popup__grid--reverse{% endif %}">
+      <!-- Left Column: Featured Promotional Image -->
+      <div class="newsletter-popup__media-col">
+        {%- if section.settings.image != blank -%}
+          {{
+            section.settings.image
+            | image_url: width: 1000
+            | image_tag:
+              loading: 'lazy',
+              class: 'newsletter-popup__image',
+              widths: '300, 450, 600, 800, 1000',
+              alt: section.settings.image.alt | default: section.settings.heading | escape
+          }}
+        {%- else -%}
+          <div class="newsletter-popup__placeholder-wrapper">
+            {{ 'lifestyle-1' | placeholder_svg_tag: 'newsletter-popup__placeholder-svg' }}
+          </div>
+        {%- endif -%}
+      </div>
+
+      <!-- Right Column: Content & Customer Form -->
+      <div class="newsletter-popup__content-col">
+        {%- form 'customer', id: form_id, class: 'newsletter-popup__form' -%}
+          <input
+            type="hidden"
+            name="contact[tags]"
+            value="{{ section.settings.customer_tag | default: 'newsletter, newsletter-popup' | escape }}"
+          >
+          <input type="hidden" name="challenge" value="false">
+
+          {%- assign is_success_active = false -%}
+          {%- if request.design_mode and section.settings.editor_view_mode == 'success' -%}
+            {%- assign is_success_active = true -%}
+          {%- elsif form.posted_successfully? -%}
+            {%- assign is_success_active = true -%}
+          {%- endif -%}
+
+          {%- if form.posted_successfully? -%}
+            <span class="visually-hidden" data-posted-successfully="true"></span>
+          {%- endif -%}
+
+          <!-- FIRST PART: Form View (Shown initially; hidden once personal email is verified) -->
+          <div
+            class="newsletter-popup__form-view"
+            data-form-view
+            {% if is_success_active %}hidden style="display: none !important;"{% endif %}
+          >
+            {%- if section.settings.heading != blank -%}
+              <h2 id="NewsletterPopupHeading-{{ section.id }}" class="newsletter-popup__heading">
+                {{ section.settings.heading }}
+              </h2>
+            {%- endif -%}
+
+            {%- if section.settings.text != blank -%}
+              <div class="newsletter-popup__text rte">
+                {{ section.settings.text }}
+              </div>
+            {%- endif -%}
+
+            <div class="newsletter-popup__field-group">
+              <div class="newsletter-popup__field">
+                <input
+                  id="NewsletterInput-{{ section.id }}"
+                  type="email"
+                  name="contact[email]"
+                  class="newsletter-popup__input"
+                  value="{{ form.email }}"
+                  aria-required="true"
+                  autocorrect="off"
+                  autocapitalize="off"
+                  autocomplete="email"
+                  placeholder="{{ section.settings.email_placeholder | default: 'Enter your email address' | escape }}"
+                  required
+                  {% if form.errors %}
+                    aria-invalid="true"
+                    aria-describedby="NewsletterPopupError-{{ section.id }}"
+                  {% endif %}
+                >
+                <button
+                  type="submit"
+                  class="button newsletter-popup__submit-btn"
+                  name="commit"
+                  data-submit-btn
+                >
+                  <span class="newsletter-popup__btn-text">
+                    {{ section.settings.button_label | default: 'Subscribe' | escape }}
+                  </span>
+                </button>
+              </div>
+
+              <!-- Error state message -->
+              <div
+                id="NewsletterPopupError-{{ section.id }}"
+                class="newsletter-popup__error-message"
+                data-error-container
+                role="alert"
+                {% unless form.errors %}hidden{% endunless %}
+              >
+                <span class="newsletter-popup__error-icon" aria-hidden="true">
+                  {{ 'icon-error.svg' | inline_asset_content }}
+                </span>
+                <span data-error-text>
+                  {%- if form.errors -%}
+                    {{ form.errors.translated_fields.email | capitalize }} {{ form.errors.messages.email }}
+                  {%- endif -%}
+                </span>
+              </div>
+            </div>
+
+            {%- if section.settings.footer_note != blank -%}
+              <div class="newsletter-popup__footer-note">
+                {{ section.settings.footer_note }}
+              </div>
+            {%- endif -%}
+          </div>
+
+          <!-- BOTTOM PART: Success View (Shown ONLY when personal email is verified) -->
+          <div
+            class="newsletter-popup__success-view"
+            data-success-view
+            {% unless is_success_active %}hidden style="display: none !important;"{% endunless %}
+          >
+            <div class="newsletter-popup__success-badge">
+              <span class="newsletter-popup__success-icon" aria-hidden="true">
+                {{ 'icon-checkmark.svg' | inline_asset_content }}
+              </span>
+            </div>
+
+            <h2 class="newsletter-popup__heading newsletter-popup__heading--success">
+              {{ section.settings.success_title | default: "You're on the list!" | escape }}
+            </h2>
+
+            {%- if section.settings.success_text != blank -%}
+              <p class="newsletter-popup__success-text">
+                {{ section.settings.success_text }}
+              </p>
+            {%- endif -%}
+
+            {%- if section.settings.discount_code != blank -%}
+              <div class="newsletter-popup__discount-card" data-discount-card title="Click to copy voucher code">
+                <span class="newsletter-popup__discount-badge">Exclusive Voucher</span>
+                <div class="newsletter-popup__discount-row">
+                  <span class="newsletter-popup__discount-code" data-discount-code-value>
+                    {{ section.settings.discount_code | escape }}
+                  </span>
+                  <button
+                    type="button"
+                    class="button newsletter-popup__copy-btn"
+                    data-copy-btn
+                    aria-label="{{ section.settings.copy_button_label | default: 'Copy discount code' | escape }}"
+                  >
+                    <span class="newsletter-popup__copy-btn-icon" data-copy-icon aria-hidden="true">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                      </svg>
+                    </span>
+                    <span class="newsletter-popup__check-btn-icon" data-check-icon aria-hidden="true">
+                      {{ 'icon-checkmark.svg' | inline_asset_content }}
+                    </span>
+                    <span data-copy-btn-text>{{ section.settings.copy_button_label | default: 'Copy' | escape }}</span>
+                  </button>
+                </div>
+              </div>
+            {%- endif -%}
+
+            {%- if section.settings.success_subtext != blank -%}
+              <p class="newsletter-popup__success-subtext">
+                {{ section.settings.success_subtext }}
+              </p>
+            {%- endif -%}
+
+            <div class="newsletter-popup__success-actions">
+              <button
+                type="button"
+                class="button button-secondary newsletter-popup__continue-btn"
+                data-newsletter-close
+              >
+                Continue Shopping
+              </button>
+            </div>
+          </div>
+        {%- endform -%}
+      </div>
+    </div>
+  </div>
+
+  {%- if section.settings.show_floating_launcher -%}
+    <!-- Optional Floating Launcher Button (Manual trigger) -->
+    <button
+      type="button"
+      class="newsletter-popup__floating-launcher color-{{ section_color }}"
+      data-newsletter-open
+      aria-label="{{ section.settings.floating_launcher_text | default: 'Get discount code' | escape }}"
+    >
+      <span class="newsletter-popup__floating-icon" aria-hidden="true">
+        {{ 'icon-discount.svg' | inline_asset_content }}
+      </span>
+      {%- if section.settings.floating_launcher_text != blank -%}
+        <span class="newsletter-popup__floating-label">
+          {{ section.settings.floating_launcher_text }}
+        </span>
+      {%- endif -%}
+    </button>
+  {%- endif -%}
+</newsletter-popup>
+
+{% stylesheet %}
+  .shopify-section-newsletter-popup,
+  .shopify-section:has(> .newsletter-popup-root),
+  .shopify-section:has(> newsletter-popup),
+  newsletter-popup.newsletter-popup-root,
+  .newsletter-popup-root {
+    background: transparent !important;
+    background-color: transparent !important;
+  }
+
+  .newsletter-popup-root {
+    position: fixed;
+    inset: 0;
+    z-index: 99999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--padding-md, 20px);
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition: opacity 0.35s cubic-bezier(0.16, 1, 0.3, 1), visibility 0.35s;
+  }
+
+  .newsletter-popup-root.is-open {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+  }
+
+  /* Backdrop - Clean, translucent dark tint so store background stays clearly visible */
+  .newsletter-popup__backdrop {
+    position: absolute;
+    inset: 0;
+    background-color: rgb(0 0 0 / var(--overlay-opacity, 0.35));
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    cursor: pointer;
+    transition: opacity 0.35s ease;
+  }
+
+  /* Modal Dialog */
+  .newsletter-popup__dialog {
+    position: relative;
+    z-index: 2;
+    width: 100%;
+    max-width: 860px;
+    max-height: calc(100vh - 40px);
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    border-radius: var(--style-border-radius-popover, 20px);
+    border: 1px solid var(--color-border, rgba(0, 0, 0, 0.08));
+    box-shadow: 0 25px 60px -12px rgba(0, 0, 0, 0.35), 0 12px 24px -6px rgba(0, 0, 0, 0.15);
+    overflow: hidden;
+    transform: scale(0.92) translateY(16px);
+    transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .newsletter-popup-root.is-open .newsletter-popup__dialog {
+    transform: scale(1) translateY(0);
+  }
+
+  /* Close Button */
+  .newsletter-popup__close-btn {
+    position: absolute;
+    top: 14px;
+    right: 14px;
+    z-index: 10;
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    border-radius: 50%;
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    border: 1px solid var(--color-border, rgba(0, 0, 0, 0.1));
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    transition: transform 0.2s ease, background-color 0.2s ease, color 0.2s ease;
+  }
+
+  .newsletter-popup__close-btn:hover {
+    transform: scale(1.1);
+    background-color: var(--color-primary-button-hover-background, var(--color-foreground));
+    color: var(--color-primary-button-hover-text, var(--color-background));
+  }
+
+  .newsletter-popup__close-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 14px;
+    height: 14px;
+  }
+
+  .newsletter-popup__close-icon svg {
+    width: 12px;
+    height: 12px;
+  }
+
+  /* Two Column Grid */
+  .newsletter-popup__grid {
+    display: grid;
+    grid-template-columns: 1fr 1.15fr;
+    min-height: 460px;
+  }
+
+  .newsletter-popup__grid--reverse {
+    grid-template-columns: 1.15fr 1fr;
+  }
+
+  .newsletter-popup__grid--reverse .newsletter-popup__media-col {
+    order: 2;
+  }
+
+  .newsletter-popup__grid--reverse .newsletter-popup__content-col {
+    order: 1;
+  }
+
+  /* Left Column: Media */
+  .newsletter-popup__media-col {
+    position: relative;
+    overflow: hidden;
+    background-color: var(--color-input-background, rgba(0, 0, 0, 0.03));
+  }
+
+  .newsletter-popup__image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+
+  .newsletter-popup__placeholder-wrapper {
+    width: 100%;
+    height: 100%;
+    min-height: 280px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, rgba(0, 0, 0, 0.03), rgba(0, 0, 0, 0.08));
+  }
+
+  .newsletter-popup__placeholder-svg {
+    width: 100%;
+    height: 100%;
+    max-height: 460px;
+    object-fit: cover;
+  }
+
+  /* Right Column: Content */
+  .newsletter-popup__content-col {
+    padding: clamp(28px, 4.5vw, 48px);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    position: relative;
+    overflow-y: auto;
+  }
+
+  /* Headline */
+  .newsletter-popup__heading {
+    font-family: var(--font-heading--family, inherit);
+    font-size: clamp(1.45rem, 2.8vw, 1.95rem);
+    font-weight: 700;
+    line-height: 1.25;
+    margin: 0 0 12px 0;
+    color: var(--color-foreground-heading, var(--color-foreground));
+  }
+
+  .newsletter-popup__heading--success {
+    margin-bottom: 8px;
+  }
+
+  /* Text */
+  .newsletter-popup__text {
+    font-family: var(--font-body--family, var(--font-paragraph--family, inherit));
+    font-size: 0.9375rem;
+    line-height: 1.5;
+    color: var(--color-foreground);
+    opacity: 0.88;
+    margin: 0 0 24px 0;
+  }
+
+  .newsletter-popup__text p {
+    margin: 0 0 8px 0;
+  }
+
+  .newsletter-popup__text p:last-child {
+    margin-bottom: 0;
+  }
+
+  /* Form Container */
+  .newsletter-popup__form {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+  }
+
+  /* First Part: Form View */
+  .newsletter-popup__form-view {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    width: 100%;
+    animation: newsletterFadeIn 0.3s ease;
+  }
+
+  /* Bottom Part: Success View */
+  .newsletter-popup__success-view {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    padding-block: 8px;
+    width: 100%;
+    animation: newsletterFadeIn 0.35s ease;
+  }
+
+  /* CRITICAL: Strictly hide the other part so they never show together */
+  .newsletter-popup__form-view[hidden],
+  .newsletter-popup__success-view[hidden] {
+    display: none !important;
+  }
+
+  @keyframes newsletterFadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(6px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .newsletter-popup__field-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .newsletter-popup__field {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .newsletter-popup__input {
+    width: 100%;
+    height: 48px;
+    padding: 0 16px;
+    font-family: var(--font-paragraph--family, inherit);
+    font-size: 0.9375rem;
+    border-radius: var(--style-border-radius-buttons-primary, 8px);
+    border: 1px solid var(--color-input-border, var(--color-border));
+    background-color: var(--color-input-background, transparent);
+    color: var(--color-input-text, var(--color-foreground));
+    box-sizing: border-box;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  }
+
+  .newsletter-popup__input:focus {
+    outline: none;
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 2px rgb(var(--color-primary-rgb, 0 0 0) / 0.15);
+  }
+
+  .newsletter-popup__input.is-invalid {
+    border-color: #e53e3e !important;
+    box-shadow: 0 0 0 2px rgba(229, 62, 62, 0.18) !important;
+  }
+
+  .newsletter-popup__submit-btn {
+    width: 100%;
+    height: 48px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    cursor: pointer;
+    box-sizing: border-box;
+    transition: opacity 0.2s ease, background-color 0.2s ease;
+  }
+
+  /* Error container */
+  .newsletter-popup__error-message {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.8125rem;
+    color: #e53e3e;
+    margin-top: 4px;
+    line-height: 1.4;
+  }
+
+  .newsletter-popup__error-icon svg {
+    width: 14px;
+    height: 14px;
+    flex-shrink: 0;
+  }
+
+  /* Footer disclaimer */
+  .newsletter-popup__footer-note {
+    font-size: 0.75rem;
+    color: var(--color-foreground);
+    opacity: 0.65;
+    line-height: 1.4;
+    margin-top: 8px;
+  }
+
+  /* Success View styling */
+  .newsletter-popup__success-badge {
+    width: 58px;
+    height: 58px;
+    border-radius: 50%;
+    background-color: rgb(var(--color-primary-rgb, 16 185 129) / 0.12);
+    color: var(--color-primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 16px;
+  }
+
+  .newsletter-popup__success-icon svg {
+    width: 26px;
+    height: 26px;
+  }
+
+  .newsletter-popup__success-text {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: var(--color-primary);
+    margin: 0 0 16px 0;
+  }
+
+  .newsletter-popup__discount-card {
+    width: 100%;
+    background-color: rgb(var(--color-primary-rgb, 0 0 0) / 0.04);
+    border: 2px dashed var(--color-primary);
+    border-radius: 12px;
+    padding: 16px 18px;
+    margin: 8px 0 18px 0;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    cursor: pointer;
+    transition: background-color 0.2s ease, border-color 0.2s ease;
+  }
+
+  .newsletter-popup__discount-card:hover {
+    background-color: rgb(var(--color-primary-rgb, 0 0 0) / 0.07);
+  }
+
+  .newsletter-popup__discount-badge {
+    font-size: 0.6875rem;
+    text-transform: uppercase;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    color: var(--color-foreground);
+    opacity: 0.7;
+    text-align: left;
+  }
+
+  .newsletter-popup__discount-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  .newsletter-popup__discount-code {
+    font-family: var(--font-heading--family, monospace);
+    font-size: 1.35rem;
+    font-weight: 800;
+    letter-spacing: 0.12em;
+    color: var(--color-foreground-heading, var(--color-foreground));
+    user-select: all;
+  }
+
+  .newsletter-popup__copy-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 8px 16px;
+    font-size: 0.875rem;
+    font-weight: 600;
+    min-height: 38px;
+    cursor: pointer;
+    white-space: nowrap;
+    border-radius: var(--style-border-radius-buttons-primary, 6px);
+  }
+
+  /* Copy icon: visible by default */
+  .newsletter-popup__copy-btn .newsletter-popup__copy-btn-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 14px;
+    height: 14px;
+  }
+
+  /* Checkmark icon: strictly hidden by default */
+  .newsletter-popup__copy-btn .newsletter-popup__check-btn-icon {
+    display: none !important;
+  }
+
+  /* When copied: hide copy icon and reveal checkmark icon */
+  .newsletter-popup__copy-btn.is-copied .newsletter-popup__copy-btn-icon {
+    display: none !important;
+  }
+
+  .newsletter-popup__copy-btn.is-copied .newsletter-popup__check-btn-icon {
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: center;
+    width: 14px;
+    height: 14px;
+  }
+
+  .newsletter-popup__check-btn-icon svg {
+    width: 14px;
+    height: 14px;
+  }
+
+  .newsletter-popup__success-subtext {
+    font-size: 0.875rem;
+    color: var(--color-foreground);
+    opacity: 0.8;
+    margin: 0 0 20px 0;
+  }
+
+  .newsletter-popup__success-actions {
+    width: 100%;
+  }
+
+  .newsletter-popup__continue-btn {
+    width: 100%;
+    height: 44px;
+  }
+
+  /* Floating Trigger Launcher */
+  .newsletter-popup__floating-launcher {
+    position: fixed;
+    bottom: 24px;
+    left: 24px;
+    z-index: 9998;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 18px;
+    border-radius: 9999px;
+    border: 1px solid var(--color-border, rgba(0, 0, 0, 0.12));
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+    cursor: pointer;
+    font-family: var(--font-paragraph--family, inherit);
+    font-size: 0.875rem;
+    font-weight: 600;
+    transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.25s ease;
+  }
+
+  .newsletter-popup-root.is-open ~ .newsletter-popup__floating-launcher,
+  .newsletter-popup-root.is-open .newsletter-popup__floating-launcher {
+    display: none;
+  }
+
+  .newsletter-popup__floating-launcher:hover {
+    transform: translateY(-2px) scale(1.03);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.22);
+  }
+
+  .newsletter-popup__floating-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    color: var(--color-primary);
+  }
+
+  .newsletter-popup__floating-icon svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  /* Responsive Mobile Breakpoint */
+  @media screen and (max-width: 749px) {
+    .newsletter-popup-root {
+      padding: 12px;
+    }
+
+    .newsletter-popup__dialog {
+      max-height: calc(96vh - 24px);
+    }
+
+    .newsletter-popup__grid,
+    .newsletter-popup__grid--reverse {
+      grid-template-columns: 1fr;
+      max-height: calc(96vh - 24px);
+      overflow-y: auto;
+    }
+
+    .newsletter-popup__grid--reverse .newsletter-popup__media-col {
+      order: 1;
+    }
+
+    .newsletter-popup__grid--reverse .newsletter-popup__content-col {
+      order: 2;
+    }
+
+    .newsletter-popup__media-col {
+      height: 170px;
+      min-height: 170px;
+    }
+
+    .newsletter-popup__content-col {
+      padding: 24px 20px;
+    }
+
+    .newsletter-popup__heading {
+      font-size: 1.35rem;
+    }
+
+    .newsletter-popup__floating-launcher {
+      bottom: 16px;
+      left: 16px;
+      padding: 8px 14px;
+      font-size: 0.8125rem;
+    }
+
+    .newsletter-popup__close-btn {
+      top: 10px;
+      right: 10px;
+    }
+  }
+{% endstylesheet %}
+
+<script>
+  (function () {
+    // List of known disposable / throwaway email domains to reject
+    const DISPOSABLE_EMAIL_DOMAINS = new Set([
+      'mailinator.com', '10minutemail.com', 'tempmail.com', 'temp-mail.org',
+      'guerrillamail.com', 'guerrillamailblock.com', 'sharklasers.com', 'grr.la',
+      'throwawaymail.com', 'yopmail.com', 'trashmail.com', 'trashmail.net',
+      'dispostable.com', 'getairmail.com', 'fakeinbox.com', 'burnermail.io',
+      'crazymailing.com', 'dropmail.me', 'getnada.com', 'nada.ltd', 'mohmal.com',
+      'mytemp.email', 'tempail.com', 'fakemailgenerator.com', 'emailondeck.com',
+      'inboxkitten.com', 'maildrop.cc', 'generator.email', 'armyspy.com',
+      'cuvox.de', 'dayrep.com', 'fleckens.hu', 'gustr.com', 'jourrapide.com',
+      'rhyta.com', 'superrito.com', 'teleworm.us', 'tinemail.com', 'test.com',
+      'example.com', 'fake.com', 'asdf.com'
+    ]);
+
+    class NewsletterPopup extends HTMLElement {
+      constructor() {
+        super();
+        this.STORAGE_DISMISSED_KEY = 'podifai_newsletter_popup_dismissed';
+        this.STORAGE_SUBSCRIBED_KEY = 'podifai_newsletter_popup_subscribed';
+        this.STORAGE_TIMESTAMP_KEY = 'podifai_newsletter_popup_dismissed_time';
+        this.timer = null;
+      }
+
+      connectedCallback() {
+        this.dialog = this.querySelector('.newsletter-popup__dialog');
+        this.formView = this.querySelector('[data-form-view]');
+        this.successView = this.querySelector('[data-success-view]');
+        this.form = this.querySelector('.newsletter-popup__form');
+        this.emailInput = this.querySelector('input[name="contact[email]"]');
+        this.submitBtn = this.querySelector('[data-submit-btn]');
+        this.errorContainer = this.querySelector('[data-error-container]');
+        this.errorText = this.querySelector('[data-error-text]');
+        this.copyBtn = this.querySelector('[data-copy-btn]');
+
+        this.timerDelay = parseInt(this.dataset.timerDelay || '5', 10) * 1000;
+        this.cookieDuration = this.dataset.cookieDuration || 'session';
+        this.discountCode = this.dataset.discountCode || '';
+        this.previewMode = this.dataset.previewMode === 'true';
+        this.editorViewMode = this.dataset.editorViewMode || 'form';
+
+        this.initEvents();
+        this.checkInitialState();
+      }
+
+      disconnectedCallback() {
+        if (this.timer) clearTimeout(this.timer);
+      }
+
+      initEvents() {
+        // Close buttons and backdrop clicks
+        this.querySelectorAll('[data-newsletter-close]').forEach((el) => {
+          el.addEventListener('click', () => this.close());
+        });
+
+        // Open button inside section (floating launcher)
+        this.querySelectorAll('[data-newsletter-open]').forEach((el) => {
+          el.addEventListener('click', () => this.open());
+        });
+
+        // Global manual click triggers
+        document.addEventListener('click', (event) => {
+          const trigger = event.target.closest(
+            '[data-newsletter-popup-open], [data-open-newsletter-popup], a[href="#open-newsletter-popup"]'
+          );
+          if (trigger) {
+            event.preventDefault();
+            this.open();
+          }
+        });
+
+        // Escape key to close
+        this.addEventListener('keydown', (event) => {
+          if (event.key === 'Escape' && this.classList.contains('is-open')) {
+            event.preventDefault();
+            this.close();
+          }
+        });
+
+        // Copy button & discount card handling (via resilient event delegation)
+        this.addEventListener('click', (event) => {
+          const copyBtn = event.target.closest('[data-copy-btn]');
+          const discountCard = event.target.closest('[data-discount-card]');
+
+          if (copyBtn) {
+            event.preventDefault();
+            event.stopPropagation();
+            this.handleCopyCode(copyBtn);
+          } else if (discountCard) {
+            event.preventDefault();
+            const btn = this.querySelector('[data-copy-btn]');
+            this.handleCopyCode(btn);
+          }
+        });
+
+        // Form submission with verification
+        if (this.form) {
+          this.form.addEventListener('submit', (e) => this.handleFormSubmit(e));
+        }
+
+        // Clear error on input typing
+        if (this.emailInput) {
+          this.emailInput.addEventListener('input', () => {
+            this.clearError();
+          });
+        }
+
+        // Shopify Theme Editor Integration
+        if (window.Shopify && window.Shopify.designMode) {
+          document.addEventListener('shopify:section:select', (event) => {
+            if (event.target.contains(this) || event.target === this.closest('.shopify-section')) {
+              this.applyEditorViewMode();
+              this.open();
+            }
+          });
+
+          document.addEventListener('shopify:section:deselect', (event) => {
+            if (event.target.contains(this) || event.target === this.closest('.shopify-section')) {
+              if (!this.previewMode) this.close();
+            }
+          });
+        }
+      }
+
+      applyEditorViewMode() {
+        if (this.editorViewMode === 'success') {
+          this.showSuccessState();
+        } else {
+          this.showFormState();
+        }
+      }
+
+      checkInitialState() {
+        // In Theme Editor: respect editor_view_mode
+        if (window.Shopify && window.Shopify.designMode) {
+          this.applyEditorViewMode();
+          if (this.previewMode) {
+            this.open();
+          }
+          return;
+        }
+
+        // Check if user already subscribed
+        if (localStorage.getItem(this.STORAGE_SUBSCRIBED_KEY) === 'true') {
+          return;
+        }
+
+        // Check dismissal logic
+        if (this.isDismissed()) {
+          return;
+        }
+
+        // By default on first load: ensure ONLY the first part is shown
+        this.showFormState();
+
+        // Set timer for automatic popup
+        this.timer = setTimeout(() => {
+          this.open();
+        }, this.timerDelay);
+      }
+
+      isDismissed() {
+        if (sessionStorage.getItem(this.STORAGE_DISMISSED_KEY) === 'true') {
+          return true;
+        }
+
+        if (this.cookieDuration !== 'session') {
+          const days = parseInt(this.cookieDuration, 10);
+          const dismissedAt = localStorage.getItem(this.STORAGE_TIMESTAMP_KEY);
+          if (dismissedAt) {
+            const timeDiff = Date.now() - parseInt(dismissedAt, 10);
+            const maxDuration = days * 24 * 60 * 60 * 1000;
+            if (timeDiff < maxDuration) {
+              return true;
+            }
+          }
+        }
+
+        if (document.cookie.split(';').some((c) => c.trim().startsWith('podifai_newsletter_dismissed='))) {
+          return true;
+        }
+
+        return false;
+      }
+
+      open() {
+        this.classList.add('is-open');
+        document.documentElement.style.overflow = 'hidden';
+
+        if (this.dialog) {
+          if (this.emailInput && !this.formView?.hidden) {
+            setTimeout(() => this.emailInput.focus(), 150);
+          } else {
+            this.dialog.focus();
+          }
+        }
+      }
+
+      close() {
+        this.classList.remove('is-open');
+        document.documentElement.style.overflow = '';
+
+        sessionStorage.setItem(this.STORAGE_DISMISSED_KEY, 'true');
+
+        if (this.cookieDuration !== 'session') {
+          const days = parseInt(this.cookieDuration, 10) || 1;
+          localStorage.setItem(this.STORAGE_TIMESTAMP_KEY, Date.now().toString());
+          const maxAge = days * 24 * 60 * 60;
+          document.cookie = `podifai_newsletter_dismissed=true; path=/; max-age=${maxAge}; SameSite=Lax`;
+        }
+      }
+
+      markSubscribed() {
+        localStorage.setItem(this.STORAGE_SUBSCRIBED_KEY, 'true');
+        sessionStorage.setItem(this.STORAGE_DISMISSED_KEY, 'true');
+      }
+
+      /**
+       * Validates that the provided email is a legitimate personal email.
+       * Rejects malformed strings and temporary/disposable email domains.
+       */
+      validatePersonalEmail(rawEmail) {
+        if (!rawEmail || typeof rawEmail !== 'string') {
+          return { valid: false, message: 'Please enter your email address.' };
+        }
+
+        const email = rawEmail.trim().toLowerCase();
+
+        // Standard RFC email structure check
+        const emailRegex = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)+$/;
+        if (!emailRegex.test(email)) {
+          return { valid: false, message: 'Please enter a valid personal email address (e.g. name@gmail.com).' };
+        }
+
+        const parts = email.split('@');
+        if (parts.length !== 2) {
+          return { valid: false, message: 'Please enter a valid email address.' };
+        }
+
+        const [username, domain] = parts;
+
+        if (!username || username.length < 2) {
+          return { valid: false, message: 'Please enter a valid email username.' };
+        }
+
+        if (!domain || !domain.includes('.')) {
+          return { valid: false, message: 'Please include a valid domain extension (e.g. .com).' };
+        }
+
+        const domainParts = domain.split('.');
+        const tld = domainParts[domainParts.length - 1];
+        if (!tld || tld.length < 2) {
+          return { valid: false, message: 'Please enter a valid email domain.' };
+        }
+
+        // Check against known disposable/throwaway domains
+        if (DISPOSABLE_EMAIL_DOMAINS.has(domain)) {
+          return { valid: false, message: 'Disposable email addresses are not accepted. Please use a personal email.' };
+        }
+
+        return { valid: true, email };
+      }
+
+      async handleFormSubmit(event) {
+        event.preventDefault();
+
+        const rawValue = this.emailInput ? this.emailInput.value : '';
+        const validation = this.validatePersonalEmail(rawValue);
+
+        if (!validation.valid) {
+          this.showError(validation.message);
+          if (this.emailInput) {
+            this.emailInput.classList.add('is-invalid');
+            this.emailInput.focus();
+          }
+          return;
+        }
+
+        this.setLoading(true);
+        this.clearError();
+
+        const formData = new FormData(this.form);
+
+        try {
+          const response = await fetch(this.form.action, {
+            method: 'POST',
+            body: formData,
+            headers: {
+              Accept: 'text/html',
+            },
+          });
+
+          const responseText = await response.text();
+
+          // Check if response contains Shopify form error
+          const parser = new DOMParser();
+          const doc = parser.parseFromString(responseText, 'text/html');
+          const errorElement = doc.querySelector('.errors, .form__message--error');
+
+          if (errorElement) {
+            const errorMsg = errorElement.textContent.trim() || 'Please check your email and try again.';
+            this.showError(errorMsg);
+            this.setLoading(false);
+          } else {
+            // Personal email verified and subscriber recorded in Shopify customer database!
+            this.markSubscribed();
+            this.showSuccessState();
+            this.setLoading(false);
+          }
+        } catch (error) {
+          // If fetch network fails, fallback to standard submission
+          console.warn('Newsletter AJAX failed, falling back to standard submit:', error);
+          this.form.submit();
+        }
+      }
+
+      // Shows ONLY the bottom part (Success & Discount Code)
+      showSuccessState() {
+        if (this.formView) {
+          this.formView.hidden = true;
+          this.formView.style.setProperty('display', 'none', 'important');
+        }
+        if (this.successView) {
+          this.successView.hidden = false;
+          this.successView.style.setProperty('display', 'flex', 'important');
+        }
+      }
+
+      // Shows ONLY the first part (Email Form)
+      showFormState() {
+        if (this.formView) {
+          this.formView.hidden = false;
+          this.formView.style.setProperty('display', 'flex', 'important');
+        }
+        if (this.successView) {
+          this.successView.hidden = true;
+          this.successView.style.setProperty('display', 'none', 'important');
+        }
+      }
+
+      setLoading(isLoading) {
+        if (!this.submitBtn) return;
+        if (isLoading) {
+          this.submitBtn.disabled = true;
+          this.submitBtn.style.opacity = '0.7';
+          this.submitBtn.style.cursor = 'not-allowed';
+        } else {
+          this.submitBtn.disabled = false;
+          this.submitBtn.style.opacity = '';
+          this.submitBtn.style.cursor = '';
+        }
+      }
+
+      showError(message) {
+        if (!this.errorContainer || !this.errorText) return;
+        this.errorText.textContent = message;
+        this.errorContainer.hidden = false;
+      }
+
+      clearError() {
+        if (this.emailInput) {
+          this.emailInput.classList.remove('is-invalid');
+        }
+        if (!this.errorContainer || !this.errorText) return;
+        this.errorText.textContent = '';
+        this.errorContainer.hidden = true;
+      }
+
+      async copyToClipboard(text) {
+        if (!text) return false;
+
+        // Modern asynchronous Clipboard API
+        if (navigator.clipboard && window.isSecureContext) {
+          try {
+            await navigator.clipboard.writeText(text);
+            return true;
+          } catch (err) {
+            console.warn('navigator.clipboard failed, attempting fallback:', err);
+          }
+        }
+
+        // Reliable synchronous textarea fallback (works across iframe sandboxes and mobile)
+        try {
+          const textarea = document.createElement('textarea');
+          textarea.value = text;
+          textarea.setAttribute('readonly', '');
+          textarea.style.position = 'fixed';
+          textarea.style.top = '0';
+          textarea.style.left = '0';
+          textarea.style.width = '2em';
+          textarea.style.height = '2em';
+          textarea.style.padding = '0';
+          textarea.style.border = 'none';
+          textarea.style.outline = 'none';
+          textarea.style.boxShadow = 'none';
+          textarea.style.background = 'transparent';
+          textarea.style.opacity = '0';
+          textarea.style.pointerEvents = 'none';
+          textarea.style.zIndex = '-1';
+          document.body.appendChild(textarea);
+
+          textarea.focus();
+          textarea.select();
+          textarea.setSelectionRange(0, textarea.value.length);
+
+          const successful = document.execCommand('copy');
+          document.body.removeChild(textarea);
+          return successful;
+        } catch (err) {
+          console.error('execCommand copy fallback failed:', err);
+          return false;
+        }
+      }
+
+      async handleCopyCode(buttonEl) {
+        const btn = buttonEl || this.querySelector('[data-copy-btn]');
+        if (!btn) return;
+
+        // Dynamically get the code from the DOM element, fallback to dataset/stored property
+        const codeElement = this.querySelector('[data-discount-code-value]');
+        const codeToCopy = (codeElement ? (codeElement.innerText || codeElement.textContent) : '')?.trim()
+          || this.dataset.discountCode
+          || this.discountCode
+          || '';
+
+        if (!codeToCopy) return;
+
+        await this.copyToClipboard(codeToCopy);
+
+        // Update button visual feedback
+        const btnText = btn.querySelector('[data-copy-btn-text]');
+        const originalText = btn.dataset.originalText || (btnText ? btnText.textContent : 'Copy');
+        btn.dataset.originalText = originalText;
+
+        if (btnText) btnText.textContent = 'Copied!';
+        btn.classList.add('is-copied');
+
+        if (btn._copyTimeout) clearTimeout(btn._copyTimeout);
+        btn._copyTimeout = setTimeout(() => {
+          if (btnText) btnText.textContent = originalText;
+          btn.classList.remove('is-copied');
+        }, 2500);
+      }
+    }
+
+    if (!customElements.get('newsletter-popup')) {
+      customElements.define('newsletter-popup', NewsletterPopup);
+    }
+  })();
+</script>
+
+{% schema %}
+{
+  "name": "Newsletter pop-up",
+  "tag": "aside",
+  "class": "shopify-section-newsletter-popup",
+  "enabled_on": {
+    "templates": ["*"],
+    "groups": ["footer"]
+  },
+  "settings": [
+    {
+      "type": "header",
+      "content": "Display Triggers & Timing"
+    },
+    {
+      "type": "range",
+      "id": "timer_delay",
+      "label": "Popup timer delay",
+      "info": "Number of seconds after page load before the pop-up appears.",
+      "min": 0,
+      "max": 60,
+      "step": 1,
+      "unit": "s",
+      "default": 5
+    },
+    {
+      "type": "select",
+      "id": "cookie_duration",
+      "label": "Dismissal session duration",
+      "info": "How long until the pop-up may appear again after dismissal.",
+      "options": [
+        {
+          "value": "session",
+          "label": "Until browser session ends"
+        },
+        {
+          "value": "1",
+          "label": "1 day"
+        },
+        {
+          "value": "7",
+          "label": "7 days"
+        },
+        {
+          "value": "30",
+          "label": "30 days"
+        }
+      ],
+      "default": "session"
+    },
+    {
+      "type": "checkbox",
+      "id": "preview_mode",
+      "label": "Keep pop-up open for previewing",
+      "info": "Useful when designing and customizing in the theme editor. Turn off before publishing.",
+      "default": false
+    },
+    {
+      "type": "select",
+      "id": "editor_view_mode",
+      "label": "Theme editor preview view",
+      "info": "Choose which part to preview while customizing in the theme editor.",
+      "options": [
+        {
+          "value": "form",
+          "label": "First part (Email Form)"
+        },
+        {
+          "value": "success",
+          "label": "Bottom part (Success & Discount Code)"
+        }
+      ],
+      "default": "form"
+    },
+    {
+      "type": "range",
+      "id": "overlay_opacity",
+      "label": "Background overlay opacity",
+      "info": "Controls the shade level. Default 20% keeps your store clearly visible.",
+      "min": 0,
+      "max": 80,
+      "step": 5,
+      "unit": "%",
+      "default": 20
+    },
+    {
+      "type": "header",
+      "content": "Image (Left Column)"
+    },
+    {
+      "type": "image_picker",
+      "id": "image",
+      "label": "Featured image"
+    },
+    {
+      "type": "select",
+      "id": "image_position",
+      "label": "Image position",
+      "options": [
+        {
+          "value": "left",
+          "label": "Left"
+        },
+        {
+          "value": "right",
+          "label": "Right"
+        }
+      ],
+      "default": "left"
+    },
+    {
+      "type": "header",
+      "content": "Promotional Content (Right Column)"
+    },
+    {
+      "type": "inline_richtext",
+      "id": "heading",
+      "label": "Headline",
+      "default": "Get 10 RM off your first order"
+    },
+    {
+      "type": "richtext",
+      "id": "text",
+      "label": "Body text",
+      "default": "<p>Subscribe to our newsletter to receive an instant discount code on your next customized piece.</p>"
+    },
+    {
+      "type": "text",
+      "id": "email_placeholder",
+      "label": "Email placeholder",
+      "default": "Enter your email address"
+    },
+    {
+      "type": "text",
+      "id": "button_label",
+      "label": "Subscribe button label",
+      "default": "Claim My 10 RM Off"
+    },
+    {
+      "type": "inline_richtext",
+      "id": "footer_note",
+      "label": "Footer disclaimer",
+      "default": "By subscribing you agree to receive marketing emails. Unsubscribe anytime."
+    },
+    {
+      "type": "header",
+      "content": "Success State & Incentive"
+    },
+    {
+      "type": "text",
+      "id": "success_title",
+      "label": "Success title",
+      "default": "You're on the list!"
+    },
+    {
+      "type": "text",
+      "id": "success_text",
+      "label": "Success message",
+      "default": "Here is your 10 RM off!"
+    },
+    {
+      "type": "text",
+      "id": "discount_code",
+      "label": "Discount code to reveal",
+      "default": "WELCOME10"
+    },
+    {
+      "type": "text",
+      "id": "success_subtext",
+      "label": "Success subtext",
+      "default": "Enter this coupon code at checkout to claim your savings."
+    },
+    {
+      "type": "text",
+      "id": "copy_button_label",
+      "label": "Copy button label",
+      "default": "Copy"
+    },
+    {
+      "type": "header",
+      "content": "Backend Customer Integration"
+    },
+    {
+      "type": "text",
+      "id": "customer_tag",
+      "label": "Customer tags",
+      "info": "Comma-separated tags to apply to the customer in Shopify.",
+      "default": "newsletter, newsletter-popup"
+    },
+    {
+      "type": "header",
+      "content": "Styling & Floating Launcher"
+    },
+    {
+      "type": "color_scheme",
+      "id": "color_scheme",
+      "label": "Color scheme"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_floating_launcher",
+      "label": "Show floating launcher button",
+      "info": "Displays a subtle floating badge in the bottom corner so visitors can manually re-open the pop-up anytime.",
+      "default": true
+    },
+    {
+      "type": "text",
+      "id": "floating_launcher_text",
+      "label": "Floating launcher button text",
+      "default": "Get 10 RM Off"
+    }
+  ],
+  "presets": [
+    {
+      "name": "Newsletter pop-up"
+    }
+  ]
+}
+{% endschema %}

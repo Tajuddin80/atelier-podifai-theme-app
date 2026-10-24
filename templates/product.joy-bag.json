@@ -367,7 +367,7 @@
             "title": "Animals",
             "size": "5cm x 4cm ​",
             "use_metafield": true,
-            "metafield_key": "custom.category_7_patches"
+            "metafield_key": "custom.animals"
           }
         },
         "character_category_wBYxrN": {
@@ -376,7 +376,7 @@
             "title": "Balls",
             "size": "5cm x 5cm",
             "use_metafield": true,
-            "metafield_key": "custom.category_5_patches"
+            "metafield_key": "custom.balls"
           }
         },
         "character_category_83Rpfe": {
@@ -385,7 +385,7 @@
             "title": "Cartoons",
             "size": "3.5cm x 3.5cm",
             "use_metafield": true,
-            "metafield_key": "category_1_patches"
+            "metafield_key": "custom.cartoons"
           }
         },
         "character_category_3qUktF": {
@@ -394,7 +394,7 @@
             "title": "Cuties",
             "size": "4cm x 4cm",
             "use_metafield": true,
-            "metafield_key": "custom.category_4_patches"
+            "metafield_key": "custom.cuties"
           }
         },
         "character_category_Uxqfdf": {
@@ -403,7 +403,7 @@
             "title": "Food",
             "size": "4cm x 4cm",
             "use_metafield": true,
-            "metafield_key": "custom.category_6_patches"
+            "metafield_key": "custom.food"
           }
         },
         "character_category_tGmFAf": {
@@ -412,7 +412,7 @@
             "title": "Mini Zoo",
             "size": "2cm x 2cm",
             "use_metafield": true,
-            "metafield_key": "custom.category_11_patches"
+            "metafield_key": "custom.mini_zoo"
           }
         },
         "character_category_GYbnjj": {
@@ -421,7 +421,7 @@
             "title": "Sanrio",
             "size": "5cm x 5cm",
             "use_metafield": true,
-            "metafield_key": "custom.category_2_patches"
+            "metafield_key": "custom.sanrio"
           }
         },
         "character_category_C9C3Ja": {
@@ -430,7 +430,7 @@
             "title": "Sports",
             "size": "2cm x 2cm",
             "use_metafield": true,
-            "metafield_key": "custom.category_10_patches"
+            "metafield_key": "custom.sports"
           }
         },
         "character_category_wdTpjK": {
@@ -439,7 +439,7 @@
             "title": "Spongebob",
             "size": "5.5cm x 5.5cm",
             "use_metafield": true,
-            "metafield_key": "custom.category_8_patches"
+            "metafield_key": "custom.spongebob"
           }
         },
         "character_category_VMHQE3": {
@@ -448,7 +448,7 @@
             "title": "Sushi",
             "size": "5cm x 5cm",
             "use_metafield": true,
-            "metafield_key": "custom.category_9_patches"
+            "metafield_key": "custom.sushi"
           }
         },
         "character_category_e7DmDD": {
@@ -457,16 +457,18 @@
             "title": "Transport",
             "size": "6cm x 4cm",
             "use_metafield": true,
-            "metafield_key": "custom.category_3_patches"
+            "metafield_key": "custom.transport"
           }
         },
         "atelier_customizer_block": {
           "type": "atelier-customizer",
           "settings": {
+            "imgbb_api_key": "222e573c91bea794c21c7d5a1550cc41",
             "cloudinary_cloud_name": "djgkiteys",
             "cloudinary_upload_preset": "shopify_preset_podifai",
             "enable_addon_surcharges": true,
             "patch_addon_product": "patch-addon",
+            "patch_addons_collection": "patch-addons",
             "embroidery_addon_product": "embroidery-addon",
             "patch_addon_variant_id": "",
             "embroidery_addon_variant_id": "",

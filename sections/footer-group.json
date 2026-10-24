@@ -327,10 +327,35 @@
         "padding-block-start": 12,
         "padding-block-end": 16
       }
+    },
+    "newsletter_popup": {
+      "type": "newsletter-popup",
+      "settings": {
+        "timer_delay": 5,
+        "cookie_duration": "session",
+        "preview_mode": false,
+        "editor_view_mode": "form",
+        "overlay_opacity": 20,
+        "heading": "Get 10 RM off your first order",
+        "text": "<p>Subscribe to our newsletter to receive an instant discount code on your next customized piece.</p>",
+        "email_placeholder": "Enter your email address",
+        "button_label": "Claim My 10 RM Off",
+        "footer_note": "By subscribing you agree to receive marketing emails. Unsubscribe anytime.",
+        "success_title": "You're on the list!",
+        "success_text": "Here is your 10 RM off!",
+        "discount_code": "WELCOME10",
+        "success_subtext": "Enter this coupon code at checkout to claim your savings.",
+        "copy_button_label": "Copy",
+        "customer_tag": "newsletter, newsletter-popup",
+        "color_scheme": "scheme-1",
+        "show_floating_launcher": true,
+        "floating_launcher_text": "Get 10 RM Off"
+      }
     }
   },
   "order": [
     "footer",
-    "utilities"
+    "utilities",
+    "newsletter_popup"
   ]
 }

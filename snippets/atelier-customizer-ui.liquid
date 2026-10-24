@@ -1,0 +1,782 @@
+  <!-- Canvas Overlay Teleport Anchor / Wrapper -->
+  <div id="podifai-canvas-wrapper" class="podifai-canvas-wrapper">
+    <div id="podifai-konva-container" class="podifai-konva-container"></div>
+    <div id="podifai-overlap-error-toast" class="podifai-overlap-error-toast" style="display: none;">
+      <svg
+        width="18"
+        height="18"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2.2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      >
+        <circle cx="12" cy="12" r="10"></circle>
+        <line x1="12" y1="8" x2="12" y2="12"></line>
+        <line x1="12" y1="16" x2="12.01" y2="16"></line>
+      </svg>
+      <span>Patches and embroidery cannot overlap. Move to a free area.</span>
+    </div>
+  </div>
+
+  <div class="podifai-customizer__container">
+    <!-- Step 3: Add Patches Card -->
+    <div class="podifai-step-card podifai-patches-step-card" id="podifai-patches-step-card">
+      <div class="podifai-step-header">
+        <div class="podifai-step-title-group">
+          <span class="step-badge">3</span>
+          <span class="podifai-step-title">Add patches</span>
+          <span class="podifai-optional-badge">optional</span>
+        </div>
+        <div class="podifai-step-header-meta">
+          <span id="podifai-patches-header-count-text"></span>
+          <span class="podifai-embroidery-price-tag">
+            +{{ currency_symbol -}}
+            {{- patch_unit_price -}}
+          </span>
+          <button
+            type="button"
+            class="podifai-clear-all-patches-btn"
+            id="podifai-clear-all-patches-btn"
+            style="display: none;"
+            title="Clear all patches"
+          >
+            &times;
+          </button>
+        </div>
+      </div>
+
+      <!-- Accordion 1: Character Patches -->
+      <div class="podifai-accordion" id="podifai-char-accordion">
+        <div class="podifai-accordion__trigger">
+          <span class="podifai-accordion__label">Character patches</span>
+
+          <span class="podifai-accordion__icon">+</span>
+        </div>
+        <div class="podifai-accordion__content" style="display: none;">
+          <!-- Character Category Filter Pills -->
+          <div class="podifai-pill-filters" id="podifai-char-categories">
+            {% assign char_category_blocks = section.blocks | where: 'type', 'character_category' %}
+
+            {% if char_category_blocks.size > 0 %}
+              {% for cb in char_category_blocks %}
+                {% assign cat_id = cb.settings.title | handleize | default: cb.id %}
+                <button
+                  type="button"
+                  class="podifai-pill-btn {% if forloop.first %}active{% endif %}"
+                  data-char-cat="{{ cat_id }}"
+                  data-label="{{ cb.settings.title | escape }}"
+                  data-size="{{ cb.settings.size | default: '8cm x 8cm' | escape }}"
+                  {{ cb.shopify_attributes }}
+                >
+                  {{ cb.settings.title }}
+                </button>
+              {% endfor %}
+            {% endif %}
+          </div>
+
+          {% assign first_char_cat_title = '' %}
+          {% assign first_char_cat_size = '8cm x 8cm' %}
+
+          {% if char_category_blocks.size > 0 %}
+            {% assign first_block = char_category_blocks.first %}
+            {% assign first_char_cat_size = first_block.settings.size | default: '8cm x 8cm' %}
+          {% else %}
+            {% assign first_char_cat_size = '8cm x 8cm' %}
+          {% endif %}
+
+          <div class="podifai-sublabel" id="podifai-char-sublabel">
+            Size approximately <span id="podifai-char-cat-size">{{ first_char_cat_size | default: '8cm x 8cm' }}</span>
+          </div>
+
+          <!-- Character Patches Grid -->
+          <div class="podifai-patch-grid" id="podifai-character-patches">
+            <!-- Custom Character Category Blocks (Metafield & Manual Uploads) -->
+            {% if char_category_blocks.size > 0 %}
+              {% for cb in char_category_blocks %}
+                {% assign is_first_char_cat = forloop.first %}
+                {% assign cat_id = cb.settings.title | handleize | default: cb.id %}
+                {% assign cat_handle = cb.settings.title | handleize %}
+                {% assign cat_underscore = cat_handle | replace: '-', '_' %}
+                {% assign cat_underscore_patches = cat_underscore | append: '_patches' %}
+                {% assign cat_handle_patches = cat_handle | append: '-patches' %}
+
+                {% assign patch_files = blank %}
+
+                {% comment %} 1. Shopify Metaobjects matching category name or handle {% endcomment %}
+                {% assign mo_handle = cb.settings.metaobject_handle
+                  | default: cb.settings.metafield_key
+                  | remove: 'custom.'
+                  | strip
+                  | handleize
+                %}
+                {% if mo_handle == blank %}
+                  {% assign mo_handle = cat_handle %}
+                {% endif %}
+                {% assign mo_underscore = mo_handle | replace: '-', '_' %}
+
+                {% assign mo = shop.metaobjects.patch_category[mo_handle]
+                  | default: shop.metaobjects.patch_category[mo_underscore]
+                  | default: shop.metaobjects.patch_category[cat_handle]
+                  | default: shop.metaobjects.patch_category[cat_underscore]
+                  | default: shop.metaobjects.patches[mo_handle]
+                  | default: shop.metaobjects.patches[mo_underscore]
+                  | default: shop.metaobjects.patches[cat_handle]
+                  | default: shop.metaobjects.patches[cat_underscore]
+                  | default: shop.metaobjects.patch[mo_handle]
+                  | default: shop.metaobjects.patch[cat_handle]
+                  | default: shop.metaobjects.character_category[cat_handle]
+                  | default: shop.metaobjects.character_patches[cat_handle]
+                  | default: shop.metaobjects[cat_handle][cat_handle]
+                  | default: shop.metaobjects[cat_underscore][cat_underscore]
+                %}
+
+                {% if mo != blank %}
+                  {% assign patch_files = mo.images.value
+                    | default: mo.images
+                    | default: mo.files.value
+                    | default: mo.files
+                    | default: mo.patches.value
+                    | default: mo.patches
+                    | default: mo.image.value
+                    | default: mo.image
+                  %}
+                {% endif %}
+
+                {% comment %} 2. Product Metafields matching category name directly (e.g. custom.animals, custom.sushi, custom.animals_patches) {% endcomment %}
+                {% if patch_files == blank %}
+                  {% assign mf_obj = product.metafields.custom[cat_underscore].value
+                    | default: product.metafields.custom[cat_handle].value
+                    | default: product.metafields.custom[cat_underscore_patches].value
+                    | default: product.metafields.custom[cat_handle_patches].value
+                    | default: product.metafields.custom[cat_underscore]
+                    | default: product.metafields.custom[cat_handle]
+                    | default: product.metafields.custom[cat_underscore_patches]
+                  %}
+                  {% if mf_obj != blank %}
+                    {% if mf_obj.images.value != blank %}
+                      {% assign patch_files = mf_obj.images.value %}
+                    {% elsif mf_obj.files.value != blank %}
+                      {% assign patch_files = mf_obj.files.value %}
+                    {% elsif mf_obj.patches.value != blank %}
+                      {% assign patch_files = mf_obj.patches.value %}
+                    {% else %}
+                      {% assign patch_files = mf_obj %}
+                    {% endif %}
+                  {% endif %}
+                {% endif %}
+
+                {% comment %} 3. Configured metafield_key in block settings {% endcomment %}
+                {% if patch_files == blank and cb.settings.metafield_key != blank %}
+                  {% assign clean_key = cb.settings.metafield_key | remove: 'custom.' | strip %}
+                  {% assign clean_underscore = clean_key | handleize | replace: '-', '_' %}
+                  {% assign clean_key_patches = clean_underscore | append: '_patches' %}
+                  {% assign mf_conf = product.metafields.custom[clean_key].value
+                    | default: product.metafields.custom[clean_underscore].value
+                    | default: product.metafields.custom[clean_key_patches].value
+                    | default: product.metafields.custom[clean_key]
+                    | default: product.metafields.custom[clean_underscore]
+                  %}
+                  {% if mf_conf != blank %}
+                    {% if mf_conf.images.value != blank %}
+                      {% assign patch_files = mf_conf.images.value %}
+                    {% elsif mf_conf.files.value != blank %}
+                      {% assign patch_files = mf_conf.files.value %}
+                    {% elsif mf_conf.patches.value != blank %}
+                      {% assign patch_files = mf_conf.patches.value %}
+                    {% else %}
+                      {% assign patch_files = mf_conf %}
+                    {% endif %}
+                  {% endif %}
+                {% endif %}
+
+                {% comment %} 4. Legacy category index fallback (category_1_patches to category_11_patches) {% endcomment %}
+                {% if patch_files == blank %}
+                  {% case cat_underscore %}
+                    {% when 'cartoons' %}
+                      {% assign patch_files = product.metafields.custom.category_1_patches.value
+                        | default: product.metafields.custom.category_1_patches
+                      %}
+                    {% when 'sanrio' %}
+                      {% assign patch_files = product.metafields.custom.category_2_patches.value
+                        | default: product.metafields.custom.category_2_patches
+                      %}
+                    {% when 'transport' %}
+                      {% assign patch_files = product.metafields.custom.category_3_patches.value
+                        | default: product.metafields.custom.category_3_patches
+                      %}
+                    {% when 'cuties' %}
+                      {% assign patch_files = product.metafields.custom.category_4_patches.value
+                        | default: product.metafields.custom.category_4_patches
+                      %}
+                    {% when 'balls' %}
+                      {% assign patch_files = product.metafields.custom.category_5_patches.value
+                        | default: product.metafields.custom.category_5_patches
+                      %}
+                    {% when 'food' %}
+                      {% assign patch_files = product.metafields.custom.category_6_patches.value
+                        | default: product.metafields.custom.category_6_patches
+                      %}
+                    {% when 'animals' %}
+                      {% assign patch_files = product.metafields.custom.category_7_patches.value
+                        | default: product.metafields.custom.category_7_patches
+                      %}
+                    {% when 'spongebob' %}
+                      {% assign patch_files = product.metafields.custom.category_8_patches.value
+                        | default: product.metafields.custom.category_8_patches
+                      %}
+                    {% when 'sushi' %}
+                      {% assign patch_files = product.metafields.custom.category_9_patches.value
+                        | default: product.metafields.custom.category_9_patches
+                      %}
+                    {% when 'sports' %}
+                      {% assign patch_files = product.metafields.custom.category_10_patches.value
+                        | default: product.metafields.custom.category_10_patches
+                      %}
+                    {% when 'mini_zoo', 'mini-zoo' %}
+                      {% assign patch_files = product.metafields.custom.category_11_patches.value
+                        | default: product.metafields.custom.category_11_patches
+                      %}
+                  {% endcase %}
+                {% endif %}
+
+                {% if patch_files != blank %}
+                  {% for file in patch_files %}
+                    {% assign patch_img_obj = file %}
+                    {% if file.image.value != blank %}
+                      {% assign patch_img_obj = file.image.value %}
+                    {% elsif file.image != blank %}
+                      {% assign patch_img_obj = file.image %}
+                    {% elsif file.file.value != blank %}
+                      {% assign patch_img_obj = file.file.value %}
+                    {% elsif file.file != blank %}
+                      {% assign patch_img_obj = file.file %}
+                    {% endif %}
+                    {% assign img_thumb = patch_img_obj | image_url: width: 140 %}
+                    {% assign img_canvas = patch_img_obj | image_url: width: 280 %}
+                    {% assign default_name = cb.settings.title | append: ' #' | append: forloop.index %}
+                    {% assign patch_name = file.name
+                      | default: file.title
+                      | default: patch_img_obj.alt
+                      | default: file.alt
+                      | default: default_name
+                    %}
+                    {% assign patch_filename = patch_img_obj.src
+                      | default: patch_img_obj.url
+                      | split: '/'
+                      | last
+                      | split: '?'
+                      | first
+                      | escape
+                    %}
+                    {% assign patch_alt = patch_img_obj.alt | default: file.alt | default: patch_name | escape %}
+                    <button
+                      type="button"
+                      class="podifai-patch-item{% unless is_first_char_cat %} hidden{% endunless %}"
+                      {% unless is_first_char_cat %}
+                        style="display: none;"
+                      {% endunless %}
+                      data-char-category="{{ cat_id }}"
+                      data-category-title="{{ cb.settings.title | escape }}"
+                      data-size="{{ cb.settings.size | default: '8cm x 8cm' | escape }}"
+                      data-patch-id="char-mf-{{ cb.id }}-{{ forloop.index }}"
+                      data-patch-type="character"
+                      data-patch-name="{{ patch_name | escape }}"
+                      data-patch-alt="{{ patch_alt }}"
+                      data-patch-index="{{ forloop.index }}"
+                      data-patch-filename="{{ patch_filename }}"
+                      data-patch-img="{{ img_canvas }}"
+                      title="{{ patch_name | escape }}"
+                    >
+                      <img
+                        src="{{ img_thumb }}"
+                        alt="{{ patch_name | escape }}"
+                        class="podifai-patch-img"
+                        loading="{% if is_first_char_cat %}eager{% else %}lazy{% endif %}"
+                        decoding="async"
+                        width="44"
+                        height="44"
+                        style="max-width: 70%; max-height: 70%; width: auto; height: auto; object-fit: contain;"
+                      >
+                      <span class="podifai-patch-label">
+                        {%- if patch_img_obj.alt != blank -%}
+                          {{ patch_img_obj.alt }}
+                        {%- elsif file.alt != blank -%}
+                          {{ file.alt }}
+                        {%- elsif file.name != blank -%}
+                          {{ file.name }}
+                        {%- else -%}
+                          P{{ forloop.index }}
+                        {%- endif -%}
+                      </span>
+                      <span class="podifai-patch-badge"></span>
+                    </button>
+                  {% endfor %}
+                {% else %}
+                  {% for i in (1..10) %}
+                    {% assign img_key = 'img_' | append: i %}
+                    {% if cb.settings[img_key] != blank %}
+                      {% assign img_thumb = cb.settings[img_key] | image_url: width: 140 %}
+                      {% assign img_canvas = cb.settings[img_key] | image_url: width: 280 %}
+                      {% assign patch_name = cb.settings.title | append: ' #' | append: i %}
+                      <button
+                        type="button"
+                        class="podifai-patch-item{% unless is_first_char_cat %} hidden{% endunless %}"
+                        {% unless is_first_char_cat %}
+                          style="display: none;"
+                        {% endunless %}
+                        data-char-category="{{ cat_id }}"
+                        data-size="{{ cb.settings.size | default: '8cm x 8cm' | escape }}"
+                        data-patch-id="char-{{ cb.id }}-{{ i }}"
+                        data-patch-type="character"
+                        data-patch-name="{{ patch_name | escape }}"
+                        data-patch-img="{{ img_canvas }}"
+                        title="{{ patch_name | escape }}"
+                      >
+                        <img
+                          src="{{ img_thumb }}"
+                          alt="{{ patch_name | escape }}"
+                          class="podifai-patch-img"
+                          loading="{% if is_first_char_cat %}eager{% else %}lazy{% endif %}"
+                          decoding="async"
+                          width="44"
+                          height="44"
+                          style="max-width: 70%; max-height: 70%; width: auto; height: auto; object-fit: contain;"
+                        >
+                        <span class="podifai-patch-label">P{{ i }}</span>
+                        <span class="podifai-patch-badge"></span>
+                      </button>
+                    {% endif %}
+                  {% endfor %}
+                {% endif %}
+              {% endfor %}
+            {% endif %}
+          </div>
+        </div>
+      </div>
+
+      <!-- Accordion 2: Alphabet Patches -->
+      <div class="podifai-accordion" id="podifai-alphabet-accordion">
+        <div class="podifai-accordion__trigger">
+          <span class="podifai-accordion__label">Alphabet patches</span>
+          <span class="podifai-accordion__icon">+</span>
+        </div>
+        <div class="podifai-accordion__content" style="display: none;">
+          <p class="podifai-alphabet-instruction">Spell a name or initials in letter patches.</p>
+
+          <!-- Alphabet Category Filter Pills -->
+          <div class="podifai-pill-filters" id="podifai-alphabet-categories">
+            {% assign alphabet_blocks = section.blocks | where: 'type', 'alphabet_category' %}
+
+            <!-- Alphabet Category Blocks (if added separately) -->
+            {% if alphabet_blocks.size > 0 %}
+              {% for ablock in alphabet_blocks %}
+                {% assign cat_id = ablock.settings.title | handleize | default: ablock.id %}
+                <button
+                  type="button"
+                  class="podifai-pill-btn {% if forloop.first %}active{% endif %}"
+                  data-cat="{{ cat_id }}"
+                  data-label="{{ ablock.settings.title | escape }}"
+                  data-size="{{ ablock.settings.size | default: '8cm x 8cm' | escape }}"
+                  {{ ablock.shopify_attributes }}
+                >
+                  {{ ablock.settings.title }}
+                </button>
+              {% endfor %}
+            {% endif %}
+          </div>
+
+          {% assign first_alpha_cat_title = '' %}
+          {% assign first_alpha_cat_size = '8cm x 8cm' %}
+
+          {% if alphabet_blocks.size > 0 %}
+            {% assign first_alpha_block = alphabet_blocks.first %}
+            {% assign first_alpha_cat_size = first_alpha_block.settings.size | default: '8cm x 8cm' %}
+          {% else %}
+            {% assign first_alpha_cat_size = '8cm x 8cm' %}
+          {% endif %}
+
+          <div class="podifai-sublabel" id="podifai-alpha-sublabel">
+            Size approximately
+            <span id="podifai-alpha-cat-size">{{ first_alpha_cat_size | default: '8cm x 8cm' }}</span>
+          </div>
+
+          <!-- Alphabet Letters Patch Grid -->
+          <div class="podifai-alphabet-grid" id="podifai-alphabet-grid">
+            <!-- Custom Alphabet Blocks Letters -->
+            {% if alphabet_blocks.size > 0 %}
+              {% for ablock in alphabet_blocks %}
+                {% assign is_first_alpha_cat = forloop.first %}
+                {% assign cat_id = ablock.settings.title | handleize | default: ablock.id %}
+                {% assign cat_handle = ablock.settings.title | handleize %}
+                {% assign cat_underscore = cat_handle | replace: '-', '_' %}
+                {% assign cat_underscore_letters = cat_underscore | append: '_letters' %}
+
+                {% assign alpha_files = blank %}
+
+                {% comment %} 1. Shopify Metaobjects matching category name or handle {% endcomment %}
+                {% assign mo_alpha_handle = ablock.settings.metaobject_handle
+                  | default: ablock.settings.metafield_key
+                  | remove: 'custom.'
+                  | strip
+                  | handleize
+                %}
+                {% if mo_alpha_handle == blank %}
+                  {% assign mo_alpha_handle = cat_handle %}
+                {% endif %}
+                {% assign mo_alpha_underscore = mo_alpha_handle | replace: '-', '_' %}
+
+                {% assign mo_alpha = shop.metaobjects.alphabet_category[mo_alpha_handle]
+                  | default: shop.metaobjects.alphabet_category[mo_alpha_underscore]
+                  | default: shop.metaobjects.alphabet_category[cat_handle]
+                  | default: shop.metaobjects.alphabet_category[cat_underscore]
+                  | default: shop.metaobjects.alphabet_patches[mo_alpha_handle]
+                  | default: shop.metaobjects.alphabet_patches[mo_alpha_underscore]
+                  | default: shop.metaobjects.alphabet_patches[cat_handle]
+                  | default: shop.metaobjects.alphabet_patches[cat_underscore]
+                  | default: shop.metaobjects.patch_category[mo_alpha_handle]
+                  | default: shop.metaobjects.patch_category[cat_handle]
+                  | default: shop.metaobjects.patches[mo_alpha_handle]
+                  | default: shop.metaobjects.patches[cat_handle]
+                  | default: shop.metaobjects[cat_handle][cat_handle]
+                  | default: shop.metaobjects[cat_underscore][cat_underscore]
+                %}
+
+                {% if mo_alpha != blank %}
+                  {% assign alpha_files = mo_alpha.images.value
+                    | default: mo_alpha.images
+                    | default: mo_alpha.files.value
+                    | default: mo_alpha.files
+                    | default: mo_alpha.letters.value
+                    | default: mo_alpha.letters
+                  %}
+                {% endif %}
+
+                {% comment %} 2. Product Metafield matching category name directly {% endcomment %}
+                {% if alpha_files == blank %}
+                  {% assign mf_alpha_obj = product.metafields.custom[cat_underscore].value
+                    | default: product.metafields.custom[cat_handle].value
+                    | default: product.metafields.custom[cat_underscore_letters].value
+                    | default: product.metafields.custom[cat_underscore]
+                    | default: product.metafields.custom[cat_handle]
+                  %}
+                  {% if mf_alpha_obj != blank %}
+                    {% if mf_alpha_obj.images.value != blank %}
+                      {% assign alpha_files = mf_alpha_obj.images.value %}
+                    {% elsif mf_alpha_obj.files.value != blank %}
+                      {% assign alpha_files = mf_alpha_obj.files.value %}
+                    {% else %}
+                      {% assign alpha_files = mf_alpha_obj %}
+                    {% endif %}
+                  {% endif %}
+                {% endif %}
+
+                {% comment %} 3. Configured metafield_key in block settings {% endcomment %}
+                {% if alpha_files == blank and ablock.settings.metafield_key != blank %}
+                  {% assign clean_alpha_key = ablock.settings.metafield_key | remove: 'custom.' | strip %}
+                  {% assign clean_alpha_underscore = clean_alpha_key | handleize | replace: '-', '_' %}
+                  {% assign mf_alpha_conf = product.metafields.custom[clean_alpha_key].value
+                    | default: product.metafields.custom[clean_alpha_underscore].value
+                    | default: product.metafields.custom[clean_alpha_key]
+                    | default: product.metafields.custom[clean_alpha_underscore]
+                  %}
+                  {% if mf_alpha_conf != blank %}
+                    {% if mf_alpha_conf.images.value != blank %}
+                      {% assign alpha_files = mf_alpha_conf.images.value %}
+                    {% elsif mf_alpha_conf.files.value != blank %}
+                      {% assign alpha_files = mf_alpha_conf.files.value %}
+                    {% else %}
+                      {% assign alpha_files = mf_alpha_conf %}
+                    {% endif %}
+                  {% endif %}
+                {% endif %}
+
+                {% if alpha_files != blank %}
+                  {% assign alphabet_upper = 'A,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q,R,S,T,U,V,W,X,Y,Z' | split: ',' %}
+                  {% for file in alpha_files %}
+                    {% assign ltr_idx = forloop.index0 %}
+                    {% assign alpha_img_obj = file %}
+                    {% if file.image.value != blank %}
+                      {% assign alpha_img_obj = file.image.value %}
+                    {% elsif file.image != blank %}
+                      {% assign alpha_img_obj = file.image %}
+                    {% elsif file.file.value != blank %}
+                      {% assign alpha_img_obj = file.file.value %}
+                    {% elsif file.file != blank %}
+                      {% assign alpha_img_obj = file.file %}
+                    {% endif %}
+                    {% assign letter_char = file.name
+                      | default: file.title
+                      | default: alpha_img_obj.alt
+                      | default: file.alt
+                      | default: alphabet_upper[ltr_idx]
+                      | default: forloop.index
+                    %}
+                    {% assign img_thumb = alpha_img_obj | image_url: width: 140 %}
+                    {% assign img_canvas = alpha_img_obj | image_url: width: 280 %}
+                    {% assign alpha_filename = alpha_img_obj.src
+                      | default: alpha_img_obj.url
+                      | split: '/'
+                      | last
+                      | split: '?'
+                      | first
+                      | escape
+                    %}
+                    <button
+                      type="button"
+                      class="podifai-letter-item{% unless is_first_alpha_cat %} hidden{% endunless %}"
+                      {% unless is_first_alpha_cat %}
+                        style="display: none;"
+                      {% endunless %}
+                      data-letter-category="{{ cat_id }}"
+                      data-letter-cat-label="{{ ablock.settings.title | escape }}"
+                      data-size="{{ ablock.settings.size | default: '8cm x 8cm' | escape }}"
+                      data-letter="{{ letter_char | downcase }}"
+                      data-filename="{{ alpha_filename }}"
+                      data-index="{{ forloop.index }}"
+                      data-custom-img="{{ img_canvas }}"
+                      title="{{ letter_char | upcase }} ({{ ablock.settings.title }})"
+                    >
+                      <div class="podifai-letter-wrapper">
+                        <img
+                          src="{{ img_thumb }}"
+                          alt="{{ letter_char }}"
+                          class="podifai-letter-img"
+                          loading="{% if is_first_alpha_cat %}eager{% else %}lazy{% endif %}"
+                          decoding="async"
+                          width="44"
+                          height="44"
+                          style="max-width: 100%; max-height: 100%; object-fit: contain;"
+                        >
+                      </div>
+                      <span class="podifai-patch-badge"></span>
+                    </button>
+                  {% endfor %}
+                {% endif %}
+              {% endfor %}
+            {% endif %}
+          </div>
+        </div>
+      </div>
+
+      <!-- Selected Patches Persistent Summary Bar at the BOTTOM of Step 3 -->
+      <div class="podifai-active-summary" id="podifai-active-summary" style="display: none;">
+        <div class="podifai-summary-header">
+          <span class="podifai-summary-title"
+            >Your patches (<span id="podifai-summary-count">0</span>) ·
+            <span id="podifai-summary-price">{{ currency_symbol }}0.00</span></span
+          >
+        </div>
+        <div class="podifai-summary-tags" id="podifai-summary-tags">
+          <!-- Active patch tags dynamically inserted here -->
+        </div>
+      </div>
+    </div>
+
+    <!-- Step 4: Add Embroidery Card -->
+    <div class="podifai-step-card podifai-embroidery-step-card" id="podifai-embroidery-step-card">
+      <div class="podifai-step-header">
+        <div class="podifai-step-title-group">
+          <span class="step-badge">4</span>
+          <span class="podifai-step-title">{{ embroidery_heading_text }}</span>
+          <span class="podifai-optional-badge">optional</span>
+        </div>
+        <div class="podifai-step-header-meta">
+          <span class="podifai-embroidery-price-tag"
+            >+{{ currency_symbol -}}
+            {{- embroidery_unit_price -}}
+          </span>
+        </div>
+      </div>
+      <p class="podifai-embroidery-subtitle">
+        Colour, font size and placement may vary slightly. These small differences are inherent to personalisation, not
+        a defect.​
+      </p>
+
+      <div class="podifai-embroidery">
+        <!-- Dynamic Multi-Text Embroidery Lines Container -->
+        <div id="podifai-embroidery-lines" class="podifai-embroidery-lines"></div>
+
+        <!-- Add Another Text Button -->
+        <button type="button" id="podifai-add-text-btn" class="podifai-add-text-btn" style="display: none !important;">
+          <span>+ Add Another Text</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Live Order Total Summary Breakdown Card -->
+    <div class="podifai-total-summary-card" id="podifai-total-summary-card">
+      <div class="podifai-summary-row" id="podifai-summary-base-row">
+        <span class="podifai-summary-row-label" id="podifai-summary-product-name">
+          {{- product.title -}}
+          {%- assign init_v = default_medium_orange_variant -%}
+          {%- if init_v and init_v.title != 'Default Title' -%}
+            {%- assign init_size = init_v.option1 | default: init_v.title -%}
+            {%- if init_size != blank %} ({{ init_size }}){% endif -%}
+          {%- endif -%}
+        </span>
+        <span class="podifai-summary-row-price" id="podifai-summary-base-price">
+          {{- default_medium_orange_variant.price | default: product.price | money -}}
+        </span>
+      </div>
+      <div class="podifai-summary-row" id="podifai-summary-patches-row" style="display: none;">
+        <span class="podifai-summary-row-label">Patches × <span id="podifai-summary-patches-qty">0</span></span>
+        <span class="podifai-summary-row-price" id="podifai-summary-patches-total">
+          {{- currency_symbol -}}
+          0.00
+        </span>
+      </div>
+      <div class="podifai-summary-row" id="podifai-summary-embroidery-row" style="display: none;">
+        <span class="podifai-summary-row-label">Embroidery × <span id="podifai-summary-embroidery-qty">0</span></span>
+        <span class="podifai-summary-row-price" id="podifai-summary-embroidery-total">
+          {{- currency_symbol -}}
+          0.00
+        </span>
+      </div>
+      <div class="podifai-summary-divider"></div>
+      <div class="podifai-summary-row podifai-summary-total-row">
+        <span class="podifai-summary-total-label">Your total</span>
+        <span class="podifai-summary-total-price" id="podifai-summary-grand-total">
+          {{- default_medium_orange_variant.price | default: product.price | money -}}
+        </span>
+      </div>
+    </div>
+
+    <!-- Microcopy Notes -->
+    {% assign n1_icon = block.settings.notice_1_icon
+      | default: section_settings.notice_1_icon
+      | default: section.settings.notice_1_icon
+      | default: '🧵'
+    %}
+    {% assign n1_text = block.settings.notice_1_text
+      | default: section_settings.notice_1_text
+      | default: section.settings.notice_1_text
+    %}
+    {% if n1_text == blank
+      and block.settings.notice_1_text == null
+      and section_settings.notice_1_text == null
+      and section.settings.notice_1_text == null
+    %}
+      {% assign n1_text = '<strong>Made to order</strong> — ready to ship in 5–7 working days.' %}
+    {% endif %}
+
+    {% assign n2_icon = block.settings.notice_2_icon
+      | default: section_settings.notice_2_icon
+      | default: section.settings.notice_2_icon
+      | default: '💛'
+    %}
+    {% assign n2_text = block.settings.notice_2_text
+      | default: section_settings.notice_2_text
+      | default: section.settings.notice_2_text
+    %}
+    {% if n2_text == blank
+      and block.settings.notice_2_text == null
+      and section_settings.notice_2_text == null
+      and section.settings.notice_2_text == null
+    %}
+      {% assign n2_text = "Because it's personalised just for you, custom pieces can't be returned or exchanged." %}
+    {% endif %}
+
+    {% assign n3_icon = block.settings.notice_3_icon
+      | default: section_settings.notice_3_icon
+      | default: section.settings.notice_3_icon
+    %}
+    {% assign n3_text = block.settings.notice_3_text
+      | default: section_settings.notice_3_text
+      | default: section.settings.notice_3_text
+    %}
+
+    <div class="podifai-microcopy-list">
+      {% if n1_text != blank %}
+        <div class="podifai-microcopy-item">
+          {% if n1_icon != blank -%}
+            <span class="podifai-microcopy-icon">{{ n1_icon }}</span>
+          {%- endif %}
+          <span>{{ n1_text }}</span>
+        </div>
+      {% endif %}
+      {% if n2_text != blank %}
+        <div class="podifai-microcopy-item">
+          {% if n2_icon != blank -%}
+            <span class="podifai-microcopy-icon">{{ n2_icon }}</span>
+          {%- endif %}
+          <span>{{ n2_text }}</span>
+        </div>
+      {% endif %}
+      {% if n3_text != blank %}
+        <div class="podifai-microcopy-item">
+          {% if n3_icon != blank -%}
+            <span class="podifai-microcopy-icon">{{ n3_icon }}</span>
+          {%- endif %}
+          <span>{{ n3_text }}</span>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+
+<!-- Reusable Thread Color Options Definition for Dynamic Injection -->
+<div id="podifai-thread-options-source" style="display: none;">
+  {% assign thread_color_blocks = section.blocks | where: 'type', 'thread_color' %}
+  {% assign has_custom_threads = false %}
+
+  <!-- Custom Threads from Blocks -->
+  {% if thread_color_blocks.size > 0 %}
+    {% for tb in thread_color_blocks %}
+      {% assign has_custom_threads = true %}
+      <button
+        type="button"
+        class="podifai-color-swatch"
+        data-color="{{ tb.settings.color }}"
+        data-color-name="{{ tb.settings.color_name | escape }}"
+        style="background-color: {{ tb.settings.color }};"
+        title="{{ tb.settings.color_name | escape }}"
+      ></button>
+    {% endfor %}
+  {% endif %}
+
+  <!-- Default 5 Thread Colors matching reference designs -->
+  {% if has_custom_threads == false %}
+    <button
+      type="button"
+      class="podifai-color-swatch"
+      data-color="#D32F2F"
+      data-color-name="Red"
+      style="background-color: #D32F2F;"
+      title="Red"
+    ></button>
+    <button
+      type="button"
+      class="podifai-color-swatch"
+      data-color="#FAF8F5"
+      data-color-name="Ivory"
+      style="background-color: #FAF8F5;"
+      title="Ivory"
+    ></button>
+    <button
+      type="button"
+      class="podifai-color-swatch"
+      data-color="#1A1A1A"
+      data-color-name="Black"
+      style="background-color: #1A1A1A;"
+      title="Black"
+    ></button>
+    <button
+      type="button"
+      class="podifai-color-swatch"
+      data-color="#FF69B4"
+      data-color-name="Pink"
+      style="background-color: #FF69B4;"
+      title="Pink"
+    ></button>
+    <button
+      type="button"
+      class="podifai-color-swatch"
+      data-color="#E68A2E"
+      data-color-name="Orange"
+      style="background-color: #E68A2E;"
+      title="Orange"
+    ></button>
+  {% endif %}
+</div>
+

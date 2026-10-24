@@ -6,20 +6,27 @@
   "settings": [
     {
       "type": "header",
-      "content": "Cloud Image Hosting (Optional - Cloudinary Direct)"
+      "content": "Cloud Image Hosting (ImgBB / Cloudinary)"
+    },
+    {
+      "type": "text",
+      "id": "imgbb_api_key",
+      "label": "ImgBB API Key (Recommended)",
+      "info": "Your free ImgBB API key from https://api.imgbb.com/ (Provides free full high-resolution image hosting)",
+      "default": "222e573c91bea794c21c7d5a1550cc41"
     },
     {
       "type": "text",
       "id": "cloudinary_cloud_name",
-      "label": "Cloudinary Cloud Name",
-      "info": "Your free Cloudinary Cloud Name (e.g. demo or my-store)",
+      "label": "Cloudinary Cloud Name (Fallback)",
+      "info": "Optional fallback if not using ImgBB",
       "default": "tifgkltm"
     },
     {
       "type": "text",
       "id": "cloudinary_upload_preset",
-      "label": "Cloudinary Unsigned Upload Preset",
-      "info": "Your unsigned upload preset name (e.g. unsigned_presets)",
+      "label": "Cloudinary Unsigned Upload Preset (Fallback)",
+      "info": "Optional fallback if not using ImgBB",
       "default": "shopify_preset_podifai"
     },
     {
@@ -38,6 +45,12 @@
       "id": "patch_addon_product",
       "label": "Patch Surcharge Product",
       "info": "Select the addon product priced per patch (e.g. $6.00)"
+    },
+    {
+      "type": "collection",
+      "id": "patch_addons_collection",
+      "label": "Patch Addons Collection (Optional)",
+      "info": "Collection containing all patch products to track inventory across multiple products (defaults to 'patch-addons')"
     },
     {
       "type": "product",
